@@ -5,8 +5,9 @@
 //! microphone, release stops it, and between the two nothing may be lost.
 
 use crate::adapters::capture::Capture;
-use crate::adapters::inject;
+use crate::adapters::inject::{self, InjectError};
 use crate::session::Outcome;
+use crate::take::{Ending, KeyJob, Waiting};
 use ramble_core::session::{Effect, Event, SessionMachine};
 use ramble_engine::Engine;
 use ramble_history::HistoryStore;
@@ -100,6 +101,45 @@ fn recorded_duration(sample_count: usize, rate: u32) -> std::time::Duration {
     std::time::Duration::from_secs_f64(sample_count as f64 / rate as f64)
 }
 
+/// How finished words leave the app.
+///
+/// Handed in rather than called directly, so the rules about words that could
+/// not land can be checked without pasting into whatever is in front of the
+/// person running the tests.
+pub struct Delivery {
+    /// Borrow the clipboard, send the paste shortcut, give the clipboard back.
+    pub paste: fn(&str) -> Result<(), InjectError>,
+    /// Put the words on the clipboard and leave them there.
+    pub copy: fn(&str) -> Result<(), InjectError>,
+    /// Whether this desktop lets an application type into other windows at
+    /// all. Where it does not, the clipboard is the delivery and the paste is
+    /// the person's own.
+    pub types_for_you: bool,
+}
+
+impl Delivery {
+    fn system() -> Self {
+        Delivery {
+            paste: inject::insert,
+            copy: inject::copy,
+            types_for_you: session_types_for_you(),
+        }
+    }
+}
+
+fn session_types_for_you() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        crate::adapters::linux_session::detect()
+            .injection
+            .types_for_you()
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        true
+    }
+}
+
 /// The running dictation service.
 pub struct Dictation {
     machine: Mutex<SessionMachine>,
@@ -114,6 +154,10 @@ pub struct Dictation {
     store: ModelStore,
     history: HistoryStore,
     dictionary_directory: PathBuf,
+    pub(crate) delivery: Delivery,
+    /// Words that could not land. In memory only: they are in History as
+    /// well, and keeping them anywhere else would be a third store.
+    waiting: Mutex<Option<Waiting>>,
 }
 
 impl Dictation {
@@ -136,11 +180,34 @@ impl Dictation {
             store,
             history: HistoryStore::new(support_root()?.join("History")),
             dictionary_directory: support_root()?,
+            delivery: Delivery::system(),
+            waiting: Mutex::new(None),
         };
         // Their own terms are in effect from the first dictation, not from the
         // first time they open settings.
         dictation.reload_pipeline();
         Some(dictation)
+    }
+
+    /// A dictation service that touches no clipboard and no keyboard, and has
+    /// no model: whatever it is asked to deliver goes through `delivery`.
+    #[cfg(test)]
+    pub(crate) fn for_tests(delivery: Delivery) -> Self {
+        let root = std::env::temp_dir().join("openramble-delivery-tests");
+        Dictation {
+            machine: Mutex::new(SessionMachine::new()),
+            capture: Mutex::new(None),
+            engine: Mutex::new(None),
+            pipeline: Mutex::new(TextPipeline::default()),
+            store: ModelStore::new(
+                Manifest::parse(SHIPPING_MANIFEST).expect("the shipping manifest parses"),
+                root.join("Models"),
+            ),
+            history: HistoryStore::new(root.join("History")),
+            dictionary_directory: root,
+            delivery,
+            waiting: Mutex::new(None),
+        }
     }
 
     /// Rebuild the pipeline from the supplied terms plus the person's own.
@@ -236,7 +303,11 @@ impl Dictation {
     }
 
     /// Begin recording.
-    pub fn begin(&self) -> Result<(), String> {
+    ///
+    /// `accepted` runs once the take is certain to start and before the
+    /// microphone is opened, which is the moment the take block appears: a
+    /// press that starts nothing must not flash a block.
+    pub fn begin(&self, accepted: impl FnOnce()) -> Result<(), String> {
         if self.advance(Event::Pressed).is_empty() {
             return Err(if self.model_is_ready() {
                 "A dictation is already in progress.".into()
@@ -244,6 +315,7 @@ impl Dictation {
                 "The speech model is not installed yet.".into()
             });
         }
+        accepted();
 
         match Capture::start() {
             Ok(capture) => {
@@ -323,12 +395,13 @@ impl Dictation {
         // Recorded before insertion is attempted: if putting the text into the
         // other application fails, the words are the one thing that must not be
         // lost, and history is where a person goes to find them. A failed write
-        // is not reported here: the words are about to appear in the app.
-        let _ = self.remember(&output.text, &samples);
+        // is not reported while the words are about to appear in the app. If
+        // they cannot land either, the block that holds them says so.
+        let kept = self.remember(&output.text, &samples).is_ok();
 
-        if let Err(error) = inject::insert(&output.text) {
+        if !self.land(output.text, !kept) {
             self.advance(Event::InsertionFailed);
-            return Outcome::Failed(error.to_string());
+            return Outcome::WordsWait;
         }
         self.advance(Event::Inserted);
 
@@ -354,6 +427,87 @@ impl Dictation {
                     .into(),
             ),
         }
+    }
+
+    /// Put the words where the person was typing.
+    ///
+    /// `false` when they could not land. Then they wait, in full, and
+    /// `waiting` has them.
+    pub(crate) fn land(&self, words: String, kept_nowhere_else: bool) -> bool {
+        let waiting = if self.delivery.types_for_you {
+            match (self.delivery.paste)(&words) {
+                Ok(()) => return true,
+                Err(error) => Waiting::after_paste(&error, words, kept_nowhere_else),
+            }
+        } else {
+            let copied = (self.delivery.copy)(&words).is_ok();
+            Waiting::after_copy(copied, words, kept_nowhere_else)
+        };
+        *self.waiting_slot() = Some(waiting);
+        false
+    }
+
+    fn waiting_slot(&self) -> MutexGuard<'_, Option<Waiting>> {
+        self.waiting
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// The words that wait, or `None` once they no longer do.
+    pub fn waiting(&self) -> Option<Waiting> {
+        self.waiting_slot().clone()
+    }
+
+    /// Do what the dictation key says while words wait: try the paste again,
+    /// or copy where this desktop cannot type.
+    ///
+    /// `Some` once the words have landed, `None` while they still wait.
+    /// Copied words have nothing left to try.
+    pub fn retry_waiting(&self) -> Option<Ending> {
+        let mut slot = self.waiting_slot();
+        let waiting = slot.as_mut()?;
+        if waiting.copied {
+            return None;
+        }
+        match waiting.job {
+            KeyJob::Paste => match (self.delivery.paste)(&waiting.words) {
+                Ok(()) => {
+                    *slot = None;
+                    Some(Ending::Pasted)
+                }
+                Err(error) => {
+                    let words = std::mem::take(&mut waiting.words);
+                    *waiting = Waiting::after_paste(&error, words, waiting.kept_nowhere_else);
+                    None
+                }
+            },
+            KeyJob::Copy => {
+                waiting.copied = (self.delivery.copy)(&waiting.words).is_ok();
+                None
+            }
+        }
+    }
+
+    /// Let the waiting words leave the block, for Later or for a new take.
+    ///
+    /// They are in History already, so nothing more is needed, unless History
+    /// could not keep them. Then they go to the clipboard first, and if that
+    /// fails too they stay: the block is the only place they are, and
+    /// dropping them would discard what the person said.
+    ///
+    /// `None` when nothing waits, or when the words cannot leave yet.
+    pub fn release_waiting(&self) -> Option<Ending> {
+        let mut slot = self.waiting_slot();
+        let waiting = slot.as_ref()?;
+        let ending = if !waiting.kept_nowhere_else {
+            Ending::Kept
+        } else if waiting.copied || (self.delivery.copy)(&waiting.words).is_ok() {
+            Ending::Copied
+        } else {
+            return None;
+        };
+        *slot = None;
+        Some(ending)
     }
 
     fn failed(&self, detail: String) -> Outcome {
@@ -469,6 +623,130 @@ mod tests {
         dictation.shutdown();
     }
 
+    fn pastes(_: &str) -> Result<(), InjectError> {
+        Ok(())
+    }
+
+    fn shortcut_not_sent(_: &str) -> Result<(), InjectError> {
+        Err(InjectError::Keystroke("blocked".into()))
+    }
+
+    fn clipboard_unusable(_: &str) -> Result<(), InjectError> {
+        Err(InjectError::Clipboard("busy".into()))
+    }
+
+    fn must_not_paste(_: &str) -> Result<(), InjectError> {
+        panic!("a session that cannot type must never send a paste")
+    }
+
+    fn dictation_delivering(delivery: Delivery) -> Dictation {
+        Dictation::for_tests(delivery)
+    }
+
+    fn typing(paste: fn(&str) -> Result<(), InjectError>) -> Delivery {
+        Delivery {
+            paste,
+            copy: pastes,
+            types_for_you: true,
+        }
+    }
+
+    #[test]
+    fn a_paste_that_lands_leaves_nothing_waiting() {
+        let dictation = dictation_delivering(typing(pastes));
+        assert!(dictation.land("Ship it Friday.".into(), false));
+        assert_eq!(dictation.waiting(), None);
+    }
+
+    /// The clipboard is written before the shortcut is sent, so a shortcut
+    /// that could not be sent leaves the words one paste away. The block says
+    /// that, and the key has nothing left to do.
+    #[test]
+    fn a_shortcut_that_could_not_be_sent_leaves_the_words_copied() {
+        let dictation = dictation_delivering(typing(shortcut_not_sent));
+        assert!(!dictation.land("Ship it Friday.".into(), false));
+        let waiting = dictation.waiting().expect("the words wait");
+        assert_eq!(waiting.words, "Ship it Friday.");
+        assert!(waiting.copied);
+        assert_eq!(dictation.retry_waiting(), None);
+        assert!(dictation.waiting().is_some(), "copied words stay put");
+    }
+
+    /// The whole of what a tap does: the same paste again. When it lands the
+    /// words stop waiting; when it does not, they are still there, in full.
+    #[test]
+    fn a_tap_tries_the_paste_again_until_it_lands() {
+        let mut dictation = dictation_delivering(typing(clipboard_unusable));
+        assert!(!dictation.land("Ship it Friday.".into(), false));
+        assert!(!dictation.waiting().expect("the words wait").copied);
+
+        assert_eq!(dictation.retry_waiting(), None);
+        assert_eq!(
+            dictation.waiting().expect("still waiting").words,
+            "Ship it Friday."
+        );
+
+        dictation.delivery.paste = pastes;
+        assert_eq!(dictation.retry_waiting(), Some(Ending::Pasted));
+        assert_eq!(dictation.waiting(), None);
+    }
+
+    /// Where the desktop forbids typing into other windows, a paste would be
+    /// sent to nothing and the old clipboard put back over the words. The
+    /// clipboard is the delivery there, and the paste is the person's own.
+    #[test]
+    fn a_session_that_cannot_type_copies_and_never_pastes() {
+        let dictation = dictation_delivering(Delivery {
+            paste: must_not_paste,
+            copy: pastes,
+            types_for_you: false,
+        });
+        assert!(!dictation.land("Ship it Friday.".into(), false));
+        let waiting = dictation.waiting().expect("the words wait");
+        assert!(waiting.copied);
+        assert_eq!(waiting.job, KeyJob::Copy);
+    }
+
+    #[test]
+    fn where_the_copy_failed_a_tap_copies_again() {
+        let mut dictation = dictation_delivering(Delivery {
+            paste: must_not_paste,
+            copy: clipboard_unusable,
+            types_for_you: false,
+        });
+        assert!(!dictation.land("Ship it Friday.".into(), false));
+        assert!(!dictation.waiting().expect("the words wait").copied);
+
+        dictation.delivery.copy = pastes;
+        assert_eq!(dictation.retry_waiting(), None);
+        assert!(dictation.waiting().expect("still on the block").copied);
+    }
+
+    /// Later is a promise that the words are somewhere. In History when
+    /// History kept them; on the clipboard when it could not; and if neither,
+    /// they do not leave the block.
+    #[test]
+    fn words_leave_the_block_only_for_somewhere_they_can_be_found() {
+        let dictation = dictation_delivering(typing(clipboard_unusable));
+        dictation.land("Ship it Friday.".into(), false);
+        assert_eq!(dictation.release_waiting(), Some(Ending::Kept));
+        assert_eq!(dictation.waiting(), None);
+        assert_eq!(dictation.release_waiting(), None, "nothing waits now");
+
+        let mut unkept = dictation_delivering(typing(clipboard_unusable));
+        unkept.delivery.copy = clipboard_unusable;
+        unkept.land("Ship it Friday.".into(), true);
+        assert_eq!(unkept.release_waiting(), None);
+        assert_eq!(
+            unkept.waiting().expect("they must not be dropped").words,
+            "Ship it Friday."
+        );
+
+        unkept.delivery.copy = pastes;
+        assert_eq!(unkept.release_waiting(), Some(Ending::Copied));
+        assert_eq!(unkept.waiting(), None);
+    }
+
     fn dictation_keeping_history_in(history: PathBuf, root: &Path) -> Dictation {
         Dictation {
             machine: Mutex::new(SessionMachine::new()),
@@ -481,6 +759,8 @@ mod tests {
             ),
             history: HistoryStore::new(history),
             dictionary_directory: root.to_path_buf(),
+            delivery: typing(pastes),
+            waiting: Mutex::new(None),
         }
     }
 

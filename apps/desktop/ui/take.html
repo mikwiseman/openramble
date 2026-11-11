@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenRamble</title>
+    <!-- Generated from design/tokens.json; see scripts/generate-tokens.py. -->
+    <link rel="stylesheet" href="tokens.css" />
+    <style>
+      /* The take block: what a person sees from key-down to text.
+       *
+       * One surface, sized by what it holds. A line of it is a capsule one
+       * unit tall, because a panel that short has nothing left but its
+       * corners; holding the person's words, the same shape is a soft panel.
+       * On the Mac that surface is Liquid Glass. Here it is the platform's
+       * own solid fill, and nothing imitates glass.
+       *
+       * Shape and word carry each state, and color only confirms it, in the
+       * glyph and nowhere else:
+       *   a red disc    only while the microphone captures,
+       *   an orange bar only while words wait,
+       *   a green check only for a paste that landed.
+       * So every state reads in grayscale and in a forced-colors theme.
+       *
+       * The app speaks in the system sans. What the person said is set in a
+       * serif: speech became text, and it looks like text.
+       *
+       * Sizes come from tokens.css. The type sizes are the Mac's.
+       */
+      :root {
+        color-scheme: light dark;
+
+        /* n units across are n units and the gaps between them. */
+        --four-units: calc(4 * var(--block-unit) + 3 * var(--block-gap));
+        --eight-units: calc(8 * var(--block-unit) + 7 * var(--block-gap));
+        /* A control inside a block, and the key drawn inside a control. */
+        --control: calc(var(--block-unit) - var(--space-inline));
+        --key: calc(var(--control) - 2 * var(--space-tight));
+        --key-travel: calc(2 * var(--stroke-emphasised));
+        --glyph: 12px;
+        --leading: 1.3;
+        /* A glyph this far in sits at the centre of the capsule's round end. */
+        --line-inset: calc((var(--block-unit) - var(--glyph)) / 2);
+        /* One line of text, centred, makes a block exactly one unit tall. */
+        --line-pad: calc((var(--block-unit) - var(--leading) * 1em) / 2);
+
+        --surface: #f9f9f9;
+        --text: #1b1b1d;
+        --text-2: rgba(0, 0, 0, 0.56);
+        --edge: rgba(0, 0, 0, var(--stroke-opacity));
+        --press: rgba(0, 0, 0, 0.08);
+        --shade: rgba(0, 0, 0, 0.18);
+        /* The one thing to press: near-black on light, white on dark. */
+        --ink: #171717;
+        --on-ink: #ffffff;
+
+        --red: #ff3b30;
+        --orange: #ff9500;
+        --green: #34c759;
+        --blue: #007aff;
+
+        --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+        /* The system's own serif where the web view knows it, then one each
+           platform ships. Every one of them has Cyrillic. */
+        --serif: ui-serif, Georgia, Cambria, "Noto Serif", "DejaVu Serif", "Liberation Serif", serif;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --surface: #2c2c2c;
+          --text: #f5f5f7;
+          --text-2: rgba(255, 255, 255, 0.6);
+          --edge: rgba(255, 255, 255, var(--stroke-opacity));
+          --press: rgba(255, 255, 255, 0.12);
+          --shade: rgba(0, 0, 0, 0.5);
+          --ink: #ffffff;
+          --on-ink: #000000;
+
+          --red: #ff453a;
+          --orange: #ff9f0a;
+          --green: #30d158;
+          --blue: #0a84ff;
+        }
+      }
+
+      @media (prefers-contrast: more) {
+        :root { --stroke-opacity: var(--stroke-opacity-contrast); }
+      }
+
+      * { box-sizing: border-box; }
+      [hidden] { display: none !important; }
+
+      html, body {
+        margin: 0;
+        /* The window is the block and nothing else. */
+        background: transparent;
+        overflow: hidden;
+      }
+
+      body {
+        color: var(--text);
+        font: 500 14px/var(--leading) var(--sans);
+        -webkit-font-smoothing: antialiased;
+        cursor: default;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      /* Measured, and the window is made exactly this size. Its margin keeps
+         the block clear of the taskbar and the screen edge, and holds the
+         shadow. Laid out on its own, so the window's size never decides it. */
+      #stage {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: max-content;
+        padding: var(--space-stack);
+      }
+
+      /* One radius for every size. One unit tall, it closes into a capsule. */
+      .block {
+        border-radius: var(--radius-surface);
+        background: var(--surface);
+        box-shadow:
+          0 0 0 var(--stroke-hairline) var(--edge),
+          0 var(--space-tight) var(--space-section) var(--shade);
+        animation: arrive var(--motion-control) ease-out;
+      }
+      .block[data-kind="take"] { width: var(--four-units); }
+      .block[data-kind="ending"] {
+        width: max-content;
+        min-width: var(--four-units);
+        max-width: var(--eight-units);
+      }
+      .block[data-kind="waiting"] { width: var(--eight-units); }
+
+      @keyframes arrive {
+        from { opacity: 0; transform: scale(0.96); }
+      }
+
+      /* A forced-colors theme paints every fill with its own canvas. The
+         block gets a border there, and the glyphs keep their shapes. */
+      @media (forced-colors: active) {
+        .block { border: var(--stroke-emphasised) solid CanvasText; box-shadow: none; }
+      }
+
+      .glyph {
+        flex: none;
+        width: var(--glyph);
+        height: var(--glyph);
+        color: var(--text);
+        fill: currentColor;
+        stroke: currentColor;
+      }
+      .glyph[data-glyph="silent"], .glyph[data-glyph="nothing"] { color: var(--text-2); }
+      .glyph[data-glyph="listening"] { color: var(--red); }
+      .glyph[data-glyph="working"] { color: var(--blue); }
+      .glyph[data-glyph="waiting"] { color: var(--orange); }
+      .glyph[data-glyph="pasted"] { color: var(--green); }
+
+      /* A take: glyph, word, clock. One line, one unit tall. */
+      .take {
+        display: flex;
+        align-items: center;
+        gap: var(--space-inline);
+        height: var(--block-unit);
+        padding: 0 var(--line-inset);
+      }
+      .take .word { white-space: nowrap; }
+      .take .clock {
+        margin-left: auto;
+        color: var(--text-2);
+        font-weight: 400;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* One glyph and one sentence. When the sentence wraps, the glyph stays
+         beside its first line. */
+      .sentence { display: flex; align-items: flex-start; gap: var(--space-inline); }
+      .sentence .glyph { margin-top: calc((var(--leading) * 1em - var(--glyph)) / 2); }
+
+      /* How it ended. */
+      .line { padding: var(--line-pad) var(--line-inset); }
+
+      /* Words that wait. The words first, set as written text: they are what
+         the person is afraid of losing. Then why, then the one thing to do. */
+      .waiting {
+        display: grid;
+        gap: calc(2 * var(--space-tight));
+        padding: var(--block-padding) var(--space-stack) var(--space-stack) var(--block-padding);
+      }
+      /* The same margin on both sides of the words, though the buttons
+         below sit closer to the edge. */
+      .words, .note { margin: 0 calc(var(--block-padding) - var(--space-stack)) 0 0; }
+      .words {
+        font: 400 19px/1.4 var(--serif);
+        overflow-wrap: anywhere;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 6;
+        overflow: hidden;
+      }
+      .note { font-size: 12px; font-weight: 400; color: var(--text-2); }
+
+      .foot { display: grid; gap: calc(2 * var(--space-tight)); }
+      /* Copied words have nothing left to press but the way out, so the
+         reason and Later share the line. */
+      .foot[data-copied] { grid-template-columns: 1fr auto; align-items: center; }
+      .foot .sentence {
+        gap: var(--block-gap);
+        font-size: 13px;
+        font-weight: 400;
+        color: var(--text-2);
+      }
+      .actions { display: flex; align-items: center; justify-content: space-between; }
+
+      button {
+        font: 13px/var(--leading) var(--sans);
+        min-height: var(--control);
+        border: 0;
+        border-radius: var(--control);
+        cursor: pointer;
+      }
+      :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+      /* The one action: an ink capsule with the key drawn inside it. */
+      .ink {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--block-gap);
+        padding: 0 var(--space-stack);
+        background: var(--ink);
+        color: var(--on-ink);
+        font-weight: 600;
+        transition: transform var(--motion-control) ease-out;
+      }
+      .ink:active { opacity: 0.82; transform: scale(0.97); }
+
+      /* The way out: words alone. */
+      .quiet {
+        padding: 0 var(--space-inline);
+        background: transparent;
+        color: var(--text-2);
+        font-weight: 500;
+      }
+      .quiet:hover, .quiet:active { background: var(--press); }
+
+      /* The dictation key, drawn. It goes down when the real one does. */
+      kbd {
+        font: inherit;
+        font-size: 12px;
+        white-space: nowrap;
+        padding: 0 var(--radius-chip);
+        line-height: var(--key);
+        border-radius: var(--space-tight);
+        background: color-mix(in srgb, currentColor 18%, transparent);
+        box-shadow: 0 0 0 var(--stroke-emphasised) color-mix(in srgb, currentColor 45%, transparent);
+        transition: transform calc(var(--motion-control) / 2) ease-out;
+      }
+      kbd[data-down] { transform: translateY(var(--key-travel)); }
+
+      @media (prefers-reduced-motion: reduce) {
+        .ink:active { transform: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="stage">
+      <div class="block" id="block" hidden>
+        <div class="take" id="take" hidden>
+          <svg class="glyph" id="take-glyph" viewBox="0 0 14 14" aria-hidden="true"></svg>
+          <span class="word" id="take-word"></span>
+          <span class="clock" id="take-clock"></span>
+        </div>
+
+        <div class="line" id="line" hidden>
+          <div class="sentence" role="status">
+            <svg class="glyph" id="line-glyph" viewBox="0 0 14 14" aria-hidden="true"></svg>
+            <span id="line-text"></span>
+          </div>
+        </div>
+
+        <div class="waiting" id="waiting" hidden>
+          <p class="words" id="words"></p>
+          <p class="note" id="note" hidden></p>
+          <div class="foot" id="foot">
+            <div class="sentence" role="status">
+              <svg class="glyph" id="reason-glyph" viewBox="0 0 14 14" aria-hidden="true"></svg>
+              <span id="reason-text"></span>
+            </div>
+            <div class="actions">
+              <button class="ink" id="act"><kbd id="key"></kbd><span id="verb"></span></button>
+              <button class="quiet" id="later"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script type="module">
+      const invoke = window.__TAURI__.core.invoke;
+      const listen = window.__TAURI__.event.listen;
+
+      const el = (id) => document.getElementById(id);
+
+      // Every sentence the block can say, in English and in Russian, side by
+      // side so that one cannot be written without the other. The wording is
+      // the Mac's, with this platform's key and its paste shortcut.
+      const words = {
+        listening: ["Listening", "Слушаю"],
+        writing: ["Writing it down…", "Записываю…"],
+        notPasted: ["Not pasted.", "Не вставлено."],
+        copied: ["Copied. Press Ctrl+V to paste.", "Скопировано. Нажмите Ctrl+V, чтобы вставить."],
+        notKept: [
+          "This dictation couldn't be saved to History.",
+          "Не удалось сохранить эту диктовку в истории.",
+        ],
+        pastes: ["pastes", "вставит"],
+        copies: ["copies", "скопирует"],
+        paste: ["Paste", "Вставить"],
+        copy: ["Copy", "Скопировать"],
+        later: ["Later", "Позже"],
+        laterKeeps: ["Keeps the words in History", "Сохраняет слова в истории"],
+        pasted: ["Pasted.", "Вставлено."],
+        kept: ["Kept in History.", "Сохранено в истории."],
+        nothingHeard: ["Nothing heard.", "Ничего не слышно."],
+        // The dictation key, as it is drawn on its cap.
+        rightControl: ["Right Ctrl", "Правый Ctrl"],
+        rightAlt: ["Right Alt", "Правый Alt"],
+        rightShift: ["Right Shift", "Правый Shift"],
+        leftControl: ["Left Ctrl", "Левый Ctrl"],
+      };
+
+      // Read each time, so the block follows the system's language.
+      const russian = () => (navigator.language || "en").toLowerCase().startsWith("ru");
+      const say = (name) => words[name][russian() ? 1 : 0];
+
+      // The shape each state wears, drawn in a 14 by 14 box.
+      const shapes = {
+        // A hollow ring: the microphone is not capturing. Silence is never red.
+        silent: '<circle cx="7" cy="7" r="5.2" fill="none" stroke-width="1.6"/>',
+        // A disc: the microphone is capturing.
+        listening: '<circle cx="7" cy="7" r="6" stroke="none"/>',
+        // An open ring: the words are being written down.
+        working:
+          '<circle cx="7" cy="7" r="5" fill="none" stroke-width="2" stroke-linecap="round" ' +
+          'stroke-dasharray="23.9 31.4" transform="rotate(133 7 7)"/>',
+        // A bar, never a dot: words wait for the person.
+        waiting: '<rect y="3.5" width="14" height="7" rx="2.3" stroke="none"/>',
+        // Two sheets: the words are on the clipboard.
+        copied:
+          '<rect x="1.2" y="4.3" width="8.5" height="8.5" rx="2" fill="none" stroke-width="1.6"/>' +
+          '<path d="M5 1.9h5.6a2 2 0 0 1 2 2v5.6" fill="none" stroke-width="1.6" stroke-linecap="round"/>',
+        // A check: the words landed.
+        pasted:
+          '<path d="M2.2 7.6l3.3 3.3 6.3-7.2" fill="none" stroke-width="2.2" ' +
+          'stroke-linecap="round" stroke-linejoin="round"/>',
+        // A tray: the words are kept in History.
+        kept:
+          '<path d="M1.6 8.6 3.5 3h7l1.9 5.6v2.5a.7.7 0 0 1-.7.7H2.3a.7.7 0 0 1-.7-.7z' +
+          'M1.6 8.6h3.1a2.3 2.3 0 0 0 4.6 0h3.1" fill="none" stroke-width="1.5" stroke-linejoin="round"/>',
+        // A flat line: nothing was heard.
+        nothing: '<rect y="6.1" width="14" height="1.8" rx="0.9" stroke="none"/>',
+      };
+
+      function wear(glyph, shape) {
+        glyph.dataset.glyph = shape;
+        glyph.innerHTML = shapes[shape];
+      }
+
+      // The clock runs here while the microphone is open, so it does not
+      // depend on a message arriving every second.
+      let ticking;
+      const minutes = (ms) => {
+        const seconds = Math.floor(Math.max(0, ms) / 1000);
+        return Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+      };
+      function stopClock() {
+        clearInterval(ticking);
+        ticking = undefined;
+      }
+      function runClock(elapsed) {
+        const began = performance.now() - elapsed;
+        ticking = setInterval(() => {
+          el("take-clock").textContent = minutes(performance.now() - began);
+        }, 500);
+      }
+
+      function drawTake({ mark, elapsedMs }) {
+        const glyph = { starting: "silent", recording: "listening", closed: "silent", working: "working" };
+        wear(el("take-glyph"), glyph[mark]);
+        // "Listening" for as long as the microphone is open. "Writing it
+        // down…" takes the clock's place, so nothing beside it moves.
+        const word = { recording: "listening", working: "writing" }[mark];
+        el("take-word").textContent = word ? say(word) : "";
+        el("take-clock").textContent = mark === "working" ? "" : minutes(elapsedMs);
+        if (mark === "recording") runClock(elapsedMs);
+      }
+
+      function drawWaiting({ words: said, copied, job, keptNowhereElse, key, keyDown }) {
+        // textContent, never innerHTML: these are dictated words.
+        el("words").textContent = said;
+        el("note").hidden = !keptNowhereElse;
+        el("note").textContent = say("notKept");
+        wear(el("reason-glyph"), copied ? "copied" : "waiting");
+        el("reason-text").textContent = say(copied ? "copied" : "notPasted");
+        el("foot").toggleAttribute("data-copied", copied);
+        el("act").hidden = copied;
+        el("act").setAttribute("aria-label", say(job));
+        el("key").textContent = say(key);
+        el("key").toggleAttribute("data-down", keyDown);
+        el("verb").textContent = say(job === "copy" ? "copies" : "pastes");
+        el("later").textContent = say("later");
+        el("later").title = say("laterKeeps");
+      }
+
+      function drawEnding({ ending }) {
+        const glyph = { pasted: "pasted", copied: "copied", kept: "kept", nothingHeard: "nothing" };
+        wear(el("line-glyph"), glyph[ending]);
+        el("line-text").textContent = say(ending);
+      }
+
+      let shown = "hidden";
+
+      function draw(block) {
+        stopClock();
+        document.documentElement.lang = russian() ? "ru" : "en";
+        const kind = block.kind;
+        // What a person said does not stay in a page nobody is looking at.
+        if (kind !== "waiting") el("words").textContent = "";
+        el("block").hidden = kind === "hidden";
+        el("take").hidden = kind !== "take";
+        el("line").hidden = kind !== "ending";
+        el("waiting").hidden = kind !== "waiting";
+        if (kind === "hidden") {
+          shown = kind;
+          return;
+        }
+        el("block").dataset.kind = kind;
+        if (kind === "take") drawTake(block);
+        if (kind === "waiting") drawWaiting(block);
+        if (kind === "ending") drawEnding(block);
+
+        if (kind !== shown) {
+          // A new kind of block arrives; the same kind only changes.
+          el("block").style.animation = "none";
+          void el("block").offsetWidth;
+          el("block").style.animation = "";
+          shown = kind;
+        }
+
+        // The window is made the size the block came to, and shown then.
+        const box = el("stage").getBoundingClientRect();
+        invoke("take_block_fits", { width: Math.ceil(box.width), height: Math.ceil(box.height) });
+      }
+
+      el("act").addEventListener("click", () => invoke("take_block_act"));
+      el("later").addEventListener("click", () => invoke("take_block_later"));
+      // The web view's own menu has nothing to offer a block.
+      addEventListener("contextmenu", (event) => event.preventDefault());
+
+      // What the block shows arrives as it changes. A take that began before
+      // this page was ready is asked for once, and only counts if nothing
+      // newer has arrived by the time the answer does.
+      let heard = false;
+      listen("take-block", ({ payload }) => {
+        heard = true;
+        draw(payload);
+      });
+      invoke("take_block").then((block) => {
+        if (!heard) draw(block);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "take-block",
+  "description": "The take block hears what to draw. It is granted nothing else.",
+  "windows": ["take"],
+  "permissions": ["core:event:allow-listen"]
+}

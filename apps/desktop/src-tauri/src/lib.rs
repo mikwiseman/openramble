@@ -7,13 +7,18 @@
 pub mod adapters;
 pub mod commands;
 pub mod dictation;
+pub mod runner;
 pub mod session;
+pub mod take;
 
+use adapters::block_window;
 use adapters::hotkey::{Hotkey, HotkeyTracker};
 use dictation::Dictation;
 use ramble_core::hotkey::Action;
+use runner::Runner;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use take::TakeBlock;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
@@ -23,14 +28,10 @@ use tauri::Manager;
 /// rdev's listener never returns, so it owns a thread of its own. Everything it
 /// decides comes from [`HotkeyTracker`]; this closure only turns an action into
 /// a call.
-fn spawn_hotkey_listener(dictation: Arc<Dictation>, hotkey: Hotkey) {
+fn spawn_hotkey_listener(runner: Arc<Runner>, hotkey: Hotkey) {
     std::thread::spawn(move || {
         let origin = Instant::now();
         let tracker = Mutex::new(HotkeyTracker::new(hotkey));
-        // When the press happened, so a release can say how long the key was
-        // held — which is what separates "brushed the key" from "held it and the
-        // microphone gave nothing".
-        let pressed_at = Mutex::new(None::<Instant>);
 
         let result = rdev::listen(move |event| {
             let at = origin.elapsed();
@@ -45,36 +46,20 @@ fn spawn_hotkey_listener(dictation: Arc<Dictation>, hotkey: Hotkey) {
                 }
             };
 
-            let mut held_since = pressed_at
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
-
             match action {
-                Action::Press => {
-                    *held_since = Some(Instant::now());
-                    if let Err(error) = dictation.begin() {
-                        eprintln!("{error}");
-                        *held_since = None;
-                    }
-                }
-                Action::Release { .. } => {
-                    // `after` is the double-tap window a short tap should wait
-                    // out before committing. Hands-free is not wired yet, so the
-                    // take finishes immediately and the window is unused —
-                    // stated rather than silently dropped, because a release
-                    // that quietly did nothing is the bug this whole gesture
-                    // machine exists to prevent.
-                    let held = held_since.take().map(|at| at.elapsed()).unwrap_or_default();
-                    let outcome = dictation.finish(held);
-                    report(&outcome);
-                }
-                Action::AbortShortcut => {
-                    // The hold turned out to be a shortcut. Drop the recording
-                    // without inserting or announcing anything.
-                    *held_since = None;
-                    dictation.cancel();
-                }
-                Action::DoubleTap | Action::StopHandsFree | Action::None => {}
+                Action::Press => runner.key_down(false),
+                // Hands-free is not wired yet, so a second tap starts
+                // nothing. Over waiting words it is a tap like the first.
+                Action::DoubleTap => runner.key_down(true),
+                // `after` is the double-tap window a short tap should wait
+                // out before committing. With no hands-free the take finishes
+                // immediately and the window is unused — stated rather than
+                // silently dropped, because a release that quietly did nothing
+                // is the bug this whole gesture machine exists to prevent.
+                Action::Release { .. } => runner.key_up(),
+                // The hold turned out to be a shortcut.
+                Action::AbortShortcut => runner.shortcut(),
+                Action::StopHandsFree | Action::None => {}
             }
         });
 
@@ -90,23 +75,6 @@ fn spawn_hotkey_listener(dictation: Arc<Dictation>, hotkey: Hotkey) {
     });
 }
 
-fn report(outcome: &session::Outcome) {
-    match outcome {
-        session::Outcome::Inserted => {}
-        session::Outcome::Truncated => {
-            eprintln!("The recording reached the ten-minute limit and was cut short.")
-        }
-        session::Outcome::SilentInput => eprintln!(
-            "Nothing was recorded. The microphone may be muted or in use by another application."
-        ),
-        session::Outcome::TakenBack => {
-            eprintln!("Nothing left to insert after cleanup.")
-        }
-        session::Outcome::DroppedSilently => {}
-        session::Outcome::Failed(error) => eprintln!("{error}"),
-    }
-}
-
 /// Start the application.
 pub fn run() {
     let Some(dictation) = Dictation::new() else {
@@ -114,8 +82,6 @@ pub fn run() {
         return;
     };
     let dictation = Arc::new(dictation);
-
-    spawn_hotkey_listener(Arc::clone(&dictation), Hotkey::default());
 
     let for_setup = Arc::clone(&dictation);
     let for_exit = Arc::clone(&dictation);
@@ -155,6 +121,10 @@ pub fn run() {
             commands::set_start_at_login,
             commands::install_model,
             commands::cancel_install,
+            commands::take_block,
+            commands::take_block_fits,
+            commands::take_block_act,
+            commands::take_block_later,
         ])
         .setup(move |app| {
             let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
@@ -168,6 +138,19 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 apply_glass(&window);
             }
+
+            // The take block, and the key that drives it. The window is made
+            // before the key is watched, so the first take has somewhere to
+            // be shown. If it cannot be made, dictation still works: the
+            // words land as they did before there was a block.
+            if let Err(error) = block_window::create(app.handle()) {
+                eprintln!("The take block could not be created: {error}");
+            }
+            let for_block = app.handle().clone();
+            let block = TakeBlock::new(move |block| block_window::draw(&for_block, block));
+            let runner = Runner::new(Arc::clone(&for_setup), block, Hotkey::default());
+            app.manage(Arc::clone(&runner));
+            spawn_hotkey_listener(runner, Hotkey::default());
 
             let handle = app.handle().clone();
             let dictation = Arc::clone(&for_setup);

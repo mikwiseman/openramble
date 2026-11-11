@@ -182,6 +182,26 @@ pub fn insert(text: &str) -> Result<(), InjectError> {
     Ok(())
 }
 
+/// Put the text on the clipboard and leave it there.
+///
+/// For the two times the paste is the person's own: a desktop session that
+/// lets nothing type into other windows, and words leaving a take block that
+/// is the only place they are. No shortcut is sent and nothing is put back
+/// afterwards, because the person's paste is what reads it.
+pub fn copy(text: &str) -> Result<(), InjectError> {
+    // The same exclusion as a dictation: these are dictated words.
+    #[cfg(windows)]
+    {
+        write_excluded_from_history(text)
+    }
+    #[cfg(not(windows))]
+    {
+        arboard::Clipboard::new()
+            .and_then(|mut clipboard| clipboard.set_text(text.to_owned()))
+            .map_err(|error| InjectError::Clipboard(error.to_string()))
+    }
+}
+
 /// The paste shortcut for this platform.
 fn send_paste() -> Result<(), InjectError> {
     use enigo::{Direction, Enigo, Key, Keyboard, Settings};
