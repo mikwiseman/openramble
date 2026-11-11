@@ -649,14 +649,11 @@
 "A newer version of the same model with fewer recognition mistakes in English and Russian. Dictation keeps working while it downloads, and the current model is removed once Ultra is ready." = "A newer version of the same model with fewer recognition mistakes in English and Russian. Dictation keeps working while it downloads, and the current model is removed once Ultra is ready.";
 "The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. History keeps your recent dictations with their audio, as many as you choose to keep. Other dictation audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings." = "The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. History keeps your recent dictations with their audio, as many as you choose to keep. Other dictation audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings.";
 "%@ MB from Hugging Face. After verification, recognition works without the network." = "%@ MB from Hugging Face. After verification, recognition works without the network.";
-"Can't paste while typing is protected. Your words are waiting." = "Can't paste while typing is protected. Your words are waiting.";
 "The paste couldn't be confirmed in time. Your words are waiting and may already be in place." = "The paste couldn't be confirmed in time. Your words are waiting and may already be in place.";
 "A previous paste is still finishing. Your words are waiting." = "A previous paste is still finishing. Your words are waiting.";
 "The words couldn't be pasted. They are waiting." = "The words couldn't be pasted. They are waiting.";
 "The words couldn't be pasted, and the previous clipboard couldn't be restored. Your words are waiting." = "The words couldn't be pasted, and the previous clipboard couldn't be restored. Your words are waiting.";
 "Copied. Press ⌘V to paste." = "Copied. Press ⌘V to paste.";
-"Can't paste while %@ protects typing." = "Can't paste while %@ protects typing.";
-"Can't paste while typing is protected." = "Can't paste while typing is protected.";
 "Typing works again." = "Typing works again.";
 "No text field. Click one, then tap %@." = "No text field. Click one, then tap %@.";
 "Not pasted." = "Not pasted.";
@@ -696,7 +693,6 @@
 "Hold to talk. Double-press for hands-free." = "Hold to talk. Double-press for hands-free.";
 "Follows your Mac." = "Follows your Mac.";
 "Always this one, while it is connected." = "Always this one, while it is connected.";
-"Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app." = "Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app.";
 "Speech is recognized on this Mac. OpenRamble goes online only to download the speech model and to check for updates." = "Speech is recognized on this Mac. OpenRamble goes online only to download the speech model and to check for updates.";
 "Almost ready" = "Almost ready";
 "Set up" = "Set up";
@@ -755,3 +751,7 @@
 "The optional Hebrew model is Parakeet TDT 0.6B v3 Hebrew © Yakov Kolani, licensed under CC BY 4.0, trained on ivrit.ai audio. GGUF conversion by vladkens." = "The optional Hebrew model is Parakeet TDT 0.6B v3 Hebrew © Yakov Kolani, licensed under CC BY 4.0, trained on ivrit.ai audio. GGUF conversion by vladkens.";
 "Remove Hebrew?" = "Remove Hebrew?";
 "Dictation in other languages keeps working. Getting Hebrew back is another %@ MB over the network." = "Dictation in other languages keeps working. Getting Hebrew back is another %@ MB over the network.";
+"Didn't paste while typing is protected. Your words are waiting." = "Didn't paste while typing is protected. Your words are waiting.";
+"Didn't paste while %@ protects typing." = "Didn't paste while %@ protects typing.";
+"Didn't paste while typing is protected." = "Didn't paste while typing is protected.";
+"Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app." = "Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app.";

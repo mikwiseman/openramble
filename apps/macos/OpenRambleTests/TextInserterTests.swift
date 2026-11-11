@@ -32,18 +32,45 @@ final class TextInserterTests: XCTestCase {
 
     // MARK: - Failures before writing to buffer
 
-    /// Protected input: password field, terminal with keyboard protection.
+    /// Protected typing: a password field, a terminal with Secure Keyboard
+    /// Entry, or an app that left secure input on after a password.
     ///
-    /// Not a failure, but a normal situation - and the buffer cannot be touched.
-    func testScenario001() async {
+    /// It stops other apps from watching the keyboard. It does not stop a
+    /// posted ⌘V: measured on macOS 27, the paste lands with secure input held
+    /// by another process, by the app in front, and with a password field
+    /// focused. So the paste is sent like any other, and the read says whether
+    /// it landed. Refusing here used to fail every take for as long as some
+    /// app forgot to let go.
+    func testAPasteIsSentAndLandsWhileTypingIsProtected() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
+        let reader = BoardReader(board: board.name)
+        system.setSecureInput(true)
+        system.onPost = { reader.read(after: .milliseconds(20)) }
+
+        try await board.inserter(system: system).insert("DICTATED", into: target)
+
+        XCTAssertEqual(reader.texts, ["DICTATED"])
+        XCTAssertEqual(system.postedKeys.count, 1)
+        XCTAssertEqual(board.contents, "what the person copied")
+    }
+
+    /// ⌘V went out, nobody read it, and typing is protected. That may be why,
+    /// so the report says so: the app then offers a copy, and the person's own
+    /// ⌘V is the way through whatever this macOS does with posted keys.
+    func testAPasteNobodyReadsWhileTypingIsProtectedIsReportedAsProtected() async throws {
+        let board = RealBoard(holding: "what the person copied")
+        defer { board.release() }
         system.setSecureInput(true)
 
         await XCTAssertThrowsErrorAsync(
-            try await inserter.insert("hello", into: target),
-            expected: TextInsertionError.secureInputActive
+            try await board.inserter(system: system, readLimit: .milliseconds(150))
+                .insert("DICTATED", into: target),
+            expected: .secureInputActive
         )
-        XCTAssertEqual(pasteboard.writtenTexts, [])
-        XCTAssertEqual(system.postedKeys.count, 0)
+
+        XCTAssertEqual(system.postedKeys.count, 1, "the paste was tried first")
+        XCTAssertEqual(board.contents, "what the person copied")
     }
 
     func testScenario002() async {
@@ -271,14 +298,14 @@ final class TextInserterTests: XCTestCase {
         XCTAssertEqual(system.postedKeys.count, 0)
     }
 
-    func testScenario017() async {
+    /// Return follows the paste, and the paste is sent while typing is
+    /// protected, so Return is too.
+    func testReturnIsPressedWhileTypingIsProtected() async throws {
         system.setSecureInput(true)
 
-        await XCTAssertThrowsErrorAsync(
-            try await inserter.pressReturn(),
-            expected: TextInsertionError.secureInputActive
-        )
-        XCTAssertEqual(system.postedKeys.count, 0)
+        try await inserter.pressReturn()
+
+        XCTAssertEqual(system.postedKeys.count, 1)
     }
 
     func testScenario018() async {

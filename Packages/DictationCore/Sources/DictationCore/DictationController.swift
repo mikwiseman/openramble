@@ -1900,8 +1900,9 @@ public final class DictationController {
         if let insertion = error as? TextInsertionError {
             switch insertion {
             case .secureInputActive:
-                // Not a failure, but a normal situation: the password field is active.
-                message = L10n.tr("Can't paste while typing is protected. Your words are waiting.")
+                // Sent and read by nobody while typing is protected. The
+                // words wait, and a tap copies them for the person's own ⌘V.
+                message = L10n.tr("Didn't paste while typing is protected. Your words are waiting.")
             case .insertionInProgress:
                 message = L10n.tr("A previous paste is still finishing. Your words are waiting.")
             case .clipboardRestoreFailed:
@@ -1920,6 +1921,7 @@ public final class DictationController {
             message: message,
             recoverableText: text,
             wordsDidNotLand: true,
+            reason: (error as? TextInsertionError)?.failureReason ?? .pasteFailed,
             insertionFailure: error as? TextInsertionError
         )
     }

@@ -45,6 +45,16 @@ the model was resident, hundreds when it came back from swap.
 `lostAudioMilliseconds` is audio the microphone produced that the capture never
 received, read from the device's own sample times: zero on an ordinary take.
 
+After 0.38.0, completed dictations also include `readMilliseconds`: key-up until
+the pasted text was first read by anyone. Minus `pasteMilliseconds` it is how
+long the app in front took to accept the paste, which is the number that says
+whether the clipboard comes back too soon for a slow application. A
+`dictationWarning` now carries a `failureReason` when a paste did not land:
+`pasteUnread` (sent, read by nobody), `pasteUnreadWhileTypingProtected`,
+`pasteTargetChanged`, `pasteTargetGone`, `pasteBehindAnotherPaste`,
+`pasteModifiersHeld`, `pasteWithoutAccessibility`, `pasteClipboardFailed` or
+`pasteFailed`. A case name only: no words and no application name.
+
 The ZIP contains `system.json`, `events.jsonl`, `README.txt`, and at most five
 redacted Apple `.ips` crash reports (each source limited to 5 MB, last seven days).
 Only reports with OpenRamble's bundle identifier and process name are accepted;

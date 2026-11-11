@@ -509,8 +509,11 @@ public struct TargetApplication: Sendable, Equatable {
 
 public enum TextInsertionError: Error, Sendable, Equatable {
     case accessibilityPermissionDenied
-    /// Protected input is active - a password field or a terminal with keyboard protection.
-    /// You cannot insert there, and this is not a failure, but a normal situation.
+    /// ⌘V was sent, nobody read the clipboard within the limit, and typing is
+    /// protected: a password field, a terminal with keyboard protection, or
+    /// an app that left secure input on. The paste is always tried first;
+    /// this is what an unread one is called while protection is on, so that
+    /// the app can offer a copy for the person's own ⌘V.
     case secureInputActive
     case clipboardWriteFailed
     /// Before Paste the clipboard could not be returned; no text inserted.
@@ -677,6 +680,28 @@ public enum DictationFailureReason: String, Codable, Sendable {
     case accessibilityRevoked, microphoneRevoked, accessibilityRepair, relaunch
     case recordingStart, recordingPause, recordingResume, recordingFiling, recordingFailed
     case retranscription, clipboard, export, fileOperation, storage, dictionary
+
+    /// A paste that did not land, by kind. "It did not paste" is the report
+    /// people send, and the journal could not say which of these it was.
+    case pasteUnread, pasteUnreadWhileTypingProtected, pasteTargetChanged, pasteTargetGone
+    case pasteBehindAnotherPaste, pasteModifiersHeld, pasteWithoutAccessibility
+    case pasteClipboardFailed, pasteFailed
+}
+
+extension TextInsertionError {
+    /// The journal's name for this failure.
+    public var failureReason: DictationFailureReason {
+        switch self {
+        case .pasteNotRead: .pasteUnread
+        case .secureInputActive: .pasteUnreadWhileTypingProtected
+        case .targetChanged: .pasteTargetChanged
+        case .targetUnavailable: .pasteTargetGone
+        case .insertionInProgress: .pasteBehindAnotherPaste
+        case .modifiersStillHeld: .pasteModifiersHeld
+        case .accessibilityPermissionDenied: .pasteWithoutAccessibility
+        case .clipboardWriteFailed, .clipboardRestoreFailed: .pasteClipboardFailed
+        }
+    }
 }
 
 extension DictationError {

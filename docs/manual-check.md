@@ -66,11 +66,12 @@ for the check.
    panel says "Pasted into …" once. Repeat, and hold the key instead: a new
    take starts and the waiting words are in History. Repeat, and choose Later:
    the panel says "Kept in History. ⌃⌘V pastes it.", and ⌃⌘V pastes it.
-   With Terminal's Secure Keyboard Entry on, dictate into another app: the
-   panel names Terminal, a tap copies, your own ⌘V pastes, and the panel does
-   not appear in a screenshot while it shows the words. Turn Secure Keyboard
-   Entry off while the words wait: the key's label changes from copies to
-   pastes.
+   With Terminal's Secure Keyboard Entry on, dictate into Terminal and into
+   another app: the words paste as usual, and ⌃⌘V pastes the last take. Still
+   protected, dictate with no text field focused: the panel names Terminal, a
+   tap copies, your own ⌘V pastes, and the panel does not appear in a
+   screenshot while it shows the words. Turn Secure Keyboard Entry off while
+   the words wait: the key's label changes from copies to pastes.
 9. Confirm clipboard text, rich content, files, and multiple items are restored
    after insertion and do not appear on another device through Universal
    Clipboard. Verify password-manager values, lazy file promises, and content

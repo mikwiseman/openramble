@@ -5,12 +5,14 @@ import IOKit
 /// Whether typing is protected right now, and by whom.
 ///
 /// macOS calls it secure input: a password field, or a terminal with Secure
-/// Keyboard Entry on. While it lasts, no app can post keystrokes, so a paste
-/// cannot land, while the person's own ⌘V still does. It is one system-wide
-/// state: an app in the background can hold it over the app in front.
+/// Keyboard Entry on. It keeps other apps from watching the keyboard. It does
+/// not keep them from posting a paste: on macOS 27 a posted ⌘V lands while it
+/// is on, so the app always tries, and this is consulted only after a paste
+/// nobody read. It is one system-wide state: an app in the background can
+/// hold it over the app in front, long after its password was typed.
 public struct TypingProtection: Equatable, Sendable {
     public var isOn: Bool
-    /// The app that most likely holds it, for "Can't paste while Terminal
+    /// The app that most likely holds it, for "Didn't paste while Terminal
     /// protects typing." A best guess, and `nil` whenever it is not known.
     public var holder: String?
 

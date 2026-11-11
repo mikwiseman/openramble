@@ -35,8 +35,9 @@ struct WaitingWords: Equatable {
 
     /// What a tap of the dictation key does while these words wait.
     enum Action: Equatable {
-        /// Our own ⌘V cannot land while typing is protected. The person's can,
-        /// so the key copies and their ⌘V pastes.
+        /// Our ⌘V went out and nobody read it while typing is protected.
+        /// Whatever stopped it, the person's own ⌘V gets through, so the key
+        /// copies and their ⌘V pastes.
         case copy
         case paste
     }
@@ -67,9 +68,9 @@ struct WaitingWords: Equatable {
         if isCopied { return L10n.tr("Copied. Press ⌘V to paste.") }
         switch cause {
         case let .typingProtected(holder?):
-            return L10n.tr("Can't paste while %@ protects typing.", holder)
+            return L10n.tr("Didn't paste while %@ protects typing.", holder)
         case .typingProtected(nil):
-            return L10n.tr("Can't paste while typing is protected.")
+            return L10n.tr("Didn't paste while typing is protected.")
         case .typingWorksAgain:
             return L10n.tr("Typing works again.")
         case .noTextField:
@@ -109,9 +110,6 @@ struct WaitingWords: Equatable {
 enum TakeOutcome: Equatable {
     /// The words landed after waiting. `app` is where, when known.
     case pasted(into: String?)
-    /// The words were put on the clipboard by the paste-last chord while
-    /// typing was protected.
-    case copied
     /// The person chose Later, or pressed Escape. `chord` is the paste-last
     /// shortcut, when one is set. `inHistory` is false for the rare take
     /// History could not keep: then the chord is the only way back.
@@ -120,7 +118,6 @@ enum TakeOutcome: Equatable {
     var glyph: StateGlyph {
         switch self {
         case .pasted: return .pasted
-        case .copied: return .copied
         case .kept: return .kept
         }
     }
@@ -129,7 +126,6 @@ enum TakeOutcome: Equatable {
         switch self {
         case let .pasted(app?): return L10n.tr("Pasted into %@.", app)
         case .pasted(nil): return L10n.tr("Pasted.")
-        case .copied: return L10n.tr("Copied. Press ⌘V to paste.")
         case let .kept(true, chord?): return L10n.tr("Kept in History. %@ pastes it.", chord)
         case .kept(true, nil): return L10n.tr("Kept in History.")
         case let .kept(false, chord?): return L10n.tr("%@ pastes it until you quit.", chord)
@@ -141,7 +137,6 @@ enum TakeOutcome: Equatable {
     var duration: Duration {
         switch self {
         case .pasted: return .milliseconds(700)
-        case .copied: return .seconds(4)
         case .kept: return .seconds(3)
         }
     }
