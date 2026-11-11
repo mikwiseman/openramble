@@ -3146,7 +3146,7 @@ dependencies = [
 
 [[package]]
 name = "openramble-cli"
-version = "0.23.0"
+version = "0.37.0"
 dependencies = [
  "httparse",
  "ramble-engine",
@@ -3160,7 +3160,7 @@ dependencies = [
 
 [[package]]
 name = "openramble-desktop"
-version = "0.23.0"
+version = "0.37.0"
 dependencies = [
  "arboard",
  "clipboard-win",
@@ -3617,7 +3617,7 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "ramble-audio"
-version = "0.23.0"
+version = "0.37.0"
 dependencies = [
  "hound",
  "rubato",
@@ -3626,7 +3626,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-core"
-version = "0.23.0"
+version = "0.37.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3634,7 +3634,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-engine"
-version = "0.23.0"
+version = "0.37.0"
 dependencies = [
  "ramble-audio",
  "ramble-model",
@@ -3644,7 +3644,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-ffi"
-version = "0.23.0"
+version = "0.37.0"
 dependencies = [
  "ramble-core",
  "ramble-history",
@@ -3656,7 +3656,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-history"
-version = "0.23.0"
+version = "0.37.0"
 dependencies = [
  "ramble-model",
  "serde",
@@ -3666,7 +3666,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-model"
-version = "0.23.0"
+version = "0.37.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3676,7 +3676,7 @@ dependencies = [
 
 [[package]]
 name = "ramble-text"
-version = "0.23.0"
+version = "0.37.0"
 dependencies = [
  "serde",
  "serde_json",
