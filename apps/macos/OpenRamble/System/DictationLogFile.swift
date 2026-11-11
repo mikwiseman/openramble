@@ -53,6 +53,11 @@ final class DictationLogFile: @unchecked Sendable {
         /// Key-up → ⌘V sent. Sent, not landed: the target app may take the
         /// paste later, or never.
         var pasteMilliseconds: Int? = nil
+        /// Key-up → the pasted text first read by anyone. The difference from
+        /// `pasteMilliseconds` is how long the target took; a smaller number
+        /// means something read the board before ⌘V went out, and then the
+        /// target's own read is not seen at all.
+        var readMilliseconds: Int? = nil
         /// Bytes this process read from disk between key-down and the text.
         var diskReadBytes: UInt64? = nil
         /// How long the engine had been idle when the key went down.
@@ -287,6 +292,7 @@ extension DictationLogFile.Recognition {
             preparationMilliseconds: phases.enginePreparation.flatMap { ms($0.appSeconds) },
             microphoneStartupMilliseconds: report.microphoneStartup.flatMap { ms($0.appSeconds) },
             pasteMilliseconds: report.toPasteDispatched.flatMap { ms($0.appSeconds) },
+            readMilliseconds: report.toFirstRead.flatMap { ms($0.appSeconds) },
             diskReadBytes: paging?.diskReadBytes,
             engineIdleSeconds: paging?.engineIdle.map { Int($0.components.seconds) },
             lostAudioMilliseconds: phases.lostAudio.flatMap { ms($0.appSeconds) }

@@ -463,7 +463,11 @@ public final class AppState: ObservableObject {
             if lastNotice?.kind == .failure {
                 diagnostics.record(.dictationFailed, failureReason: lastNotice?.reason)
             }
-            if lastNotice?.kind == .warning { diagnostics.record(.dictationWarning) }
+            // The reason is a case name from an allowlist, never the message:
+            // which kind of paste failed is what a report has to answer.
+            if lastNotice?.kind == .warning {
+                diagnostics.record(.dictationWarning, failureReason: lastNotice?.reason)
+            }
         }
     }
     @Published public private(set) var isPreparingEngine = false
@@ -541,7 +545,7 @@ public final class AppState: ObservableObject {
 
     /// Words that could not land, waiting on the take block where the person
     /// is working. A tap of the dictation key pastes them, or copies them
-    /// while typing is protected; Later keeps them in History; holding the
+    /// after a paste nobody read while typing is protected; Later keeps them in History; holding the
     /// key starts a new take. Nothing here sends anyone to the menu bar.
     @Published private(set) var waitingWords: WaitingWords? {
         didSet {
@@ -879,9 +883,8 @@ public final class AppState: ObservableObject {
 
     /// The shortcut that pastes the last take anywhere, or nothing.
     ///
-    /// ⌃⌘V by default: one key away from the paste it stands in for. While
-    /// typing is protected it copies instead, because only the person's own
-    /// ⌘V can land then. Clearing it is Off.
+    /// ⌃⌘V by default: one key away from the paste it stands in for.
+    /// Clearing it is Off.
     @Published public var lastTakeShortcut: KeyCombination? {
         didSet {
             guard oldValue != lastTakeShortcut else { return }
@@ -1915,7 +1918,9 @@ public final class AppState: ObservableObject {
             recoverableText: said.recoverableText,
             recoveryAudio: said.recoveryAudio,
             wordsDidNotLand: said.wordsDidNotLand,
-            reason: said.reason ?? .storage,
+            // A paste's own reason gives way here: that the take is kept
+            // nowhere else is the fact the block has to act on.
+            reason: said.insertionFailure != nil ? .storage : (said.reason ?? .storage),
             insertionFailure: said.insertionFailure
         )
     }
@@ -2090,35 +2095,28 @@ public final class AppState: ObservableObject {
     /// Paste the last take into the app in front: the paste-last chord, the
     /// menu's first row, and a tap of the key while words wait.
     ///
-    /// While typing is protected a paste of ours cannot land and the person's
-    /// own ⌘V can, so the words are copied instead and the block says so.
+    /// Protected typing does not change this. A paste lands while it is on,
+    /// so it is always tried; only one that nobody read turns into a copy,
+    /// and that is the block's business, not this function's.
     public func pasteLastTake() {
         guard dictationState == .idle, !isRecoveryOperationActive else { return }
         guard let words = lastTakeText else {
             notify(DictationNotice(kind: .info, message: L10n.tr("Nothing dictated yet.")))
             return
         }
-        let protection = typingProtection()
-        guard !protection.isOn else {
-            copyWhileTypingIsProtected(words, protection: protection)
-            return
-        }
         paste(words)
     }
 
-    private func copyWhileTypingIsProtected(_ words: String, protection: TypingProtection) {
+    /// The block's copy: a paste was sent, nobody read it, and typing is
+    /// protected. The person's own ⌘V gets through whatever stopped ours.
+    private func copyWaitingWords() {
+        guard let waiting = waitingWords else { return }
         do {
-            try copyText(words)
+            try copyText(waiting.words)
         } catch {
             notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
             return
         }
-        guard waitingWords != nil else {
-            // The chord, with no block up: say where the words went.
-            waitingPresenter?.showOutcome(.copied)
-            return
-        }
-        waitingWords?.cause = .typingProtected(by: protection.holder)
         waitingWords?.isCopied = true
         // The words are on the clipboard and in History. The block has said
         // so; it does not need to stay in the way of the ⌘V it asked for.
@@ -2136,11 +2134,10 @@ public final class AppState: ObservableObject {
         failure: TextInsertionError?,
         keptNowhereElse: Bool? = nil
     ) {
-        let protection = typingProtection()
-        var cause = WaitingWords.Cause(failure, protectedBy: protection.holder)
-        // Whatever the paste reported, protected typing is the reason that
-        // decides what the key can do now.
-        if protection.isOn { cause = .typingProtected(by: protection.holder) }
+        // What the paste reported is the reason. It names protected typing
+        // only for a paste that was sent and that nobody read; every other
+        // failure is tried again by the key, protected or not.
+        let cause = WaitingWords.Cause(failure, protectedBy: typingProtection().holder)
         if recoveredText != words { recoveredText = words }
         waitingWords = WaitingWords(
             words: words,
@@ -2153,7 +2150,10 @@ public final class AppState: ObservableObject {
     /// A tap of the dictation key, or a click on the block's first button.
     public func performWaitingAction() {
         guard let waiting = waitingWords, !waiting.isCopied else { return }
-        pasteLastTake()
+        switch waiting.action {
+        case .copy: copyWaitingWords()
+        case .paste: pasteLastTake()
+        }
     }
 
     /// Later, or Escape: the block leaves and the words stay in History, one
@@ -2280,7 +2280,8 @@ public final class AppState: ObservableObject {
                 lastNotice = DictationNotice(
                     kind: .warning,
                     message: L10n.tr("The paste couldn't be confirmed in time. Your words are waiting and may already be in place."),
-                    recoverableText: words
+                    recoverableText: words,
+                    reason: .pasteFailed
                 )
                 wordsWait(words, failure: nil)
             } catch TextInsertionError.clipboardRestoreFailed {
@@ -2290,7 +2291,8 @@ public final class AppState: ObservableObject {
                     DictationNotice(
                         kind: .warning,
                         message: L10n.tr("The previous clipboard couldn't be restored."),
-                        wordsDidNotLand: false
+                        wordsDidNotLand: false,
+                        reason: .pasteClipboardFailed
                     )
                 )
                 wordsWait(words, failure: .clipboardRestoreFailed)
@@ -2299,6 +2301,7 @@ public final class AppState: ObservableObject {
                     kind: .warning,
                     message: L10n.tr("The words couldn't be pasted. They are waiting."),
                     recoverableText: words,
+                    reason: (error as? TextInsertionError)?.failureReason ?? .pasteFailed,
                     insertionFailure: error as? TextInsertionError
                 )
                 wordsWait(words, failure: error as? TextInsertionError)

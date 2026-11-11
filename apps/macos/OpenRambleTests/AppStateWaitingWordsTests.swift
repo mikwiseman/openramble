@@ -96,12 +96,22 @@ final class AppStateWaitingWordsTests: XCTestCase {
         XCTAssertEqual(harness.copied, [], "nothing reaches the clipboard unasked")
     }
 
-    /// Whatever the paste itself reported, protected typing is the reason
-    /// that decides what the key can do.
-    func testProtectedTypingIsTheReasonWhateverThePasteReported() async throws {
-        harness.typingProtection = TypingProtection(isOn: true, holder: nil)
-        let state = try await takeThatCannotLand(.pasteNotRead)
-        XCTAssertEqual(state.waitingWords?.cause, .typingProtected(by: nil))
+    /// What the paste reported is the reason. Protected typing alone decides
+    /// nothing: a paste lands while it is on, so the key tries the paste again
+    /// unless the paste itself was sent and went unread.
+    func testProtectedTypingAloneDoesNotTurnTheKeyIntoACopy() async throws {
+        harness.typingProtection = TypingProtection(isOn: true, holder: "Terminal")
+        let state = try await takeThatCannotLand(.targetChanged)
+        XCTAssertEqual(state.waitingWords?.cause, .notPasted)
+        XCTAssertEqual(state.waitingWords?.action, .paste)
+
+        await harness.inserter.setError(nil)
+        await tap()
+
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Ping test"], "the tap pasted, protected or not")
+        XCTAssertEqual(harness.copied, [])
+        XCTAssertNil(state.waitingWords)
     }
 
     /// Change the dictation key while words wait, and the block names the
@@ -111,6 +121,21 @@ final class AppStateWaitingWordsTests: XCTestCase {
         state.hotkey = .rightOption
         XCTAssertEqual(block.key, .rightOption)
         XCTAssertEqual(block.shown.last, state.waitingWords)
+    }
+
+    /// "It did not paste" has several causes, and the journal names the one
+    /// this take met. A case name only: never the words, never the message.
+    func testAPasteThatDidNotLandIsJournaledByKind() async throws {
+        let state = try await takeThatCannotLand(.targetChanged)
+
+        let warnings = state.diagnostics.snapshot().data.split(separator: 10).compactMap { line -> String? in
+            guard let entry = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any],
+                  entry["event"] as? String == "dictationWarning" else { return nil }
+            return entry["failureReason"] as? String ?? "none"
+        }
+        XCTAssertEqual(warnings, ["pasteTargetChanged"])
+        let journal = String(decoding: state.diagnostics.snapshot().data, as: UTF8.self)
+        XCTAssertFalse(journal.contains("Ping"), "the words stay out of the journal")
     }
 
     // MARK: A tap
@@ -337,17 +362,23 @@ final class AppStateWaitingWordsTests: XCTestCase {
 
     // MARK: The chord
 
-    /// ⌃⌘V over waiting words is the tap: it copies while typing is
-    /// protected, which is the one time a key event monitor would not hear it.
-    func testTheChordOverProtectedWordsCopies() async throws {
+    /// ⌃⌘V is always a paste, whatever the block offers: it is named "Paste
+    /// last take", and a paste lands while typing is protected.
+    func testTheChordPastesEvenOverProtectedWords() async throws {
         harness.typingProtection = TypingProtection(isOn: true, holder: "Terminal")
         let state = try await takeThatCannotLand(.secureInputActive)
+        await harness.inserter.setError(nil)
 
         harness.copyMonitor.onPress?()
-        await settle()
+        for _ in 0..<400 where state.waitingWords != nil {
+            try await Task.sleep(for: .milliseconds(5))
+        }
 
-        XCTAssertEqual(harness.copied, ["Ping test"])
-        XCTAssertEqual(state.waitingWords?.isCopied, true)
+        let inserted = await harness.inserter.insertedTexts
+        XCTAssertEqual(inserted, ["Ping test"])
+        XCTAssertEqual(harness.copied, [], "nothing was copied")
+        XCTAssertNil(state.waitingWords)
+        XCTAssertEqual(block.outcomes, [.pasted(into: "Notes")])
     }
 
     // MARK: Leaving

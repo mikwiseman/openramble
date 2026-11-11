@@ -887,6 +887,9 @@ final class DictationControllerTests: XCTestCase {
         // The cause travels with the notice, so the interface can offer the
         // action that works now: copy, while typing is protected.
         XCTAssertEqual(notices.last?.insertionFailure, .secureInputActive)
+        // ...and, as a case name, into the journal: "it did not paste" has
+        // nine causes, and a report has to say which.
+        XCTAssertEqual(notices.last?.reason, .pasteUnreadWhileTypingProtected)
         XCTAssertEqual(notices.last?.recoverableText, controller.pendingRecovery?.text)
         XCTAssertTrue(
             notices.contains { $0.message.contains("typing is protected") },

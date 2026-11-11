@@ -215,9 +215,10 @@ final class LastTakeShortcutTests: XCTestCase {
         XCTAssertEqual(state.lastTakeText, "Ping test", "still the last take: the chord pastes it again")
     }
 
-    /// While typing is protected a paste of ours cannot land and the person's
-    /// own ⌘V can. The chord copies, and says so.
-    func testTheChordCopiesWhileTypingIsProtected() async throws {
+    /// Protected typing does not stop a paste, so the chord pastes then as
+    /// it does at any other time. It used to copy instead, on the belief that
+    /// a posted ⌘V could not land.
+    func testTheChordPastesWhileTypingIsProtected() async throws {
         try harness.installModelMarker()
         let state = harness.makeState()
         await state.refreshModelState()
@@ -225,11 +226,14 @@ final class LastTakeShortcutTests: XCTestCase {
         harness.typingProtection = TypingProtection(isOn: true, holder: "Terminal")
 
         harness.copyMonitor.onPress?()
-        await settle()
+        for _ in 0..<400 {
+            if await harness.inserter.insertedTexts.count == 2 { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
 
         let inserted = await harness.inserter.insertedTexts
-        XCTAssertEqual(inserted, ["Ping test"], "only the take itself")
-        XCTAssertEqual(harness.copied, ["Ping test"])
+        XCTAssertEqual(inserted, ["Ping test", "Ping test"], "the take, then the chord's paste of it")
+        XCTAssertEqual(harness.copied, [], "nothing was copied")
     }
 
     private func dictate(_ state: AppState, untilHistoryHas count: Int) async throws {

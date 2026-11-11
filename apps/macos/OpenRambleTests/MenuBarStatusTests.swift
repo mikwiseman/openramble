@@ -223,7 +223,7 @@ final class MenuHandsFreeLineTests: XCTestCase {
 /// was still alive. The menu holds it as long as needed.
 @MainActor
 final class MenuRecoveryLineTests: XCTestCase {
-    private let reason = "Can't paste while Terminal protects typing."
+    private let reason = "Didn't paste while Terminal protects typing."
 
     private func line(text: Bool = false) -> String {
         MenuBarStatus.statusLine(
@@ -238,7 +238,7 @@ final class MenuRecoveryLineTests: XCTestCase {
     /// The menu repeats what the block where the person works already says,
     /// for whoever came to the menu first.
     func testScenario013() {
-        XCTAssertEqual(line(text: true), "Words waiting. Can't paste while Terminal protects typing.")
+        XCTAssertEqual(line(text: true), "Words waiting. Didn't paste while Terminal protects typing.")
     }
 
     func testScenario016() {

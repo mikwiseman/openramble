@@ -662,7 +662,7 @@ final class OverlayModelWaitingTests: XCTestCase {
         model.setWaiting(waiting)
         XCTAssertEqual(
             announcer.announcements.filter(\.urgent).map(\.message),
-            ["Words waiting. Can't paste while Terminal protects typing. Right Command copies."]
+            ["Words waiting. Didn't paste while Terminal protects typing. Right Command copies."]
         )
         XCTAssertFalse(announcer.messages.joined().contains("Ping"))
     }

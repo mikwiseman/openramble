@@ -12,14 +12,14 @@ import XCTest
 final class WaitingWordsTests: XCTestCase {
     private let words = "The deploy passed. Let's ship the menu bar fix on Monday."
 
-    /// Our ⌘V cannot land while typing is protected. The person's own can,
-    /// so the key copies.
+    /// Our ⌘V went out and nobody read it while typing is protected. The
+    /// person's own gets through whatever stopped it, so the key copies.
     func testProtectedTypingMakesTheKeyCopy() {
         let waiting = WaitingWords(words: words, cause: .init(.secureInputActive, protectedBy: "Terminal"))
         XCTAssertEqual(waiting.cause, .typingProtected(by: "Terminal"))
         XCTAssertEqual(waiting.action, .copy)
         XCTAssertEqual(waiting.actionVerb, "copies")
-        XCTAssertEqual(waiting.reason(key: "Right ⌘"), "Can't paste while Terminal protects typing.")
+        XCTAssertEqual(waiting.reason(key: "Right ⌘"), "Didn't paste while Terminal protects typing.")
         XCTAssertEqual(waiting.glyph, .waiting)
     }
 
@@ -27,7 +27,7 @@ final class WaitingWordsTests: XCTestCase {
     /// sometimes there is none to make. The sentence never invents one.
     func testAnUnknownHolderIsNotNamed() {
         let waiting = WaitingWords(words: words, cause: .init(.secureInputActive))
-        XCTAssertEqual(waiting.reason(key: "Right ⌘"), "Can't paste while typing is protected.")
+        XCTAssertEqual(waiting.reason(key: "Right ⌘"), "Didn't paste while typing is protected.")
     }
 
     /// ⌘V was sent and nothing read it: focus is not in a text field. The
@@ -77,7 +77,7 @@ final class WaitingWordsTests: XCTestCase {
         let label = waiting.accessibilityLabel(keyName: "Right Command", key: "Right ⌘")
         XCTAssertEqual(
             label,
-            "Words waiting. Can't paste while Terminal protects typing. Right Command copies."
+            "Words waiting. Didn't paste while Terminal protects typing. Right Command copies."
         )
         XCTAssertFalse(label.contains("deploy"))
     }
@@ -89,7 +89,7 @@ final class WaitingWordsTests: XCTestCase {
         L10n.shared.language = .russian
 
         let blocked = WaitingWords(words: words, cause: .typingProtected(by: "Терминал"))
-        XCTAssertEqual(blocked.reason(key: "Правый ⌘"), "Нельзя вставить, пока Терминал защищает ввод.")
+        XCTAssertEqual(blocked.reason(key: "Правый ⌘"), "Не вставилось, пока Терминал защищает ввод.")
         XCTAssertEqual(blocked.actionVerb, "скопирует")
         XCTAssertEqual(DictationHotkey.rightCommand.shortTitle, "Правый ⌘")
         XCTAssertEqual(
@@ -109,8 +109,6 @@ final class WaitingWordsTests: XCTestCase {
         XCTAssertEqual(TakeOutcome.pasted(into: "Notes").glyph.colorRole, .success)
         XCTAssertEqual(TakeOutcome.kept(chord: "⌃⌘V").glyph, .kept)
         XCTAssertNil(TakeOutcome.kept(chord: "⌃⌘V").glyph.colorRole)
-        XCTAssertEqual(TakeOutcome.copied.glyph, .copied)
-        XCTAssertNil(TakeOutcome.copied.glyph.colorRole)
     }
 
     func testOutcomesSayWhereTheWordsAre() {
@@ -118,7 +116,6 @@ final class WaitingWordsTests: XCTestCase {
         XCTAssertEqual(TakeOutcome.pasted(into: nil).message, "Pasted.")
         XCTAssertEqual(TakeOutcome.kept(chord: "⌃⌘V").message, "Kept in History. ⌃⌘V pastes it.")
         XCTAssertEqual(TakeOutcome.kept(chord: nil).message, "Kept in History.")
-        XCTAssertEqual(TakeOutcome.copied.message, "Copied. Press ⌘V to paste.")
     }
 
     /// The rare take History could not keep: the block says so, and Later

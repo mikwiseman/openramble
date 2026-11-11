@@ -117,7 +117,7 @@ private struct GeneralSettings: View {
 
             BlockSection(
                 L10n.tr("Shortcuts"),
-                footer: L10n.tr("Paste last take puts your newest dictation into the app in front, and copies it while a password field or terminal protects typing. Record starts and stops a recording from any app.")
+                footer: L10n.tr("Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app.")
             ) {
                 BlockRow(
                     title: L10n.tr("Paste last take"),

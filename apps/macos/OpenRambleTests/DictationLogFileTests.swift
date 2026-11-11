@@ -190,6 +190,7 @@ final class DictationLogFileTests: XCTestCase {
         let measured = try XCTUnwrap(DictationLogFile.Recognition(report: DictationSpeedReport(
             toRecognizedText: .milliseconds(170),
             toPasteDispatched: .milliseconds(190),
+            toFirstRead: .milliseconds(214),
             microphoneStartup: .milliseconds(212),
             phases: phases
         )))
@@ -211,6 +212,10 @@ final class DictationLogFileTests: XCTestCase {
         XCTAssertEqual(lines.count, 2)
         XCTAssertTrue(lines[0].contains("\"microphoneStartupMilliseconds\":212"), lines[0])
         XCTAssertTrue(lines[0].contains("\"pasteMilliseconds\":190"), lines[0])
+        // How long the target took to read the paste: the number that says
+        // whether the clipboard comes back too soon for a slow application.
+        XCTAssertTrue(lines[0].contains("\"readMilliseconds\":214"), lines[0])
+        XCTAssertFalse(lines[1].contains("readMilliseconds"), lines[1])
         XCTAssertTrue(lines[0].contains("\"preparationMilliseconds\":3"), lines[0])
         XCTAssertFalse(lines[1].contains("microphoneStartupMilliseconds"), lines[1])
         XCTAssertFalse(lines[1].contains("pasteMilliseconds"), lines[1])

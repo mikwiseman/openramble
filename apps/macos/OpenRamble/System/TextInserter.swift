@@ -334,8 +334,10 @@ public struct HostOnlyPasteboard: DictationPasteboard {
 /// doing at the computer right now: is the password field open, what keys
 /// clamped, whether the application is alive, where we are aiming.
 public protocol InputSystem: Sendable {
-    /// Secure input: password field, terminal with keyboard protection, manager
-    /// passwords. The system prohibits both sending events and reading the keyboard there.
+    /// Secure input: a password field, a terminal with keyboard protection, a
+    /// password manager. The system keeps other apps from reading the keyboard
+    /// then. A posted ⌘V still lands (measured on macOS 27), so this is asked
+    /// only after a paste nobody read, to choose what to offer.
     var isSecureInputEnabled: Bool { get }
     var isAccessibilityTrusted: Bool { get }
     func frontmostApplication() -> TargetApplication?
@@ -639,10 +641,14 @@ public struct TextInserter: TextInserting {
         }
         defer { operationLane.release() }
 
-        // Protected input is not a failure, but a normal situation.
-        guard !system.isSecureInputEnabled else {
-            throw TextInsertionError.secureInputActive
-        }
+        // Protected typing (secure input) is no reason to hold back. It keeps
+        // other apps from watching the keyboard; it does not stop a posted
+        // ⌘V. Measured on macOS 27 with a text field in front: the paste
+        // landed with secure input held by another process, by the app in
+        // front, and with a password field focused. This code used to refuse
+        // on the opposite belief, and every take failed for as long as some
+        // app forgot to let go after a password. The read below says whether
+        // the paste landed, protected or not.
         guard system.isAccessibilityTrusted else {
             throw TextInsertionError.accessibilityPermissionDenied
         }
@@ -653,7 +659,7 @@ public struct TextInserter: TextInserting {
         try await activate(target)
         try Task.checkCancellation()
         try validateTarget(target)
-        try validateProtectedState()
+        try validateAccessibility()
         // Read once the target is in front: the layout follows the document.
         let pasteKey = await system.pasteKeyCode()
 
@@ -669,7 +675,7 @@ public struct TextInserter: TextInserting {
             // The last check is performed after changing the clipboard and directly
             // before an irreversible event Cmd+V.
             try validateTarget(target)
-            try validateProtectedState()
+            try validateAccessibility()
             try Task.checkCancellation()
             try system.post(keyCode: pasteKey, flags: .maskCommand)
             // Header: from now on, the text is in someone else's window.
@@ -701,7 +707,12 @@ public struct TextInserter: TextInserting {
         guard let firstReadAt = pasteboard.firstRead(of: transaction) else {
             if restoredAt == nil { throw TextInsertionError.clipboardRestoreFailed }
             if wasCancelled { throw CancellationError() }
-            throw TextInsertionError.pasteNotRead
+            // ⌘V went out and nobody read the board. With typing protected
+            // that may be why on some macOS, and either way the person's own
+            // ⌘V gets through, so the report lets the app offer a copy.
+            throw system.isSecureInputEnabled
+                ? TextInsertionError.secureInputActive
+                : TextInsertionError.pasteNotRead
         }
         if restoredAt == nil {
             restoreReporter?.report()
@@ -727,7 +738,7 @@ public struct TextInserter: TextInserting {
             throw TextInsertionError.insertionInProgress
         }
         defer { operationLane.release() }
-        try validateProtectedState()
+        try validateAccessibility()
         // Return goes where the paste went, and only while the dictation's
         // application is still in front: it is irreversible.
         if let target { try validateTarget(target) }
@@ -752,10 +763,7 @@ public struct TextInserter: TextInserting {
         }
     }
 
-    private func validateProtectedState() throws {
-        guard !system.isSecureInputEnabled else {
-            throw TextInsertionError.secureInputActive
-        }
+    private func validateAccessibility() throws {
         guard system.isAccessibilityTrusted else {
             throw TextInsertionError.accessibilityPermissionDenied
         }
