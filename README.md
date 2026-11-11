@@ -264,7 +264,7 @@ OpenRamble needs Microphone access to hear you and Accessibility access to notic
 
 ### Does OpenRamble work on Windows or Linux?
 
-An early Windows and Linux version is in [`apps/desktop`](apps/desktop), and its latest installers are in the [desktop-v0.21.2 release](https://github.com/mikwiseman/openramble/releases/tag/desktop-v0.21.2) from August 2026. It needs Windows 10 or later on x86_64, or Linux with X11 or Wayland. It recognizes speech on the processor, and it has no meeting or screen recorder and no automatic updates. Its only network use is the model download you start.
+An early Windows and Linux version is in [`apps/desktop`](apps/desktop), and its latest installers are in the [desktop-v0.37.0 release](https://github.com/mikwiseman/openramble/releases/tag/desktop-v0.37.0) from November 2026. It shows the same dictation panel as the Mac, and words that cannot be pasted wait on it. Automated checks build and test this version on both systems; nobody has yet tried it by hand on either. It needs Windows 10 or later on x86_64, or Linux with X11 or Wayland. It recognizes speech on the processor, and it has no meeting or screen recorder and no automatic updates. Its only network use is the model download you start.
 
 ## Requirements
 
