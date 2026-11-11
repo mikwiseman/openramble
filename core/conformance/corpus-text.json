@@ -4768,5 +4768,77 @@
     "allowPressReturnCommand": false,
     "phoneticMatching": true,
     "input": "it works ."
+  },
+  {
+    "name": "hebrew sentence",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "שלום, קוראים לי כרמית, היום אני רוצה לבדוק אם ההכתבה עובדת טוב בעברית."
+  },
+  {
+    "name": "hebrew two sentences",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "הפגישה נדחתה ליום שלישי בשעה עשר בבוקר. בבקשה תשלחו לי את המסמכים עד מחר."
+  },
+  {
+    "name": "hebrew two sentences prose",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "הפגישה נדחתה ליום שלישי בשעה עשר בבוקר. בבקשה תשלחו לי את המסמכים עד מחר.",
+    "mode": "prose"
+  },
+  {
+    "name": "hebrew verbatim",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "אה, אני חושב שזה, אממ, רעיון טוב",
+    "mode": "verbatim"
+  },
+  {
+    "name": "hebrew question",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "מתי נפגשים מחר?"
+  },
+  {
+    "name": "hebrew extra spaces",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "  שלום    עולם  "
+  },
+  {
+    "name": "hebrew acronym with gershayim",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "צה\"ל וארה\"ב הודיעו היום"
+  },
+  {
+    "name": "hebrew name with geresh",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "ג'ורג' הגיע לצ'ילה"
+  },
+  {
+    "name": "hebrew with latin word and time",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "שלחתי את הקובץ ב-Slack בשעה 10:30"
+  },
+  {
+    "name": "hebrew without final stop",
+    "dictionary": [],
+    "allowPressReturnCommand": false,
+    "phoneticMatching": true,
+    "input": "תודה רבה"
   }
 ]

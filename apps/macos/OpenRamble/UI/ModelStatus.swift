@@ -35,7 +35,7 @@ struct ModelStatus: Equatable {
         /// VoiceOver hint: what will happen when you press it.
         func hint(downloadMegabytes: Int) -> String {
             switch self {
-            case .install: return L10n.tr("Downloads about %@ MB. This is the app's only download.", String(describing: downloadMegabytes))
+            case .install: return L10n.tr("Downloads about %@ MB. This is the only download the app needs.", String(describing: downloadMegabytes))
             case .retry: return L10n.tr("Restarts the model download from the beginning.")
             case .repair: return L10n.tr("Downloads and verifies a fresh copy of the model. The damaged copy is not used.")
             case .cancel: return L10n.tr("Stops the download and deletes the partially downloaded files.")
@@ -62,6 +62,9 @@ struct ModelStatus: Equatable {
     var announcement: String
     /// How much the install/repair button will download - the full volume or the remainder.
     var downloadMegabytes: Int = 586
+    /// An optional model beside the one the app needs: its buttons are quiet,
+    /// and they never say dictation depends on it.
+    var isAddition = false
 
     /// The whole card in one line, for the places that have room for one — the
     /// menu and the try-out step — or nothing at all.
@@ -83,11 +86,25 @@ struct ModelStatus: Equatable {
     }
 
     func title(for action: Action) -> String {
-        action.title(downloadMegabytes: downloadMegabytes)
+        guard isAddition else { return action.title(downloadMegabytes: downloadMegabytes) }
+        switch action {
+        case .install: return L10n.tr("Download — %@ MB", String(describing: downloadMegabytes))
+        case .repair: return L10n.tr("Download Again — %@ MB", String(describing: downloadMegabytes))
+        case .delete: return L10n.tr("Remove")
+        case .retry, .cancel: return action.title(downloadMegabytes: downloadMegabytes)
+        }
     }
 
     func hint(for action: Action) -> String {
-        action.hint(downloadMegabytes: downloadMegabytes)
+        guard isAddition else { return action.hint(downloadMegabytes: downloadMegabytes) }
+        switch action {
+        case .install, .repair:
+            return L10n.tr("Downloads about %@ MB. Dictation keeps working meanwhile.", String(describing: downloadMegabytes))
+        case .delete:
+            return L10n.tr("Frees up disk space. Dictation in other languages is not affected.")
+        case .retry, .cancel:
+            return action.hint(downloadMegabytes: downloadMegabytes)
+        }
     }
 
     /// The card for a newer model while the previous one keeps dictating.
@@ -140,6 +157,93 @@ struct ModelStatus: Equatable {
             )
         }
         status.downloadMegabytes = downloadMegabytes
+        return status
+    }
+
+    /// The card for the optional Hebrew model.
+    ///
+    /// Shown only on a Mac with a Hebrew keyboard. Whether dictation works is
+    /// the main card's business: Hebrew is an addition, and every state here
+    /// leaves the main model dictating.
+    static func hebrew(state: ModelState, place: Place, downloadMegabytes: Int) -> ModelStatus {
+        let rule = L10n.tr("Used while your keyboard is set to Hebrew.")
+        var status: ModelStatus
+        switch state {
+        case let .downloading(received, total):
+            let label = L10n.tr("%@ of %@ MB", String(describing: megabytes(received)), String(describing: megabytes(total)))
+            status = ModelStatus(
+                title: L10n.tr("Downloading Hebrew…"),
+                detail: L10n.tr("Dictation keeps working while it downloads."),
+                progress: total > 0 ? Double(received) / Double(total) : nil,
+                progressLabel: label,
+                actions: [.cancel],
+                tone: .neutral,
+                announcement: L10n.tr("Downloading Hebrew…")
+            )
+        case let .verifying(checked, total):
+            status = ModelStatus(
+                title: L10n.tr("Checking Hebrew…"),
+                detail: nil,
+                progress: total > 0 ? Double(checked) / Double(total) : nil,
+                progressLabel: nil,
+                actions: [],
+                tone: .neutral,
+                announcement: L10n.tr("Checking Hebrew…")
+            )
+        case .ready:
+            status = ModelStatus(
+                title: L10n.tr("Hebrew is ready"),
+                detail: rule,
+                progress: nil,
+                progressLabel: nil,
+                // Removing a model is a Settings matter, as for the main one.
+                actions: place == .settings ? [.delete] : [],
+                tone: .success,
+                announcement: L10n.tr("Hebrew is ready")
+            )
+        case .failed:
+            status = ModelStatus(
+                title: L10n.tr("Hebrew didn't download"),
+                detail: L10n.tr("Dictation in other languages is not affected."),
+                progress: nil,
+                progressLabel: nil,
+                actions: [.retry],
+                tone: .failure,
+                announcement: L10n.tr("Hebrew didn't download")
+            )
+        case .repairRequired:
+            status = ModelStatus(
+                title: L10n.tr("Hebrew needs a repair"),
+                detail: L10n.tr("Dictation in other languages is not affected."),
+                progress: nil,
+                progressLabel: nil,
+                actions: place == .settings ? [.repair, .delete] : [.repair],
+                tone: .failure,
+                announcement: L10n.tr("Hebrew needs a repair")
+            )
+        case .deleting:
+            status = ModelStatus(
+                title: L10n.tr("Removing Hebrew…"),
+                detail: nil,
+                progress: nil,
+                progressLabel: nil,
+                actions: [],
+                tone: .neutral,
+                announcement: L10n.tr("Removing Hebrew…")
+            )
+        case .notInstalled:
+            status = ModelStatus(
+                title: L10n.tr("Hebrew"),
+                detail: L10n.tr("Optional. Dictate in Hebrew while your keyboard is set to Hebrew."),
+                progress: nil,
+                progressLabel: nil,
+                actions: [.install],
+                tone: .neutral,
+                announcement: L10n.tr("Hebrew")
+            )
+        }
+        status.downloadMegabytes = downloadMegabytes
+        status.isAddition = true
         return status
     }
 

@@ -197,6 +197,11 @@ public struct AppEnvironment {
     /// How long the key is held over waiting words before it means "dictate
     /// again" instead of "do what the block says".
     public var waitingTapLimit: Duration
+    /// The languages of this Mac's keyboards. Injectable because the real
+    /// answer is whatever keyboard the developer running the suite has on.
+    public var keyboardLanguages: @MainActor () -> KeyboardLanguages
+    /// Where keyboard switches are announced: the distributed center.
+    public var keyboardNotifications: NotificationCenter
     /// Shared with the worker supervisor so its off-main recovery loop can
     /// read the pressure tier without hopping through AppState.
 
@@ -283,6 +288,8 @@ public struct AppEnvironment {
         typingProtectionPollInterval: Duration = .milliseconds(700),
         copyText: @escaping @MainActor (String) throws -> Void = { try HostOnlyPasteboard().copyHostOnly($0) },
         waitingTapLimit: Duration = .milliseconds(600),
+        keyboardLanguages: @escaping @MainActor () -> KeyboardLanguages = { KeyboardLanguages.system() },
+        keyboardNotifications: NotificationCenter = DistributedNotificationCenter.default(),
     ) {
         self.defaults = defaults
         self.paths = paths
@@ -324,6 +331,8 @@ public struct AppEnvironment {
         self.typingProtectionPollInterval = typingProtectionPollInterval
         self.copyText = copyText
         self.waitingTapLimit = waitingTapLimit
+        self.keyboardLanguages = keyboardLanguages
+        self.keyboardNotifications = keyboardNotifications
         self.announcer = announcer
         self.openSystemAudioSettings = openSystemAudioSettings
         self.playSystemAudioProbe = playSystemAudioProbe
@@ -493,6 +502,14 @@ public final class AppState: ObservableObject {
     @Published public private(set) var upgradeState: ModelState?
     /// Whether the current model has a GitHub release mirror besides Hugging Face.
     public private(set) var modelHasMirror = true
+    /// What the disk holds of the optional Hebrew model. It is an addition:
+    /// `modelState` still describes the model every take needs.
+    @Published public private(set) var hebrewModelState: ModelState = .notInstalled
+    /// Whether this Mac is shown the Hebrew model at all. Only a Mac with a
+    /// Hebrew keyboard is; see `HebrewModelRule`.
+    @Published public private(set) var offersHebrewModel = false
+    /// What the Hebrew model's button downloads.
+    public private(set) var hebrewModelMegabytes = 0
     /// How much the installation button will download: the full volume or additional volume after the update.
     /// Published from the bundled manifest as soon as it is read, before any
     /// view can draw the button.
@@ -608,6 +625,8 @@ public final class AppState: ObservableObject {
             case .paused: diagnostics.record(.recordingPaused)
             case .stopping: diagnostics.record(.recordingStopping)
             }
+            // A model switch that waited for the recording happens now.
+            if meetingState == .idle { applyPendingModelSwitch() }
         }
     }
     /// Every finished recording, newest first.
@@ -677,7 +696,11 @@ public final class AppState: ObservableObject {
     /// Transcripts read from disk for the detail pane, by recording.
     @Published public private(set) var loadedTranscripts: [UUID: [MeetingUtterance]] = [:]
     /// Which recording `liveTranscript` belongs to.
-    @Published public private(set) var transcribingRecordingID: UUID?
+    @Published public private(set) var transcribingRecordingID: UUID? {
+        didSet {
+            if transcribingRecordingID == nil { applyPendingModelSwitch() }
+        }
+    }
     /// Dictation always wins the engine; meeting decodes wait their turn.
     private let engineArbiter = EngineArbiter()
     private let dictationPriority: Result<DictationPriority, any Error>
@@ -993,6 +1016,16 @@ public final class AppState: ObservableObject {
     private var previousStore: ModelStore?
     private var currentEngineDirectory: URL?
     private var previousEngineDirectory: URL?
+    private var hebrewStore: ModelStore?
+    private var hebrewEngineDirectory: URL?
+    /// The Hebrew store is downloading or deleting: its own word is final
+    /// until it finishes, and a look at the disk would contradict it.
+    private var isHebrewStoreBusy = false
+    /// The engine refused Hebrew files that passed verification. Kept until
+    /// the person repairs or removes them, as `engineLoadFailure` is.
+    private var hebrewLoadFailure: String?
+    private let keyboardLanguages: @MainActor () -> KeyboardLanguages
+    private let keyboardNotifications: NotificationCenter
     /// Which of the two folders recognition loads from; see `ModelLineup`.
     private var activeModel: ActiveModelDirectory?
     /// The lineup chose another model while a dictation was running.
@@ -1165,6 +1198,8 @@ public final class AppState: ObservableObject {
         typingProtectionPollInterval = environment.typingProtectionPollInterval
         copyText = environment.copyText
         waitingTapLimit = environment.waitingTapLimit
+        keyboardLanguages = environment.keyboardLanguages
+        keyboardNotifications = environment.keyboardNotifications
         announcer = environment.announcer
         openSystemAudioSettingsPane = environment.openSystemAudioSettings
         playSystemAudioProbe = environment.playSystemAudioProbe
@@ -1324,6 +1359,11 @@ public final class AppState: ObservableObject {
                 previousStore = ModelStore(manifest: previousManifest, layout: previousLayout, downloader: modelDownloader)
                 previousEngineDirectory = previousLayout.engineDirectory
             }
+            let hebrewManifest = try ModelManifest.bundledHebrew()
+            let hebrewLayout = try ModelInstallLayout(manifest: hebrewManifest, root: try paths.models())
+            hebrewStore = ModelStore(manifest: hebrewManifest, layout: hebrewLayout, downloader: modelDownloader)
+            hebrewEngineDirectory = hebrewLayout.engineDirectory
+            hebrewModelMegabytes = Int(hebrewManifest.totalByteCount / 1_000_000)
             publishRemainingDownload(main: modelState)
 
             let historyStore = DictationHistoryStore(
@@ -2276,6 +2316,13 @@ public final class AppState: ObservableObject {
         observe(workspaceNotifications, NSWorkspace.didWakeNotification) { $0.handleWake() }
         observe(notifications, NSApplication.didBecomeActiveNotification) {
             $0.handleApplicationBecameActive()
+        }
+        // A take is in the language of the keyboard, so a switch of keyboards
+        // is a switch of models; see `HebrewModelRule`.
+        for name in KeyboardLanguages.changes {
+            observe(keyboardNotifications, name) { state in
+                Task { await state.refreshModelState() }
+            }
         }
     }
 
@@ -4285,6 +4332,7 @@ public final class AppState: ObservableObject {
 
     public func refreshModelState() async {
         guard let store else { return }
+        await refreshHebrewModel()
         // While the installation is in progress, inspection of the disk would reset the state to "model not
         // installed”: there is no ready flag yet. Progress would disappear from the screen
         // exactly when the person opened the settings to look at it.
@@ -4318,11 +4366,16 @@ public final class AppState: ObservableObject {
     /// `upgradeState` while the previous one still serves.
     private func applyLineup(current: ModelState, previous: ModelState) -> ModelState {
         let lineup = ModelLineup(current: current, previous: previous)
-        let folder = lineup.recognizer == .previous ? previousEngineDirectory : currentEngineDirectory
+        let lineupFolder = lineup.recognizer == .previous ? previousEngineDirectory : currentEngineDirectory
+        // Hebrew is an addition to a working model, never a replacement for a
+        // missing one: without the main model the app is not set up at all.
+        let folder = lineup.recognizer != .none && hebrewRule.recognizes ? hebrewEngineDirectory : lineupFolder
         if let folder, let activeModel, activeModel.current != folder {
-            // Never under a dictation: the switch waits for idle, and the
-            // model that was serving keeps serving until then.
-            guard dictationState == .idle else {
+            // Never under a dictation or a recording: the switch waits for
+            // idle, and the model that was serving keeps serving until then.
+            // A person who types notes in another language during a call
+            // switches keyboards, and the call must not change models halfway.
+            guard !isRecognitionInProgress else {
                 modelSwitchPending = true
                 upgradeState = lineup.recognizer == .current ? nil : current
                 return activeModel.current == previousEngineDirectory ? previous : current
@@ -4343,6 +4396,17 @@ public final class AppState: ObservableObject {
             if lineup.removesPrevious, lineup.recognizer == .none { removePreviousModel() }
             return current
         }
+    }
+
+    /// A take or a recording is being recognized, or is about to be.
+    private var isRecognitionInProgress: Bool {
+        dictationState != .idle || meetingState != .idle || transcribingRecordingID != nil
+    }
+
+    /// Carry out a model switch that waited for recognition to finish.
+    private func applyPendingModelSwitch() {
+        guard modelSwitchPending, !isRecognitionInProgress else { return }
+        Task { await refreshModelState() }
     }
 
     /// Delete the previous model once the current one has loaded and warmed up.
@@ -4454,6 +4518,93 @@ public final class AppState: ObservableObject {
         guard isInstalling else { return }
         Task {
             await store?.cancelInstall()
+        }
+    }
+
+    // MARK: - Hebrew
+
+    /// Whether Hebrew is offered here and whether the next take is in it.
+    private var hebrewRule: HebrewModelRule {
+        let keyboards = keyboardLanguages()
+        return HebrewModelRule(
+            keyboardLanguage: keyboards.current,
+            enabledKeyboardLanguages: keyboards.enabled,
+            model: hebrewModelState
+        )
+    }
+
+    /// Read the Hebrew model off the disk and decide whether to show it.
+    private func refreshHebrewModel() async {
+        guard let hebrewStore else { return }
+        // As with the main model: a look at the disk in the middle of a
+        // download would replace its progress with "not installed".
+        if !isHebrewStoreBusy {
+            var refreshed = await hebrewStore.refreshState()
+            if let hebrewLoadFailure, refreshed.isReady {
+                refreshed = .repairRequired(hebrewLoadFailure)
+            }
+            hebrewModelState = refreshed
+        }
+        offersHebrewModel = hebrewRule.isOffered
+    }
+
+    /// Download the Hebrew model beside the main one. Dictation is untouched
+    /// until it verifies, and uses it from the next take on a Hebrew keyboard.
+    public func installHebrewModel() {
+        guard let hebrewStore, !isHebrewStoreBusy else { return }
+        isHebrewStoreBusy = true
+        let engineRejectedFiles = hebrewLoadFailure != nil
+        hebrewLoadFailure = nil
+        Task {
+            let latest = await hebrewStore.refreshState()
+            if !latest.isReady || engineRejectedFiles {
+                let states = await hebrewStore.states()
+                let monitor = Task { @MainActor in
+                    for await state in states { hebrewModelState = state }
+                }
+                if latest.isReady || latest.requiresRepair {
+                    await hebrewStore.repair()
+                } else {
+                    await hebrewStore.install()
+                }
+                monitor.cancel()
+            }
+            // The store's own last word, as for the main model: a scan after a
+            // failure would erase the reason before anyone could read it.
+            hebrewModelState = await hebrewStore.currentState()
+            isHebrewStoreBusy = false
+            // The lineup may point recognition at Hebrew now.
+            await refreshModelState()
+        }
+    }
+
+    public func cancelHebrewModelInstall() {
+        guard isHebrewStoreBusy else { return }
+        Task { await hebrewStore?.cancelInstall() }
+    }
+
+    /// Remove the Hebrew model. The main model takes every take again.
+    public func deleteHebrewModel() {
+        guard dictationState == .idle else {
+            notify(
+                DictationNotice(
+                    kind: .warning,
+                    message: L10n.tr("Dictation is in progress. Wait for it to finish.")
+                )
+            )
+            return
+        }
+        guard let hebrewStore, !isHebrewStoreBusy else { return }
+        isHebrewStoreBusy = true
+        hebrewLoadFailure = nil
+        // From here the rule no longer chooses Hebrew, so the lineup moves
+        // recognition back to the main model before the files go.
+        hebrewModelState = .deleting
+        Task {
+            await refreshModelState()
+            await hebrewStore.delete()
+            isHebrewStoreBusy = false
+            await refreshModelState()
         }
     }
 
@@ -4641,6 +4792,13 @@ public final class AppState: ObservableObject {
             if let reason = verifiedModelRejection(from: error) {
                 let detail =
                     L10n.tr("the files passed verification, but Core ML couldn't load the model: %@", String(describing: reason))
+                if let hebrewEngineDirectory, activeModel?.current == hebrewEngineDirectory {
+                    // The addition failed, not the app: the Hebrew card says
+                    // so, and the main model takes the next take.
+                    hebrewLoadFailure = detail
+                    await refreshModelState()
+                    return .retryable(detail)
+                }
                 // Both stores said the files are there — the guard at the top of
                 // this function is that very statement, and it is what makes
                 // this a rejection rather than a missing model. The repair

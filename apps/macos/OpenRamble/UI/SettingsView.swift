@@ -459,6 +459,7 @@ struct SetupBlock: View {
 private struct SetupSettings: View {
     @ObservedObject var state: AppState
     @State private var showDeleteConfirmation = false
+    @State private var showHebrewRemovalConfirmation = false
     @State private var showAccessibilityRepairConfirmation = false
 
     var body: some View {
@@ -497,6 +498,24 @@ private struct SetupSettings: View {
                         )
                     }
                 }
+                // Only on a Mac with a Hebrew keyboard; see `HebrewModelRule`.
+                if state.offersHebrewModel {
+                    BlockDivider()
+                    BlockCell {
+                        ModelStatusView(
+                            status: ModelStatus.hebrew(
+                                state: state.hebrewModelState,
+                                place: .settings,
+                                downloadMegabytes: state.hebrewModelMegabytes
+                            ),
+                            install: state.installHebrewModel,
+                            cancel: state.cancelHebrewModelInstall,
+                            // Asks first, as the main model's button does:
+                            // a slip costs the whole download again.
+                            delete: { showHebrewRemovalConfirmation = true }
+                        )
+                    }
+                }
             }
             .confirmationDialog(
                 L10n.tr("Delete the recognition model?"),
@@ -507,6 +526,16 @@ private struct SetupSettings: View {
                 Button(L10n.tr("Cancel"), role: .cancel) {}
             } message: {
                 Text(L10n.tr("Dictation stops working until you download the model again — that's another %@ MB over the network.", String(describing: state.fullModelDownloadMegabytes)))
+            }
+            .confirmationDialog(
+                L10n.tr("Remove Hebrew?"),
+                isPresented: $showHebrewRemovalConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button(L10n.tr("Remove"), role: .destructive) { state.deleteHebrewModel() }
+                Button(L10n.tr("Cancel"), role: .cancel) {}
+            } message: {
+                Text(L10n.tr("Dictation in other languages keeps working. Getting Hebrew back is another %@ MB over the network.", String(describing: state.hebrewModelMegabytes)))
             }
 
             BlockSection(
@@ -1022,6 +1051,7 @@ private struct AboutView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(L10n.tr("Speech recognition runs on transcribe.cpp by CJ Pais and the Handy team, licensed under MIT. Sparkle is licensed under MIT."))
                             Text(L10n.tr("Parakeet Ultra © Moondream and Parakeet TDT 0.6B v3 © NVIDIA, licensed under CC BY 4.0. GGUF conversions by handy-computer."))
+                            Text(L10n.tr("The optional Hebrew model is Parakeet TDT 0.6B v3 Hebrew © Yakov Kolani, licensed under CC BY 4.0, trained on ivrit.ai audio. GGUF conversion by vladkens."))
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)

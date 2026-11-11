@@ -39,6 +39,7 @@ func usage() -> Never {
     Environment:
       WAI_MODELS_ROOT        install root (Application Support by default)
       WAI_ASR_MODEL_DIR      use this engine folder directly, past the store
+      WAI_MODEL=hebrew       act on the optional Hebrew model instead
     """)
     exit(64)
 }
@@ -49,7 +50,10 @@ func modelsRoot() -> URL? {
 }
 
 func makeStore() throws -> (ModelStore, ModelInstallLayout, ModelManifest) {
-    let manifest = try ModelManifest.bundled()
+    // The app's own model, or the optional Hebrew one: the same store code
+    // installs both, so the same commands check both.
+    let hebrew = ProcessInfo.processInfo.environment["WAI_MODEL"] == "hebrew"
+    let manifest = hebrew ? try ModelManifest.bundledHebrew() : try ModelManifest.bundled()
     let layout = try ModelInstallLayout(manifest: manifest, root: modelsRoot())
     return (ModelStore(manifest: manifest, layout: layout), layout, manifest)
 }

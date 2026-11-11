@@ -207,6 +207,20 @@ struct OnboardingView: View {
                     cancel: state.cancelModelInstall,
                     delete: state.deleteModel
                 )
+                // Only on a Mac with a Hebrew keyboard; see `HebrewModelRule`.
+                if state.offersHebrewModel {
+                    Divider().padding(.vertical, 6)
+                    ModelStatusView(
+                        status: ModelStatus.hebrew(
+                            state: state.hebrewModelState,
+                            place: .onboarding,
+                            downloadMegabytes: state.hebrewModelMegabytes
+                        ),
+                        install: state.installHebrewModel,
+                        cancel: state.cancelHebrewModelInstall,
+                        delete: state.deleteHebrewModel
+                    )
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 18)

@@ -70,6 +70,11 @@ struct ModelStatusView: View {
     @ViewBuilder
     private func button(for action: ModelStatus.Action) -> some View {
         switch action {
+        case .install where status.isAddition:
+            // An offer, not the way forward: it never competes with the
+            // button that sets the app up.
+            Button(status.title(for: action), action: install)
+                .accessibilityHint(status.hint(for: action))
         case .install:
             Button(status.title(for: action), action: install)
                 .buttonStyle(.borderedProminent)
