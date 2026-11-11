@@ -108,7 +108,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${GITHUB_REF_NAME#desktop-v}"
+          # Never the repository's latest release: the README sends Mac
+          # downloads to releases/latest, and that page must keep the DMG.
           gh release create "$GITHUB_REF_NAME" dist/* \
             --repo "$GITHUB_REPOSITORY" \
             --title "OpenRamble for Windows and Linux $VERSION" \
-            --notes "Windows and Linux packages built from ${GITHUB_SHA}."
+            --notes "Windows and Linux packages built from ${GITHUB_SHA}." \
+            --latest=false
