@@ -117,7 +117,7 @@ private struct GeneralSettings: View {
 
             BlockSection(
                 L10n.tr("Shortcuts"),
-                footer: L10n.tr("Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app.")
+                footer: L10n.tr("These work from any app. Paste last take puts your newest dictation into the app in front. Record starts and stops a recording. Record screen opens the screen recording choices, and stops a recording too.")
             ) {
                 BlockRow(
                     title: L10n.tr("Paste last take"),
@@ -126,7 +126,7 @@ private struct GeneralSettings: View {
                 ) {
                     ShortcutRecorder(
                         shortcut: $state.lastTakeShortcut,
-                        reserved: state.recordingShortcut.map { [$0: L10n.tr("Record")] } ?? [:]
+                        reserved: reservedShortcuts(except: \.lastTakeShortcut)
                     )
                 }
                 .accessibilityHint(L10n.tr("Press this shortcut to paste the last take into the app in front"))
@@ -138,10 +138,22 @@ private struct GeneralSettings: View {
                 ) {
                     ShortcutRecorder(
                         shortcut: $state.recordingShortcut,
-                        reserved: state.lastTakeShortcut.map { [$0: L10n.tr("Paste last take")] } ?? [:]
+                        reserved: reservedShortcuts(except: \.recordingShortcut)
                     )
                 }
                 .accessibilityHint(L10n.tr("Press this shortcut to start or stop a recording"))
+                BlockDivider()
+                BlockRow(
+                    title: L10n.tr("Record screen"),
+                    isChanged: state.screenRecordingShortcut != SettingsDefaults.screenRecordingShortcut,
+                    revert: { state.screenRecordingShortcut = SettingsDefaults.screenRecordingShortcut }
+                ) {
+                    ShortcutRecorder(
+                        shortcut: $state.screenRecordingShortcut,
+                        reserved: reservedShortcuts(except: \.screenRecordingShortcut)
+                    )
+                }
+                .accessibilityHint(L10n.tr("Press this shortcut to open the screen recording choices, or to stop a recording"))
             }
 
             BlockSection(L10n.tr("Dictation")) {
@@ -357,6 +369,22 @@ private struct GeneralSettings: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
+    }
+
+    /// The other shortcuts, by the name to blame when one is asked for twice.
+    private func reservedShortcuts(
+        except own: KeyPath<AppState, KeyCombination?>
+    ) -> [KeyCombination: String] {
+        let all: [(KeyPath<AppState, KeyCombination?>, String)] = [
+            (\.lastTakeShortcut, L10n.tr("Paste last take")),
+            (\.recordingShortcut, L10n.tr("Record")),
+            (\.screenRecordingShortcut, L10n.tr("Record screen")),
+        ]
+        var reserved: [KeyCombination: String] = [:]
+        for (path, name) in all where path != own {
+            if let shortcut = state[keyPath: path] { reserved[shortcut] = name }
+        }
+        return reserved
     }
 
     private func toggleRow(

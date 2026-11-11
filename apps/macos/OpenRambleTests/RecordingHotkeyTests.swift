@@ -111,6 +111,68 @@ final class RecordingHotkeyTests: XCTestCase {
         try await waitUntil { state.meetingState == .idle }
     }
 
+    // MARK: The screen
+
+    /// Recording the screen has a chord of its own: the Record chord with
+    /// Shift, the way Shift widens a command across the Mac.
+    func testTheScreenShortcutIsTheRecordChordWithShift() {
+        let state = harness.makeState()
+        XCTAssertEqual(
+            state.screenRecordingShortcut,
+            KeyCombination(keyCode: rKey, modifiers: [.command, .control, .shift])
+        )
+        XCTAssertEqual(state.screenRecordingShortcut?.displayString, "⌃⇧⌘R")
+        XCTAssertNotEqual(state.screenRecordingShortcut, state.recordingShortcut)
+    }
+
+    /// It opens the choices and starts nothing: which screen, and whether
+    /// the camera is on, are decided in sight. Return starts from there.
+    func testTheScreenShortcutOpensTheChoicesAndRecordsNothing() async {
+        harness.permissions.microphoneGranted = true
+        harness.permissions.accessibilityGranted = true
+        let state = harness.makeState()
+        state.refreshPermissions()
+        await settle()
+        XCTAssertEqual(harness.screenRecordingMonitor.shortcut, SettingsDefaults.screenRecordingShortcut)
+        XCTAssertTrue(harness.screenRecordingMonitor.isRunning)
+
+        harness.screenRecordingMonitor.onPress?()
+
+        XCTAssertTrue(state.isScreenRecordingSetupPresented)
+        XCTAssertEqual(state.meetingState, .idle)
+        XCTAssertEqual(harness.meetingCapture.startCount, 0)
+    }
+
+    /// Either chord ends a recording, so nobody has to remember which one
+    /// started it.
+    func testTheScreenShortcutStopsARecording() async throws {
+        harness.permissions.microphoneGranted = true
+        harness.permissions.accessibilityGranted = true
+        harness.defaults.set(true, forKey: AppState.systemAudioDeclinedKey)
+        let state = harness.makeState()
+        state.refreshPermissions()
+        await settle()
+        harness.recordingMonitor.onPress?()
+        try await waitUntil { state.meetingState == .recording }
+
+        harness.screenRecordingMonitor.onPress?()
+
+        try await waitUntil { state.meetingState == .idle }
+        XCTAssertFalse(state.isScreenRecordingSetupPresented, "it stopped the recording, and opened nothing")
+    }
+
+    func testTheScreenShortcutCanBeChangedOrTurnedOffAndStaysSo() {
+        harness.defaults.set("", forKey: "screenRecordingShortcut")
+        XCTAssertNil(harness.makeState().screenRecordingShortcut)
+
+        let chosen = KeyCombination(keyCode: rKey, modifiers: [.command, .option])
+        harness.defaults.set(chosen.rawValue, forKey: "screenRecordingShortcut")
+        XCTAssertEqual(harness.makeState().screenRecordingShortcut, chosen)
+
+        harness.defaults.removeObject(forKey: "screenRecordingShortcut")
+        XCTAssertEqual(harness.makeState().screenRecordingShortcut, SettingsDefaults.screenRecordingShortcut)
+    }
+
     /// The first recording still explains itself. The sheet lives on the
     /// Recordings window, so that press is the one case that must open it.
     func testTheFirstPressPresentsTheIntroInsteadOfStarting() throws {

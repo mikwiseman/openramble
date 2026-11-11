@@ -61,28 +61,37 @@ struct MenuContent: View {
                 WindowFronting.raiseOpenedWindow(id: "onboarding")
             }
 
-        case .pasteLastTake:
-            Button {
-                state.pasteLastTake()
-            } label: {
-                // Written into the title: this can be a bare function key,
-                // which `keyboardShortcut` cannot express.
-                Text(titled(
-                    L10n.tr("Paste “%@”", Self.firstWords(of: state.lastTakeText ?? "")),
-                    shortcut: state.lastTakeShortcut
-                ))
+        case let .take(index):
+            let takes = state.menuTakes
+            if takes.indices.contains(index) {
+                let words = Self.firstWords(of: takes[index])
+                // The words themselves are the row. A click pastes them where
+                // the person is; with Option held the row reads Copy and
+                // copies. Only the first carries the chord: it is the last
+                // take, the one the chord pastes.
+                Button {
+                    // Before macOS 15 a menu row cannot change while Option
+                    // is held, so the click itself is asked.
+                    if NSEvent.modifierFlags.contains(.option) {
+                        state.copyTake(at: index)
+                    } else {
+                        state.pasteTake(at: index)
+                    }
+                } label: {
+                    Text(L10n.tr("“%@”", words))
+                }
+                .shortcutColumn(index == 0 ? state.lastTakeShortcut : nil)
+                .optionAlternate {
+                    Button(L10n.tr("Copy “%@”", words)) { state.copyTake(at: index) }
+                }
+                .disabled(state.dictationState != .idle)
+                .accessibilityLabel(L10n.tr("Paste “%@”", words))
+                .accessibilityHint(
+                    state.dictationState == .idle
+                        ? L10n.tr("Pastes these words into the app in front. Hold Option to copy them instead.")
+                        : L10n.tr("Finish or cancel the current dictation first")
+                )
             }
-            .disabled(state.dictationState != .idle)
-            .accessibilityLabel(L10n.tr("Paste the last take"))
-            .accessibilityHint(
-                state.dictationState == .idle
-                    ? L10n.tr("Pastes the last take into the app in front")
-                    : L10n.tr("Finish or cancel the current dictation first")
-            )
-
-        case .copyLastTake:
-            Button(L10n.tr("Copy")) { state.copyLastDictation() }
-                .accessibilityLabel(L10n.tr("Copy the last take"))
 
         case .revealRecoveredRecordings:
             Button(
@@ -107,11 +116,8 @@ struct MenuContent: View {
             }
 
         case .startRecording:
-            Button {
-                state.startRecording()
-            } label: {
-                Text(titled(L10n.tr("Start Recording"), shortcut: state.recordingShortcut))
-            }
+            Button(L10n.tr("Start Recording")) { state.startRecording() }
+            .shortcutColumn(state.recordingShortcut)
             .accessibilityHint(
                 state.systemAudioMode == .enabled
                     ? L10n.tr("Records you and the other side until you stop")
@@ -124,6 +130,7 @@ struct MenuContent: View {
                 WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
                 state.prepareScreenRecording()
             }
+            .shortcutColumn(state.screenRecordingShortcut)
             .accessibilityHint(L10n.tr("Opens screen recording choices"))
 
         case .pauseRecording:
@@ -133,11 +140,8 @@ struct MenuContent: View {
             Button(L10n.tr("Resume Recording")) { state.resumeRecording() }
 
         case .stopRecording:
-            Button {
-                state.stopRecording()
-            } label: {
-                Text(titled(L10n.tr("Stop Recording"), shortcut: state.recordingShortcut))
-            }
+            Button(L10n.tr("Stop Recording")) { state.stopRecording() }
+            .shortcutColumn(state.recordingShortcut)
             .accessibilityHint(L10n.tr("Ends the recording and keeps it"))
 
         case .openRecordings:
@@ -145,7 +149,10 @@ struct MenuContent: View {
                 openWindow(id: RecordingsWindow.windowID)
                 WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
             }
-            .keyboardShortcut("r", modifiers: .command)
+            // No shortcut here or on the two rows below. A shortcut printed in
+            // this menu is one that works from any app, and ⌘R, ⌘, and ⌘Q
+            // work only while an OpenRamble window is in front, where ⌘, and
+            // ⌘Q still do.
 
         case .settings:
             Button(L10n.tr("Settings…")) {
@@ -154,11 +161,9 @@ struct MenuContent: View {
                 // it has to be raised once it exists. See `WindowFronting`.
                 WindowFronting.raiseOpenedWindow(id: "settings")
             }
-            .keyboardShortcut(",", modifiers: .command)
 
         case .quit:
             Button(L10n.tr("Quit OpenRamble")) { NSApplication.shared.terminate(nil) }
-                .keyboardShortcut("q", modifiers: .command)
         }
     }
 
@@ -171,12 +176,6 @@ struct MenuContent: View {
         return String(singleLine.prefix(43)) + "…"
     }
 
-    /// A held modifier cannot be a `keyboardShortcut`, and a function key
-    /// cannot either. The title is the one place every binding can be seen.
-    private func titled(_ name: String, shortcut: KeyCombination?) -> String {
-        guard let shortcut else { return name }
-        return "\(name)   \(shortcut.displayString)"
-    }
 
     @ViewBuilder
     private var setupHints: some View {
@@ -232,6 +231,35 @@ struct MenuContent: View {
     }
 }
 
+extension View {
+    /// Show a global shortcut where a menu shows shortcuts: in its own
+    /// column, right-aligned and dimmed.
+    ///
+    /// The chord itself is a Carbon hot key and works from any app. This
+    /// only prints it, and lets the same keys work while the menu is open.
+    /// A chord the menu cannot print leaves the row without one; Settings
+    /// still shows it.
+    @ViewBuilder
+    func shortcutColumn(_ shortcut: KeyCombination?) -> some View {
+        if let key = shortcut?.menuShortcut {
+            keyboardShortcut(key)
+        } else {
+            self
+        }
+    }
+
+    /// What the row becomes while Option is held. Before macOS 15 a menu row
+    /// has no alternate, and the row's own action asks for the modifier.
+    @ViewBuilder
+    func optionAlternate<Alternate: View>(@ViewBuilder _ alternate: () -> Alternate) -> some View {
+        if #available(macOS 15.0, *) {
+            modifierKeyAlternate(.option, alternate)
+        } else {
+            self
+        }
+    }
+}
+
 extension MenuSections {
     /// The rows for the app as it is now: the one place the menu reads its
     /// inputs, so a test can check the real wiring.
@@ -242,7 +270,7 @@ extension MenuSections {
             isDictationReady: state.isDictationReady,
             wordsAreWaiting: state.waitingWords != nil,
             recoveryStorageFaulted: state.recordingRecoveryStorageFaulted,
-            hasLastTake: state.lastTakeText != nil,
+            takes: state.menuTakes.count,
             recordingState: state.meetingState
         )
     }

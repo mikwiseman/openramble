@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import SwiftUI
 
 /// A shortcut in the ordinary Mac sense: a key, with modifiers held down.
 ///
@@ -35,6 +36,13 @@ public struct KeyCombination: Sendable, Equatable, Hashable {
         modifiers: [.command, .control]
     )
 
+    /// Record the screen: the Record chord with Shift, the way Shift widens
+    /// a command across the Mac (Save, Save As).
+    public static let shiftControlCommandR = KeyCombination(
+        keyCode: UInt16(kVK_ANSI_R),
+        modifiers: [.command, .control, .shift]
+    )
+
     /// Pastes the last take. One key away from the paste it stands in for.
     public static let controlCommandV = KeyCombination(
         keyCode: UInt16(kVK_ANSI_V),
@@ -67,6 +75,48 @@ public struct KeyCombination: Sendable, Equatable, Hashable {
         let pressed = NSEvent.ModifierFlags(rawValue: rawFlags)
             .intersection(Self.allowedModifiers)
         return pressed == modifierFlags
+    }
+
+    // MARK: - In a menu
+
+    /// The shortcut as a menu can print it in its shortcut column, or `nil`
+    /// for a key a menu has no name for.
+    var menuShortcut: KeyboardShortcut? {
+        guard let key = Self.menuKey(for: keyCode) else { return nil }
+        // Carbon has an `EventModifiers` too; a menu's are SwiftUI's.
+        var modifiers: SwiftUI.EventModifiers = []
+        if modifierFlags.contains(.command) { modifiers.insert(.command) }
+        if modifierFlags.contains(.control) { modifiers.insert(.control) }
+        if modifierFlags.contains(.option) { modifiers.insert(.option) }
+        if modifierFlags.contains(.shift) { modifiers.insert(.shift) }
+        return KeyboardShortcut(key, modifiers: modifiers)
+    }
+
+    private static let menuNamedKeys: [UInt16: KeyEquivalent] = [
+        UInt16(kVK_Return): .return, UInt16(kVK_Tab): .tab, UInt16(kVK_Space): .space,
+        UInt16(kVK_Delete): .delete, UInt16(kVK_ForwardDelete): .deleteForward,
+        UInt16(kVK_Escape): .escape, UInt16(kVK_Home): .home, UInt16(kVK_End): .end,
+        UInt16(kVK_PageUp): .pageUp, UInt16(kVK_PageDown): .pageDown,
+        UInt16(kVK_LeftArrow): .leftArrow, UInt16(kVK_RightArrow): .rightArrow,
+        UInt16(kVK_UpArrow): .upArrow, UInt16(kVK_DownArrow): .downArrow,
+    ]
+
+    /// F1…F20, in the order of their AppKit function-key characters.
+    private static let functionKeyOrder: [Int] = [
+        kVK_F1, kVK_F2, kVK_F3, kVK_F4, kVK_F5, kVK_F6, kVK_F7, kVK_F8, kVK_F9, kVK_F10,
+        kVK_F11, kVK_F12, kVK_F13, kVK_F14, kVK_F15, kVK_F16, kVK_F17, kVK_F18, kVK_F19, kVK_F20,
+    ]
+
+    static func menuKey(for keyCode: UInt16) -> KeyEquivalent? {
+        if let named = menuNamedKeys[keyCode] { return named }
+        if let index = functionKeyOrder.firstIndex(of: Int(keyCode)),
+           let scalar = UnicodeScalar(UInt32(NSF1FunctionKey + index)) {
+            return KeyEquivalent(Character(scalar))
+        }
+        // A key that types one character: the menu prints that character.
+        let label = keyLabel(for: keyCode).lowercased()
+        guard label.count == 1, let character = label.first, !character.isWhitespace else { return nil }
+        return KeyEquivalent(character)
     }
 
     // MARK: - How it reads

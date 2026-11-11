@@ -54,6 +54,8 @@ public struct AppEnvironment {
     public var lastTakeShortcutMonitor: (any ShortcutMonitoring)?
     /// A third watcher, for the shortcut that starts and stops a recording.
     public var recordingShortcutMonitor: (any ShortcutMonitoring)?
+    /// A fourth, for the shortcut that opens the screen recording choices.
+    public var screenRecordingShortcutMonitor: (any ShortcutMonitoring)?
     public var inserter: any TextInserting
     /// Lock-only destination snapshot maintained ahead of the hotkey. The
     /// shipping path never asks AppKit/WindowServer synchronously after the
@@ -217,6 +219,7 @@ public struct AppEnvironment {
         hotkeyMonitor: any HotkeyMonitoring,
         lastTakeShortcutMonitor: (any ShortcutMonitoring)? = nil,
         recordingShortcutMonitor: (any ShortcutMonitoring)? = nil,
+        screenRecordingShortcutMonitor: (any ShortcutMonitoring)? = nil,
         inserter: any TextInserting,
         targetApplicationSnapshot: @escaping @Sendable () -> TargetApplication? = { nil },
         overlay: any OverlayPresenting,
@@ -303,6 +306,7 @@ public struct AppEnvironment {
         self.hotkeyMonitor = hotkeyMonitor
         self.lastTakeShortcutMonitor = lastTakeShortcutMonitor
         self.recordingShortcutMonitor = recordingShortcutMonitor
+        self.screenRecordingShortcutMonitor = screenRecordingShortcutMonitor
         self.inserter = inserter
         self.targetApplicationSnapshot = targetApplicationSnapshot
         self.overlay = overlay
@@ -355,10 +359,13 @@ public struct AppEnvironment {
             permissions: SystemPermissions(),
             accessibilityManager: SystemAccessibilityManager(),
             hotkeyMonitor: GlobalHotkeyMonitor(),
-            // A Carbon hot key: the one kind of shortcut that still fires while
-            // typing is protected, which is when this one is needed most.
-            lastTakeShortcutMonitor: CarbonShortcutMonitor(),
-            recordingShortcutMonitor: GlobalShortcutMonitor(),
+            // Carbon hot keys, all three: the one kind of shortcut that still
+            // fires while typing is protected, and that the app in front does
+            // not also receive. Record used to be an event monitor: ⌃⌘R
+            // started a recording and ran the project in Xcode at once.
+            lastTakeShortcutMonitor: CarbonShortcutMonitor(identifier: 1),
+            recordingShortcutMonitor: CarbonShortcutMonitor(identifier: 2),
+            screenRecordingShortcutMonitor: CarbonShortcutMonitor(identifier: 3),
             inserter: TextInserter(restoreReporter: restoreReporter),
             targetApplicationSnapshot: { activeApplication.current() },
             overlay: DictationOverlay(),
@@ -613,6 +620,15 @@ public final class AppState: ObservableObject {
     }
     @Published public private(set) var lastDictation: LastDictation?
 
+    /// The takes this run inserted before the last one, newest first, at most
+    /// two: with the last take, what the menu offers again.
+    ///
+    /// Not a second history. Each is the text that was inserted, which History
+    /// does not always hold (a take the person took back is kept there as it
+    /// was heard), and each lives only as long as its History entry: a delete,
+    /// Delete All or the Keep limit takes it from here too.
+    @Published private(set) var earlierTakes: [LastDictation] = []
+
     /// What the menu offers to copy: the newest of History, nothing else.
     ///
     /// Read from History rather than kept beside it. A second list in memory
@@ -780,6 +796,7 @@ public final class AppState: ObservableObject {
             if let kept = recoveredEntryID, !history.contains(where: { $0.id == kept }) {
                 recoveredText = nil
             }
+            earlierTakes.removeAll { take in !history.contains { $0.id == take.historyEntryID } }
         }
     }
 
@@ -936,6 +953,22 @@ public final class AppState: ObservableObject {
         applyShortcutMonitor(recordingShortcutMonitor, shortcut: recordingShortcut)
     }
 
+    /// The shortcut that opens the screen recording choices and stops a
+    /// recording, or nothing.
+    ///
+    /// Default is ⇧⌃⌘R: the Record chord with Shift. Clearing it is Off.
+    @Published public var screenRecordingShortcut: KeyCombination? {
+        didSet {
+            guard oldValue != screenRecordingShortcut else { return }
+            defaults.set(screenRecordingShortcut?.rawValue ?? "", forKey: Keys.screenRecordingShortcut)
+            applyScreenRecordingShortcut()
+        }
+    }
+
+    private func applyScreenRecordingShortcut() {
+        applyShortcutMonitor(screenRecordingShortcutMonitor, shortcut: screenRecordingShortcut)
+    }
+
     private func applyShortcutMonitor(
         _ monitor: (any ShortcutMonitoring)?,
         shortcut: KeyCombination?
@@ -967,6 +1000,7 @@ public final class AppState: ObservableObject {
         static let sounds = "soundsEnabled"
         static let lastTakeShortcut = "copyShortcut"
         static let recordingShortcut = "recordingShortcut"
+        static let screenRecordingShortcut = "screenRecordingShortcut"
         static let trailingSpace = "appendsTrailingSpace"
         static let inputDevice = "inputDeviceUID"
         static let presence = "presence"
@@ -988,6 +1022,7 @@ public final class AppState: ObservableObject {
     private let hotkeyMonitor: any HotkeyMonitoring
     private let lastTakeShortcutMonitor: (any ShortcutMonitoring)?
     private let recordingShortcutMonitor: (any ShortcutMonitoring)?
+    private let screenRecordingShortcutMonitor: (any ShortcutMonitoring)?
     private let inserter: any TextInserting
     private let targetApplicationSnapshot: @Sendable () -> TargetApplication?
     private let clipboardRestoreReporter: ClipboardRestoreReporter?
@@ -1183,6 +1218,7 @@ public final class AppState: ObservableObject {
         hotkeyMonitor = environment.hotkeyMonitor
         lastTakeShortcutMonitor = environment.lastTakeShortcutMonitor
         recordingShortcutMonitor = environment.recordingShortcutMonitor
+        screenRecordingShortcutMonitor = environment.screenRecordingShortcutMonitor
         inserter = environment.inserter
         targetApplicationSnapshot = environment.targetApplicationSnapshot
         clipboardRestoreReporter = environment.clipboardRestoreReporter
@@ -1244,6 +1280,12 @@ public final class AppState: ObservableObject {
             recordingShortcut = SettingsDefaults.recordingShortcut
         } else {
             recordingShortcut = (environment.defaults.string(forKey: Keys.recordingShortcut))
+                .flatMap(KeyCombination.init(rawValue:))
+        }
+        if environment.defaults.object(forKey: Keys.screenRecordingShortcut) == nil {
+            screenRecordingShortcut = SettingsDefaults.screenRecordingShortcut
+        } else {
+            screenRecordingShortcut = (environment.defaults.string(forKey: Keys.screenRecordingShortcut))
                 .flatMap(KeyCombination.init(rawValue:))
         }
         appendsTrailingSpace = environment.defaults.object(forKey: Keys.trailingSpace) as? Bool
@@ -1622,6 +1664,7 @@ public final class AppState: ObservableObject {
             }
             controller.microphoneName = { AudioInputDevices.recordingName(of: microphone) }
             controller.onDictationCompleted = { [weak self] provenance in
+                self?.rememberAsEarlierTake(self?.lastDictation)
                 self?.lastDictation = LastDictation(
                     insertedText: provenance.finalText,
                     provenance: provenance
@@ -2064,6 +2107,7 @@ public final class AppState: ObservableObject {
         history = []
         lastDictation = nil
         recoveredText = nil
+        earlierTakes = []
     }
 
     /// Put a stored transcript back on the clipboard.
@@ -2113,6 +2157,62 @@ public final class AppState: ObservableObject {
         } catch {
             notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
         }
+    }
+
+    // MARK: - The menu's takes
+
+    /// The newest takes this run inserted, newest first: the menu's first
+    /// rows. The first is the last take, the one the chord pastes.
+    var menuTakes: [String] {
+        var takes: [String] = []
+        func add(_ text: String?) {
+            guard let text, takes.count < MenuSections.takeLimit else { return }
+            let words = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !words.isEmpty,
+                  !takes.contains(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines) == words })
+            else { return }
+            takes.append(text)
+        }
+        add(lastTakeText)
+        // While words wait, the take before them is still in the last slot.
+        if recoveredText != nil { add(lastDictation?.insertedText) }
+        earlierTakes.forEach { add($0.insertedText) }
+        return takes
+    }
+
+    /// Paste one of the menu's takes into the app in front.
+    func pasteTake(at index: Int) {
+        guard index > 0 else {
+            pasteLastTake()
+            return
+        }
+        let takes = menuTakes
+        guard takes.indices.contains(index), dictationState == .idle, !isRecoveryOperationActive else { return }
+        paste(takes[index], isLastTake: false)
+    }
+
+    /// Put one of the menu's takes on the clipboard: Option-click.
+    func copyTake(at index: Int) {
+        let takes = menuTakes
+        guard takes.indices.contains(index) else { return }
+        do {
+            try copyText(takes[index])
+            notify(DictationNotice(kind: .info, message: L10n.tr("Copied — to this Mac only.")))
+        } catch {
+            notify(DictationNotice(kind: .failure, message: L10n.tr("Couldn't copy the dictation."), reason: .clipboard))
+        }
+    }
+
+    /// A take that stops being the last one stays on the menu, while History
+    /// keeps its entry. One History never took is not kept: nothing would
+    /// ever remove it.
+    private func rememberAsEarlierTake(_ take: LastDictation?) {
+        guard let take, take.historyEntryID != nil,
+              !take.insertedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
+        earlierTakes.removeAll { $0.historyEntryID == take.historyEntryID }
+        earlierTakes.insert(take, at: 0)
+        earlierTakes = Array(earlierTakes.prefix(MenuSections.takeLimit - 1))
     }
 
     /// Paste the last take into the app in front: the paste-last chord, the
@@ -2251,7 +2351,10 @@ public final class AppState: ObservableObject {
         pasteLastTake()
     }
 
-    private func paste(_ words: String) {
+    /// - Parameter isLastTake: `false` for an earlier take from the menu.
+    ///   Its landing says nothing about words that wait: those are the last
+    ///   take's, and they keep waiting.
+    private func paste(_ words: String, isLastTake: Bool = true) {
         // The destination is maintained ahead of the click. Querying
         // NSWorkspace synchronously here can wedge MainActor and permanently
         // lock both the paste and the dictation hotkey.
@@ -2260,8 +2363,8 @@ public final class AppState: ObservableObject {
         // in front now may be a terminal, which never gets a paragraph break.
         // History keeps them as they were, for a paste into a prose app.
         let text = ParagraphBreaks.fit(words, to: PromptModePolicy().mode(for: target))
-        let wereWaiting = waitingWords != nil
-        let neverLanded = recoveredText != nil
+        let wereWaiting = isLastTake && waitingWords != nil
+        let neverLanded = isLastTake && recoveredText != nil
         isRecoveryOperationActive = true
         dictationState = .inserting
         Task { [weak self] in
@@ -2292,10 +2395,13 @@ public final class AppState: ObservableObject {
                     // PREVIOUS dictation, and correction learning may not act
                     // on it once these words have landed over it.
                     self.successfulDictationCount += 1
+                    // It is no longer the last take, and it is still a take
+                    // the menu offers.
+                    self.rememberAsEarlierTake(self.lastDictation)
                     self.lastDictation = nil
                 }
                 // The words stay the last take: the chord pastes them again.
-                self.waitingWords = nil
+                if isLastTake { self.waitingWords = nil }
                 if wereWaiting {
                     self.waitingPresenter?.showOutcome(.pasted(into: target?.localizedName))
                 }
@@ -2424,6 +2530,7 @@ public final class AppState: ObservableObject {
         hotkeyMonitor.stop()
         lastTakeShortcutMonitor?.stop()
         recordingShortcutMonitor?.stop()
+        screenRecordingShortcutMonitor?.stop()
         refreshPermissions()
         revalidateEngineAfterWake()
     }
@@ -2818,6 +2925,9 @@ public final class AppState: ObservableObject {
         waitingPresenter?.onWaitingLater = { [weak self] in
             self?.keepWaitingWordsForLater()
         }
+        screenRecordingShortcutMonitor?.onPress = { [weak self] in
+            self?.handleScreenRecordingShortcut()
+        }
         recordingShortcutMonitor?.onPress = { [weak self] in
             self?.handleRecordingShortcut()
         }
@@ -2965,6 +3075,21 @@ public final class AppState: ObservableObject {
         switch meetingState {
         case .idle:
             startRecording()
+        case .recording, .paused:
+            stopRecording()
+        case .starting, .stopping:
+            break
+        }
+    }
+
+    /// The screen chord: the choices open with the last ones in place and
+    /// Return starts, because screen and camera are decided in sight at the
+    /// moment of recording. While anything is being recorded it stops it, as
+    /// the Record chord does, so either one ends a recording.
+    private func handleScreenRecordingShortcut() {
+        switch meetingState {
+        case .idle:
+            prepareScreenRecording()
         case .recording, .paused:
             stopRecording()
         case .starting, .stopping:
@@ -4352,10 +4477,12 @@ public final class AppState: ObservableObject {
             hotkeyMonitor.start()
             applyCopyShortcut()
             applyRecordingShortcut()
+            applyScreenRecordingShortcut()
         } else {
             hotkeyMonitor.stop()
             lastTakeShortcutMonitor?.stop()
             recordingShortcutMonitor?.stop()
+            screenRecordingShortcutMonitor?.stop()
         }
 
         reschedulePermissionPolling()

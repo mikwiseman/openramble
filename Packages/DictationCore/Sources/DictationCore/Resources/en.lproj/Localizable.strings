@@ -682,9 +682,6 @@
 "The previous clipboard couldn't be restored." = "The previous clipboard couldn't be restored.";
 "OpenRamble: words waiting" = "OpenRamble: words waiting";
 "Paste “%@”" = "Paste “%@”";
-"Paste the last take" = "Paste the last take";
-"Copy the last take" = "Copy the last take";
-"Pastes the last take into the app in front" = "Pastes the last take into the app in front";
 "%@ pastes it until you quit." = "%@ pastes it until you quit.";
 "The menu pastes it until you quit." = "The menu pastes it until you quit.";
 "Paste last take" = "Paste last take";
@@ -751,7 +748,6 @@
 "Didn't paste while typing is protected. Your words are waiting." = "Didn't paste while typing is protected. Your words are waiting.";
 "Didn't paste while %@ protects typing." = "Didn't paste while %@ protects typing.";
 "Didn't paste while typing is protected." = "Didn't paste while typing is protected.";
-"Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app." = "Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app.";
 "Keyboard Settings…" = "Keyboard Settings…";
 "Opens System Settings, where you can add the Hebrew keyboard." = "Opens System Settings, where you can add the Hebrew keyboard.";
 "Hebrew is downloaded" = "Hebrew is downloaded";
@@ -779,3 +775,9 @@
 "To dictate or record in Hebrew, switch your keyboard to Hebrew. A file you import asks which language it is in." = "To dictate or record in Hebrew, switch your keyboard to Hebrew. A file you import asks which language it is in.";
 "Files you import can be transcribed in Hebrew now. To dictate or record in Hebrew, add the Hebrew keyboard and switch to it." = "Files you import can be transcribed in Hebrew now. To dictate or record in Hebrew, add the Hebrew keyboard and switch to it.";
 "Optional. For audio files in Hebrew, and for dictating or recording while your keyboard is set to Hebrew." = "Optional. For audio files in Hebrew, and for dictating or recording while your keyboard is set to Hebrew.";
+"“%@”" = "“%@”";
+"Copy “%@”" = "Copy “%@”";
+"Pastes these words into the app in front. Hold Option to copy them instead." = "Pastes these words into the app in front. Hold Option to copy them instead.";
+"Record screen" = "Record screen";
+"These work from any app. Paste last take puts your newest dictation into the app in front. Record starts and stops a recording. Record screen opens the screen recording choices, and stops a recording too." = "These work from any app. Paste last take puts your newest dictation into the app in front. Record starts and stops a recording. Record screen opens the screen recording choices, and stops a recording too.";
+"Press this shortcut to open the screen recording choices, or to stop a recording" = "Press this shortcut to open the screen recording choices, or to stop a recording";
