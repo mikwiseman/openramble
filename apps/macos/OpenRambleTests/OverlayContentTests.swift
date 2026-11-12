@@ -95,8 +95,10 @@ final class OverlayContentTests: XCTestCase {
         XCTAssertEqual(content(.transcribing, isWaitingForEngine: true).mark, .working)
         XCTAssertNil(OverlayContent.Mark.closed.colorRole)
         XCTAssertEqual(OverlayContent.Mark.closed.glyph, .silent)
-        XCTAssertEqual(content(.listening).word, "Listening", "the word stays for as long as the microphone is open")
-        XCTAssertNil(content(.transcribing).word)
+        // No words while the microphone is open: the red disc, the moving
+        // meter and the running clock already say it works.
+        XCTAssertNil(content(.listening).title)
+        XCTAssertNil(content(.listening, hasLingered: true).title)
         XCTAssertNil(OverlayContent.Mark.starting.colorRole)
         XCTAssertEqual(OverlayContent.Mark.recording.colorRole, .recording)
         XCTAssertEqual(OverlayContent.Mark.working.colorRole, .processing)
@@ -110,20 +112,17 @@ final class OverlayContentTests: XCTestCase {
 
     /// The key is up and the microphone is still live. A red lock where the
     /// dot was says so — the locked-recording sign people know from voice
-    /// messages — and red keeps its one meaning. The way out is on the block
-    /// as the key that ends the take, drawn, and in the label VoiceOver reads
-    /// on demand: nothing is spoken into the open microphone.
+    /// messages — and red keeps its one meaning. Nothing else changes: no
+    /// key cap, no word, the same width, so the block shows that it works
+    /// and asks for no attention. The way out is in the label VoiceOver
+    /// reads on demand: nothing is spoken into the open microphone.
     func testHandsFreeIsARedLockWithTheWayOutInTheLabel() {
         let handsFree = content(.listening, elapsed: 3, handsFreeFinishKey: "Right Command")
 
         XCTAssertEqual(handsFree.mark, .handsFree)
         XCTAssertEqual(OverlayContent.Mark.handsFree.colorRole, .recording)
         XCTAssertNil(handsFree.title)
-        XCTAssertEqual(handsFree.finishKey, "Right ⌘", "the key that ends it, as a key cap")
-        XCTAssertNil(content(.listening, elapsed: 3).finishKey, "while the key is held there is nothing to teach")
-        // Going hands-free is a deliberate gesture, so the block may grow
-        // once for it: the key needs room in every language.
-        XCTAssertEqual(handsFree.panelWidth, 304)
+        XCTAssertEqual(handsFree.panelWidth, content(.listening, elapsed: 3).panelWidth, "it never re-centres mid-take")
         XCTAssertEqual(
             handsFree.accessibilityLabel,
             "Recording hands-free, 3 seconds. Press Right Command to finish."

@@ -36,7 +36,11 @@ for the check.
    the dictionary form, confirm Return submits a populated pair and does not add
    an empty or half-filled replacement.
 7. Double-press the hotkey to start hands-free recording, then press once to
-   stop. Confirm Escape and a conflicting shortcut cancel without inserting text.
+   stop. While it records, the panel is the same size as when the key is held
+   and shows only a red lock, the meter and the clock: no key cap and no
+   words. Set the dictation key to Right Option or Fn first and confirm no
+   panel names Right Command anywhere. Confirm Escape and a conflicting
+   shortcut cancel without inserting text.
    Hold the hotkey and press C right away (a shortcut such as ⌘C): nothing is
    inserted. In an empty TextEdit document, hold it, speak for a second or
    two, press Down Arrow, keep talking and release: the whole take is

@@ -237,7 +237,7 @@ final class OverlayModelTests: XCTestCase {
         model.setHandsFree(finishKey: "Right Command")
 
         XCTAssertEqual(model.content.mark, .handsFree)
-        XCTAssertEqual(model.content.panelWidth, 304)
+        XCTAssertEqual(model.content.panelWidth, 244, "the same block as before the lock")
         XCTAssertEqual(announcer.cues, 2)
         XCTAssertEqual(announcer.messages, [])
     }

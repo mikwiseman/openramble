@@ -821,7 +821,7 @@ public final class AppState: ObservableObject {
             defaults.set(hotkey.rawValue, forKey: Keys.hotkey)
             hotkeyMonitor.setHotkey(hotkey)
             // A block that names the key names the one that works now.
-            if waitingWords != nil { waitingPresenter?.setWaiting(waitingWords, key: hotkey) }
+            waitingPresenter?.setWaiting(waitingWords, key: hotkey)
         }
     }
 
@@ -2916,6 +2916,10 @@ public final class AppState: ObservableObject {
 
     private func wireHotkey() {
         hotkeyMonitor.setHotkey(hotkey)
+        // The panel draws the key, so it learns which one now. It used to
+        // learn only when words waited, and until then drew the default
+        // Right ⌘ whatever key was set.
+        waitingPresenter?.setWaiting(waitingWords, key: hotkey)
         lastTakeShortcutMonitor?.onPress = { [weak self] in
             self?.pasteLastTake()
         }
