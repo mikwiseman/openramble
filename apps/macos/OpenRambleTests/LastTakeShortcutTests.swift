@@ -248,8 +248,7 @@ final class LastTakeShortcutTests: XCTestCase {
 
     private func offersCopyLast(_ state: AppState) -> Bool {
         let rows = MenuSections.sections(for: state).joined()
-        XCTAssertEqual(rows.contains(.pasteLastTake), rows.contains(.copyLastTake), "one take, two verbs")
-        return rows.contains(.pasteLastTake)
+        return rows.contains(.take(0))
     }
 
     /// The last take is the text this run inserted, and the menu offers it

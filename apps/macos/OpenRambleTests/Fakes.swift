@@ -535,6 +535,7 @@ final class AppHarness {
     let monitor = FakeHotkeyMonitor()
     let copyMonitor = FakeShortcutMonitor()
     let recordingMonitor = FakeShortcutMonitor()
+    let screenRecordingMonitor = FakeShortcutMonitor()
     /// The engine imported files are transcribed with.
     let importEngine = ScriptedImportRecognizer()
     let overlay = FakeOverlay()
@@ -683,6 +684,7 @@ final class AppHarness {
                 hotkeyMonitor: monitor,
                 lastTakeShortcutMonitor: copyMonitor,
                 recordingShortcutMonitor: recordingMonitor,
+                screenRecordingShortcutMonitor: screenRecordingMonitor,
                 inserter: inserterOverride ?? inserter,
                 targetApplicationSnapshot: { [inserter, targetOverride] in
                     targetOverride ?? inserter.frontmostApplication()

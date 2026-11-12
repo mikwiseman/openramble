@@ -10,15 +10,17 @@ import XCTest
 ///   is discoverable and deletion stays explicit.
 /// - "Copy/Delete Saved Text" are gone, and so are "Insert Last Dictation",
 ///   "Copy Last Dictation" and "Recent Dictations": three answers to one
-///   question. The last take is one thing, with two verbs, and it leads the
-///   menu. Older takes live in the Library. Do not re-add delete items.
+///   question. The answer is the words themselves: the newest takes lead the
+///   menu, one row each, three at most. A click pastes and Option-click
+///   copies, so there is no verb row. Older takes live in the Library. Do
+///   not re-add delete items.
 final class MenuSectionsTests: XCTestCase {
     private func sections(
         state: DictationState = .idle,
         ready: Bool = true,
         waiting: Bool = false,
         recoveryFaulted: Bool = false,
-        lastTake: Bool = false,
+        takes: Int = 0,
         recording: AppState.MeetingState = .idle
     ) -> [[MenuRow]] {
         MenuSections.sections(
@@ -27,7 +29,7 @@ final class MenuSectionsTests: XCTestCase {
             wordsAreWaiting: waiting,
             recoveryStorageFaulted: recoveryFaulted,
             // Words that wait are the last take, by definition.
-            hasLastTake: lastTake || waiting,
+            takes: max(takes, waiting ? 1 : 0),
             recordingState: recording
         )
     }
@@ -86,7 +88,7 @@ final class MenuSectionsTests: XCTestCase {
 
     func testWaitingWordsStillLeadTheMenuWhileRecording() {
         XCTAssertEqual(sections(waiting: true, recording: .paused).first, [.statusLine])
-        XCTAssertTrue(sections(waiting: true, recording: .paused).flatMap(\.self).contains(.pasteLastTake))
+        XCTAssertTrue(sections(waiting: true, recording: .paused).flatMap(\.self).contains(.take(0)))
     }
 
     /// The common case: a ready, quiet app shows start-recording as its own
@@ -101,10 +103,10 @@ final class MenuSectionsTests: XCTestCase {
     /// Everything on at once — four sections, and the last take leads.
     func testScenario002() {
         XCTAssertEqual(
-            sections(waiting: true, lastTake: true),
+            sections(waiting: true, takes: 1),
             [
                 [.statusLine],
-                [.pasteLastTake, .copyLastTake],
+                [.take(0)],
                 [.startRecording, .startScreenRecording],
                 [.openRecordings, .settings, .quit],
             ]
@@ -116,7 +118,7 @@ final class MenuSectionsTests: XCTestCase {
     func testScenario003() {
         for state in [DictationState.preparing, .listening] {
             XCTAssertEqual(
-                sections(state: state, waiting: true, lastTake: true),
+                sections(state: state, waiting: true, takes: 1),
                 [
                     [.statusLine],
                     [.stopAndInsert, .cancelDictation],
@@ -132,7 +134,7 @@ final class MenuSectionsTests: XCTestCase {
     func testScenario004() {
         for state in [DictationState.transcribing, .inserting] {
             XCTAssertEqual(
-                sections(state: state, waiting: true, lastTake: true),
+                sections(state: state, waiting: true, takes: 1),
                 [[.statusLine], [.openRecordings, .settings, .quit]],
                 "\(state) must show only the status"
             )
@@ -150,25 +152,28 @@ final class MenuSectionsTests: XCTestCase {
     /// A person mid-setup keeps access to the last take.
     func testScenario006() {
         XCTAssertEqual(
-            sections(ready: false, waiting: true, lastTake: true),
+            sections(ready: false, waiting: true, takes: 1),
             [
                 [.statusLine],
                 [.setupHints, .finishSetup],
-                [.pasteLastTake, .copyLastTake],
+                [.take(0)],
                 [.startRecording, .startScreenRecording],
                 [.openRecordings, .settings, .quit],
             ]
         )
     }
 
-    /// The last take is what this run dictated: no such take, no rows. One
-    /// take, two verbs, always together.
-    func testTheLastTakeNeedsATakeFromThisRun() {
+    /// The takes are what this run dictated: no such take, no rows. One row
+    /// a take, the last one first, and three at most: a menu is not a
+    /// history.
+    func testTheTakesNeedATakeFromThisRunAndStopAtThree() {
         XCTAssertEqual(
             sections(),
             [[.statusLine], [.startRecording, .startScreenRecording], [.openRecordings, .settings, .quit]]
         )
-        XCTAssertEqual(sections(lastTake: true)[1], [.pasteLastTake, .copyLastTake])
+        XCTAssertEqual(sections(takes: 1)[1], [.take(0)])
+        XCTAssertEqual(sections(takes: 3)[1], [.take(0), .take(1), .take(2)])
+        XCTAssertEqual(sections(takes: 9)[1], [.take(0), .take(1), .take(2)])
     }
 
     /// Settings and Quit close every menu, in every state.
@@ -177,7 +182,7 @@ final class MenuSectionsTests: XCTestCase {
             sections(),
             sections(state: .listening),
             sections(state: .transcribing),
-            sections(ready: false, waiting: true, lastTake: true),
+            sections(ready: false, waiting: true, takes: 1),
         ]
         for variant in variants {
             XCTAssertEqual(variant.last, [.openRecordings, .settings, .quit])
@@ -188,14 +193,14 @@ final class MenuSectionsTests: XCTestCase {
     /// or delete item.
     func testScenario009() {
         let everything: Set<MenuRow> = Set(
-            sections(ready: false, waiting: true, lastTake: true)
+            sections(ready: false, waiting: true, takes: 1)
                 .flatMap(\.self)
             + sections(state: .listening, waiting: true).flatMap(\.self)
             + sections(state: .transcribing, waiting: true).flatMap(\.self)
         )
         let allowed: Set<MenuRow> = [
             .statusLine, .stopAndInsert, .cancelDictation, .setupHints, .finishSetup,
-            .pasteLastTake, .copyLastTake, .revealRecoveredRecordings,
+            .take(0), .revealRecoveredRecordings,
             .startRecording, .startScreenRecording, .openRecordings, .settings, .quit,
         ]
         XCTAssertTrue(everything.isSubset(of: allowed))

@@ -57,6 +57,21 @@ final class AppStateWaitingWordsTests: XCTestCase {
         }
     }
 
+    /// The block draws the dictation key, so it has to know the one that is
+    /// set from the start, and every change, whether or not words wait. It
+    /// used to learn the key only when words waited, and drew the default
+    /// Right ⌘ for anyone who had chosen another.
+    func testTheBlockKnowsTheChosenKeyFromTheStart() async throws {
+        harness.defaults.set(DictationHotkey.rightOption.rawValue, forKey: "hotkey")
+        let state = harness.makeState()
+        await settle()
+        XCTAssertNil(state.waitingWords)
+        XCTAssertEqual(block.key, .rightOption)
+
+        state.hotkey = .fn
+        XCTAssertEqual(block.key, .fn, "a change reaches it with nothing waiting")
+    }
+
     /// A take whose paste fails with `failure`, at rest again.
     private func takeThatCannotLand(_ failure: TextInsertionError) async throws -> AppState {
         try harness.installModelMarker()

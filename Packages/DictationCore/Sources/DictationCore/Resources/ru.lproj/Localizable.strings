@@ -659,7 +659,6 @@
 "Not pasted." = "Не вставлено.";
 "copies" = "скопирует";
 "pastes" = "вставит";
-"ends" = "закончит";
 "Words waiting." = "Слова ждут.";
 "%@ copies." = "%@ скопирует.";
 "%@ pastes." = "%@ вставит.";
@@ -682,9 +681,6 @@
 "The previous clipboard couldn't be restored." = "Прежнее содержимое буфера обмена не вернулось.";
 "OpenRamble: words waiting" = "OpenRamble: слова ждут";
 "Paste “%@”" = "Вставить «%@»";
-"Paste the last take" = "Вставить последнюю диктовку";
-"Copy the last take" = "Скопировать последнюю диктовку";
-"Pastes the last take into the app in front" = "Вставляет последнюю диктовку в активное приложение";
 "%@ pastes it until you quit." = "%@ вставит, пока приложение открыто.";
 "The menu pastes it until you quit." = "Меню вставит, пока приложение открыто.";
 "Paste last take" = "Вставить последнюю диктовку";
@@ -751,7 +747,6 @@
 "Didn't paste while typing is protected. Your words are waiting." = "Не вставилось, пока ввод защищён. Слова ждут.";
 "Didn't paste while %@ protects typing." = "Не вставилось, пока %@ защищает ввод.";
 "Didn't paste while typing is protected." = "Не вставилось, пока ввод защищён.";
-"Paste last take puts your newest dictation into the app in front. Record starts and stops a recording from any app." = "«Вставить последнюю диктовку» помещает её в активное приложение. Комбинация записи начинает и останавливает запись из любого приложения.";
 "Keyboard Settings…" = "Настройки клавиатуры…";
 "Opens System Settings, where you can add the Hebrew keyboard." = "Открывает Системные настройки, где можно добавить ивритскую раскладку.";
 "Hebrew is downloaded" = "Иврит загружен";
@@ -779,3 +774,9 @@
 "To dictate or record in Hebrew, switch your keyboard to Hebrew. A file you import asks which language it is in." = "Чтобы диктовать или записывать на иврите, переключите раскладку на иврит. При импорте файла приложение спросит, на каком он языке.";
 "Files you import can be transcribed in Hebrew now. To dictate or record in Hebrew, add the Hebrew keyboard and switch to it." = "Файлы, которые вы импортируете, уже можно расшифровывать на иврите. Чтобы диктовать или записывать на иврите, добавьте ивритскую раскладку и переключитесь на неё.";
 "Optional. For audio files in Hebrew, and for dictating or recording while your keyboard is set to Hebrew." = "По желанию. Для аудиофайлов на иврите, а также для диктовки и записи, пока включена ивритская раскладка.";
+"“%@”" = "«%@»";
+"Copy “%@”" = "Скопировать «%@»";
+"Pastes these words into the app in front. Hold Option to copy them instead." = "Вставляет эти слова в активное приложение. С клавишей Option копирует их.";
+"Record screen" = "Записать экран";
+"These work from any app. Paste last take puts your newest dictation into the app in front. Record starts and stops a recording. Record screen opens the screen recording choices, and stops a recording too." = "Работают из любого приложения. «Вставить последнюю диктовку» помещает её в активное приложение. «Записать» начинает и останавливает запись. «Записать экран» открывает настройки записи экрана, а во время записи останавливает её.";
+"Press this shortcut to open the screen recording choices, or to stop a recording" = "Эта комбинация открывает настройки записи экрана или останавливает запись";

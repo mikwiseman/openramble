@@ -36,7 +36,11 @@ for the check.
    the dictionary form, confirm Return submits a populated pair and does not add
    an empty or half-filled replacement.
 7. Double-press the hotkey to start hands-free recording, then press once to
-   stop. Confirm Escape and a conflicting shortcut cancel without inserting text.
+   stop. While it records, the panel is the same size as when the key is held
+   and shows only a red lock, the meter and the clock: no key cap and no
+   words. Set the dictation key to Right Option or Fn first and confirm no
+   panel names Right Command anywhere. Confirm Escape and a conflicting
+   shortcut cancel without inserting text.
    Hold the hotkey and press C right away (a shortcut such as ⌘C): nothing is
    inserted. In an empty TextEdit document, hold it, speak for a second or
    two, press Down Arrow, keep talking and release: the whole take is
@@ -150,7 +154,21 @@ for the check.
     import to the Trash while it is being transcribed: it stops. With the
     Hebrew model installed, an import asks which language the file is in,
     with the keyboard's language first, and a Hebrew file comes out in Hebrew
-    while the keyboard is English. Without it, nothing is asked. With the keyboard on Hebrew, dictate a Hebrew sentence
+    while the keyboard is English. Without it, nothing is asked.
+22. The menu and the shortcuts. Dictate four different sentences and open the
+    menu: the three newest are its first rows, as their own words, the newest
+    first with ⌃⌘V in the shortcut column. Click the second: it is pasted into
+    the app in front. Hold Option with the menu open: each of the three reads
+    Copy, and clicking one copies it. Delete one of them in the Library and
+    confirm it leaves the menu. Library…, Settings… and Quit OpenRamble show
+    no shortcut, and ⌘, and ⌘Q still work with the Library window in front.
+    In Xcode or a browser, press ⌃⌘R: a recording starts and the app in front
+    does nothing. Press ⌃⇧⌘R: the recording stops. Press ⌃⇧⌘R again: the
+    Library opens on the screen recording choices, and Return starts. With
+    Terminal's Secure Keyboard Entry on, confirm ⌃⌘R still starts and stops a
+    recording. In Settings → General, set Record screen to the chord Record
+    uses and confirm it is refused by name; clear it and confirm the menu row
+    shows no shortcut. With the keyboard on Hebrew, dictate a Hebrew sentence
     and confirm Hebrew text lands right to left; switch to an English keyboard
     and confirm the next take is English. Switch keyboards during a take and
     during a recording and confirm neither changes language halfway. Remove

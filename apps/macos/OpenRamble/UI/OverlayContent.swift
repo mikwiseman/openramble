@@ -8,11 +8,13 @@ import Foundation
 /// separate type and checked by the state table, not by looking at the screen.
 ///
 /// A take has one shape from key-down to text: the same block with a glyph, a
-/// word, a meter and a clock. The glyph carries the state — a hollow ring
-/// while the microphone starts, a red disc while it records, a blue ring while
-/// the words are written down — and color only confirms it. Most takes finish
-/// inside half a second of release, so a title appears only when a state
-/// outlasts that.
+/// meter and a clock, and no words. Its job is to show that dictation is
+/// working without asking to be read. The glyph carries the state — a hollow
+/// ring while the microphone starts, a red disc while it records, a red lock
+/// while it records hands-free, a blue ring while the words are written down
+/// — and color only confirms it. Most takes finish inside half a second of
+/// release, so a title appears only when a state outlasts that, and it is
+/// set quietly.
 ///
 /// When the words cannot land the block grows to hold them, in full, with the
 /// reason and the one action that works now. See `WaitingWords`.
@@ -86,12 +88,6 @@ struct OverlayContent: Equatable {
     var accessibilityLabel: String
     /// What VoiceOver hears on entering this state. `nil` - nothing.
     var voice: Voice?
-    /// The state's word beside the glyph while the take's shape is shown:
-    /// "Listening". Stays visible for as long as the microphone is open.
-    var word: String?
-    /// Hands-free only: the key that ends the take, drawn as a key cap, so the
-    /// way out is on the block and not in memory.
-    var finishKey: String?
     /// Words that could not land. The block grows to hold them.
     var waiting: WaitingWords?
     /// How a waiting take ended, said once before the block leaves.
@@ -106,15 +102,13 @@ struct OverlayContent: Equatable {
         case speech(String, urgent: Bool)
     }
 
-    /// One width per kind: every take state shares the recording layout, so
-    /// the block never re-centres mid-take; a notice needs room for a
-    /// sentence, and waiting words need room to be read in full.
+    /// One width per kind: every take state shares the recording layout,
+    /// hands-free included, so the block never re-centres mid-take; a notice
+    /// needs room for a sentence, and waiting words need room to be read in
+    /// full.
     var panelWidth: Double {
         if waiting != nil { return 384 }
         if outcome != nil { return 320 }
-        // Going hands-free is a deliberate gesture, so the block may grow for
-        // it once: the key that ends the take needs room in every language.
-        if finishKey != nil { return 304 }
         return tone == nil ? 244 : 320
     }
 
@@ -207,17 +201,19 @@ struct OverlayContent: Equatable {
         case .listening:
             let seconds = spokenSeconds(elapsed)
             if let handsFreeFinishKey {
+                // The lock is the whole message. The way out is the key the
+                // person just pressed twice, pressed once more; a key cap and
+                // a word for it made the block wider and louder than the take
+                // it describes. VoiceOver reads it on demand: said aloud it
+                // would be said into the open microphone.
                 return OverlayContent(
                     mark: .handsFree,
-                    // The way out lives here, read on demand: said aloud it
-                    // would be said into the open microphone.
                     accessibilityLabel: L10n.tr(
                         "Recording hands-free, %@. Press %@ to finish.",
                         String(describing: seconds),
                         handsFreeFinishKey
                     ),
-                    voice: .cue,
-                    finishKey: key.shortTitle
+                    voice: .cue
                 )
             }
             return OverlayContent(
@@ -225,8 +221,7 @@ struct OverlayContent: Equatable {
                 accessibilityLabel: L10n.tr("Recording, %@.", String(describing: seconds)),
                 // The main cue throughout the application: without it, a blind
                 // person does not know that the microphone is on.
-                voice: .cue,
-                word: L10n.tr("Listening")
+                voice: .cue
             )
 
         case .transcribing:

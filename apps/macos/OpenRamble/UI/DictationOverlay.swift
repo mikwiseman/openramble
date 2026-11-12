@@ -789,7 +789,7 @@ struct OverlayView: View {
 
     // MARK: A take
 
-    /// Glyph, word, meter, clock: one shape from key-down to text.
+    /// Glyph, meter, clock: one shape from key-down to text.
     ///
     /// Static on purpose, in every state: this block is visible while the
     /// recognition result waits for the main actor, and an iterative effect
@@ -801,25 +801,15 @@ struct OverlayView: View {
             }
             if let title = content.title {
                 // Takes the place of the meter and the clock, so the block
-                // keeps its size and nothing beside it moves.
+                // keeps its size and nothing beside it moves. Set like the
+                // clock: a state that lingers is said, not announced.
                 Text(title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
             } else {
-                if let key = content.finishKey {
-                    KeyCap(title: key)
-                    Text(L10n.tr("ends"))
-                        .font(.system(size: 14, weight: .medium))
-                        .lineLimit(1)
-                        .fixedSize()
-                } else if let word = content.word {
-                    Text(word)
-                        .font(.system(size: 14, weight: .medium))
-                        .lineLimit(1)
-                        .fixedSize()
-                }
                 RecordingWaveform(
                     samples: model.waveformSamples,
                     color: content.mark?.colorRole?.color ?? .secondary,

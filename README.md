@@ -35,7 +35,8 @@ OpenRamble's voice typing works in any app that accepts text, from Mail, Slack a
 - **Personal dictionary.** Tell OpenRamble how a word sounds and how to write it. A built-in list already covers common technical terms. You can also import and export your dictionary as a file.
 - **Your clipboard comes back.** Once the text has been read, usually a quarter of a second after the paste, OpenRamble puts back what was on your clipboard, images included. If no app reads the text within three seconds, OpenRamble puts your clipboard back and keeps your words on screen, where you are working, until you paste them or set them aside. Dictated text is marked so that it stays off Universal Clipboard and out of clipboard managers that respect the standard privacy markers.
 - **Words wait where you work.** If a paste cannot land, the words stay on the dictation panel with the reason and one action. Tap the dictation key to paste them once you are in a text field. A password field or a terminal that protects typing does not stop a paste. If one still goes unread while typing is protected, the tap copies the words instead, and your own ⌘V pastes. Later keeps them in History, and holding the key starts a new dictation.
-- **The last take.** ⌃⌘V pastes your newest dictation into the app in front, and it is the first row of the OpenRamble menu. You can change or clear the shortcut in Settings.
+- **Your last takes, one click away.** The OpenRamble menu starts with your three newest dictations, as their own words. Click one to paste it into the app in front, or hold Option and click to copy it. ⌃⌘V pastes the newest from any app.
+- **Three shortcuts that work from any app.** ⌃⌘V pastes the last take, ⌃⌘R starts and stops a recording, and ⌃⇧⌘R opens the screen recording choices. You can change or clear each one in Settings → General. The menu prints only these, because they are the ones that work wherever you are.
 - **Library.** One window holds everything you said: your recent dictations and your recordings, by day, with one search. Replay, copy or delete a dictation, or recognize it again.
 - **VoiceOver.** With VoiceOver on, OpenRamble plays a short tone when the microphone opens instead of a spoken announcement, so VoiceOver's speech does not end up in your dictation.
 
@@ -85,13 +86,13 @@ OpenRamble acts on the spoken commands below.
 ### Meeting recorder
 
 - OpenRamble records your microphone and what your Mac plays. It transcribes both on your Mac while you record and labels them You and Others.
-- Press Control-Command-R (⌃⌘R) in any app to start or stop a recording, and you can change the shortcut. You can also start, pause, resume and stop a recording from the menu bar.
+- Press Control-Command-R (⌃⌘R) in any app to start or stop a recording, and you can change the shortcut. The app in front does not receive the shortcut. You can also start, pause, resume and stop a recording from the menu bar.
 - You can rename a recording, copy the transcript, or export a Markdown transcript or an M4A audio file.
 - OpenRamble does not tell the other people in a call that you are recording. In many places recording a conversation without everyone's consent is illegal, so asking them is your responsibility.
 
 ### Screen recording
 
-Choose Record Screen to record your screen, optionally with your microphone, your Mac's audio and a camera bubble that you can move and resize while you talk. OpenRamble saves an MP4 video next to the audio and the transcript on your Mac. OpenRamble does not upload the video, make a share link or store it in the cloud. To put a copy somewhere else, choose Save Video.
+Choose Record Screen, or press Control-Shift-Command-R (⌃⇧⌘R) in any app, to record your screen, optionally with your microphone, your Mac's audio and a camera bubble that you can move and resize while you talk. OpenRamble saves an MP4 video next to the audio and the transcript on your Mac. OpenRamble does not upload the video, make a share link or store it in the cloud. To put a copy somewhere else, choose Save Video.
 
 ### Transcribe an audio or video file
 
@@ -167,7 +168,7 @@ OpenRamble stores audio and text from your dictations and recordings only on you
 | Audio saved after a technical failure, so a take is not lost | Up to 10 WAV files, for at most 7 days and about 1 GB |
 | Technical journal, with no speech or text in it | On by default, for 7 days and at most 5 MB, and cleared when you turn it off |
 | Settings and dictionary | Until you change or delete them |
-| The words of your last dictation, kept so that ⌃⌘V and the menu can paste them again | In memory only, until a later dictation replaces them, you delete its History entry, or you quit. Dictation history keeps its own copy. While words that could not be pasted are on screen, the panel that shows them is left out of screenshots and screen recordings. |
+| The words of your last three dictations, kept so that ⌃⌘V and the menu can paste them again | In memory only, until later dictations replace them, you delete their History entries, or you quit. Dictation history keeps its own copy. While words that could not be pasted are on screen, the panel that shows them is left out of screenshots and screen recordings. |
 
 To report a problem, choose Settings → About → Save Error Report. OpenRamble saves a ZIP file on your Mac, and you decide whether to send it to the developer. The file holds technical events, timings, error codes, the app and macOS versions, the app's architecture (arm64 or x86_64), and up to five recent Apple crash reports rebuilt without your file paths or device identifiers. It never holds audio, transcripts or clipboard contents, and OpenRamble does not upload it. [docs/diagnostics.md](docs/diagnostics.md) lists exactly what it contains.
 
@@ -273,7 +274,7 @@ OpenRamble keeps your last 5 dictations with their audio so you can replay or co
 
 ### What permissions does OpenRamble need? Does it log my keystrokes?
 
-OpenRamble needs Microphone access to hear you and Accessibility access to notice the dictation key and paste the text. It compares each key press only with the dictation key, Escape and the shortcuts you set in Settings, such as Control-Command-R for recording, and it does not record, store or send any other key. Input Monitoring is not needed.
+OpenRamble needs Microphone access to hear you and Accessibility access to notice the dictation key and paste the text. It compares each key press only with the dictation key and Escape, and it does not record, store or send any other key. The shortcuts you set in Settings, such as Control-Command-R for recording, are registered with macOS, which tells OpenRamble only that one of them was pressed. Input Monitoring is not needed.
 
 ### Does OpenRamble work on Windows or Linux?
 

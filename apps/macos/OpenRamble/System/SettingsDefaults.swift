@@ -11,6 +11,7 @@ public enum SettingsDefaults {
     public static let hotkey: DictationHotkey = .rightCommand
     public static let lastTakeShortcut: KeyCombination? = .controlCommandV
     public static let recordingShortcut: KeyCombination? = .controlCommandR
+    public static let screenRecordingShortcut: KeyCombination? = .shiftControlCommandR
     public static let soundsEnabled = true
     public static let appendsTrailingSpace = false
     public static let launchAtLogin = false

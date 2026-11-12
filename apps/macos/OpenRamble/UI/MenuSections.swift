@@ -2,17 +2,17 @@ import DictationCore
 
 /// A row the menu can offer. `setupHints` expands to several controls in the
 /// view; as policy it is one unit that appears and disappears whole.
-enum MenuRow: Equatable {
+enum MenuRow: Hashable {
     case statusLine
     case stopAndInsert
     case cancelDictation
     case setupHints
     case finishSetup
-    /// The last take, by its first words: one press pastes it where the
-    /// person is. Insert Last, Copy Last and Recent Dictations were three
-    /// answers to one question.
-    case pasteLastTake
-    case copyLastTake
+    /// One of the newest takes, by its first words: a click pastes it where
+    /// the person is, and Option-click copies it. The first is the last take.
+    /// Paste, Copy and Recent Dictations were three answers to one question;
+    /// a short list of the words themselves is the one answer.
+    case take(Int)
     case revealRecoveredRecordings
     case recordingLine
     case startRecording
@@ -42,16 +42,19 @@ enum MenuRow: Equatable {
 ///   recovery-storage fault: when safe cleanup cannot be persisted, hiding
 ///   retained voice data would break the privacy promise, so that state keeps
 ///   its menu row until it is resolved.
-/// - The last take is one thing: the newest take's words, landed or not.
-///   It leads the menu, because the menu is the backstop for words that
-///   could not land. Older takes live in the Library.
+/// - The newest takes lead the menu, the last one first, because the menu is
+///   the backstop for words that could not land. Three at most: a menu is
+///   not a history. Older takes live in the Library.
 enum MenuSections {
+    /// How many takes the menu offers. A menu is not a history.
+    static let takeLimit = 3
+
     static func sections(
         state: DictationState,
         isDictationReady: Bool,
         wordsAreWaiting: Bool,
         recoveryStorageFaulted: Bool,
-        hasLastTake: Bool,
+        takes: Int,
         recordingState: AppState.MeetingState = .idle
     ) -> [[MenuRow]] {
         var sections: [[MenuRow]] = []
@@ -82,8 +85,8 @@ enum MenuSections {
             if !isDictationReady {
                 sections.append([.setupHints, .finishSetup])
             }
-            if hasLastTake {
-                sections.append([.pasteLastTake, .copyLastTake])
+            if takes > 0 {
+                sections.append((0..<min(takes, takeLimit)).map(MenuRow.take))
             }
             if recoveryStorageFaulted {
                 sections.append([.revealRecoveredRecordings])

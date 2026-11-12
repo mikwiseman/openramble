@@ -111,6 +111,13 @@ struct OpenRambleApp: App {
                 openWindow(id: RecordingsWindow.windowID)
                 WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
             }
+            .onChange(of: state.isScreenRecordingSetupPresented) { _, presented in
+                // The same for the screen recording choices, which the
+                // Record Screen shortcut opens from any app.
+                guard presented else { return }
+                openWindow(id: RecordingsWindow.windowID)
+                WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
+            }
         }
 
         // The content here is unconditional. While it was hiding behind
@@ -163,7 +170,6 @@ struct OpenRambleApp: App {
                     openWindow(id: RecordingsWindow.windowID)
                     WindowFronting.raiseOpenedWindow(id: RecordingsWindow.windowID)
                 }
-                .keyboardShortcut("r", modifiers: .command)
             }
         }
     }
