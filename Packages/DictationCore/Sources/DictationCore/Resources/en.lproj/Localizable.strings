@@ -778,5 +778,5 @@
 "Copy “%@”" = "Copy “%@”";
 "Pastes these words into the app in front. Hold Option to copy them instead." = "Pastes these words into the app in front. Hold Option to copy them instead.";
 "Record screen" = "Record screen";
-"These work from any app. Paste last take puts your newest dictation into the app in front. Record starts and stops a recording. Record screen opens the screen recording choices, and stops a recording too." = "These work from any app. Paste last take puts your newest dictation into the app in front. Record starts and stops a recording. Record screen opens the screen recording choices, and stops a recording too.";
+"These work from any app. The same shortcut stops a recording." = "These work from any app. The same shortcut stops a recording.";
 "Press this shortcut to open the screen recording choices, or to stop a recording" = "Press this shortcut to open the screen recording choices, or to stop a recording";
