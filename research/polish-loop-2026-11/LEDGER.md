@@ -119,12 +119,91 @@ now part of the text and follows the last word. The note under the shortcuts
 restated their names in forty words; it now says the two things the names do
 not. Checked in the gallery screenshot of the General tab. Commit `b4cb080`.
 
+## S1, on all 1,422 FLEURS clips
+
+The comparison above, repeated on every English and Russian test utterance,
+the size October's decoder gate (H8) used:
+
+| set | clips | different text | different tokens or times | tokens | word errors, both builds |
+|---|---|---|---|---|---|
+| English | 647 | 0 | 0 | 29,770 | 735 of 14,481 (5.08%) |
+| Russian | 775 | 0 | 0 | 46,140 | 735 of 15,105 (4.87%) |
+
+## A1. Taught words inside the decoder (October's H4c), on the current model
+
+Hypothesis. October's phrase boosting passed its gate on Parakeet v3 and was
+never released. It should hold on Parakeet Ultra, and it should sit on top of
+S1 unchanged, because it only re-ranks the logits a step produced.
+
+Change. The four commits of `openramble/v0.4.0-phrase-boosting` cherry-pick
+cleanly onto S1 (branch `openramble/v0.4.1-next`, tip `dacdba09`). In the app,
+`AppState` hands the written forms of the person's own dictionary entries to
+both recognizers at launch and on every change; the starter set and entries
+marked `noAcousticBoost` are left out, as October designed it.
+
+Result, Parakeet Ultra Q4_K_M, default weight 8.0, the 70 synthetic sentences
+of `research/term-biasing-2026-10/corpus.json` read by the same macOS voices,
+with all 60 terms of its `vocabulary.txt` active:
+
+| | without | with |
+|---|---|---|
+| English terms found, test half | 23 of 37 | 32 of 37 |
+| English terms found, dev half | 26 of 41 | 33 of 41 |
+| Russian terms found, test half | 1 of 34 | 1 of 34 |
+| FLEURS English, first 200, word errors | 203 (4.79%) | 206 (4.86%) |
+| FLEURS Russian, first 200, word errors | 190 (5.01%) | 190 (5.01%) |
+| decoder time for the 70 sentences | 681 ms | 688 ms |
+
+With no terms the build is identical to S1 on all 400 FLEURS clips (text,
+tokens, times). The four English transcripts that changed with 60 terms moved
+toward a term: "Sintra" to "Sentry" twice, "Giza" to "Ghost", "Festicella" to
+"Figicella". A person's own dictionary is a handful of words, not sixty.
+
+Through the app's own recognizer (`TaughtWordsEndToEndTests`, real model, the
+boosted build): "…built with Tori…" without the word, "…built with Tauri…"
+with it, and "Tori" again once it is removed. The whole `Packages/LocalASR`
+suite passes on that build, file-quality counts unchanged.
+
+Not helped: Russian speech that says English terms the Russian way. The model
+writes them in Cyrillic and never begins the Latin spelling, so there is
+nothing to complete. The text dictionary stays the tool there.
+
+Decision. Adopt with S1 in one fork release. The wiring and its unit tests
+are on the branch and change nothing on the shipped runtime; the real-model
+test lands with the pin.
+
+## A2. Upstream 0.4.2's mel fix (negative)
+
+Hypothesis. Upstream 0.4.2 drops a padding mel frame that leaked into the
+encoder "whenever floor(n/hop) is a multiple of 8", for checkpoints that do
+not mask it in the graph. Ultra masks it; the Hebrew model does not, so
+Hebrew might gain.
+
+Result. Built 0.4.2 with our two changes (`openramble/v0.4.2-next`,
+`16a6dd8d`). Ultra: all 400 FLEURS clips identical to the 0.4.1 line. Hebrew
+model on the 108 FLEURS Hebrew clips: 395 of 1,873 word errors before, 396
+after. The same clips trimmed so every length is a multiple of eight frames:
+393 before, 397 after, no empty transcript either way.
+
+Decision. No accuracy reason to move the base. 0.4.2 also carries a fix for
+x86 processors whose operating system has not enabled a register set (#246),
+which may matter on Windows and Linux; that is a robustness question for
+another round, not this one.
+
+## Design, round 2
+
+The rest of the gallery was reviewed as contact sheets (onboarding, import,
+Library in both appearances, the protected-typing banner): no defects.
+
+One gap is not a defect: the take panel appears, changes state and leaves
+with hard cuts. The code says why its contents are static ("an iterative
+effect drove a RenderBox/CA commit on every display refresh through the
+glass" while recognition waits for the main actor). A window-level fade at
+appearance and departure would not touch that path, but it changes the feel
+of the most-seen surface, so it is a proposal for Mik, not a change.
+
 ## Found, not done
 
-- **Dictionary terms inside the decoder (October research, H4c).** Passed all
-  five of its rules (English term recall 22 of 37 to 31 of 37, FLEURS word
-  error rate +0.047 points, nothing invented on noise) and has waited since
-  for a fork release. It belongs in the same release as S1.
 - **Leftover files.** `Takes/` in the installed app's support folder holds 66
   `.openramble-delete-take-*.intent` files from August, 50 bytes each.
 - **The latency gate in the release** has no allowance for a busy Mac (see

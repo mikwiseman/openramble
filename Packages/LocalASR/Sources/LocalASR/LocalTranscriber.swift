@@ -324,6 +324,11 @@ public actor LocalTranscriber {
     /// Used by wedge recovery and model deletion: it must work even when a
     /// zombie inference will never return. A load in flight is fenced out by
     /// the generation bump; its caller sees cancellation.
+    /// Hand the person's taught words to the engine; see `ASREngineAdapting`.
+    public func setVocabulary(_ terms: [String]) async {
+        await engine.setVocabulary(terms)
+    }
+
     public func unload() async {
         generation += 1
         inferenceWarmupEpoch &+= 1
