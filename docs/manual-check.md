@@ -34,7 +34,9 @@ for the check.
    a code editor using hold-to-talk. Confirm the compact HUD disappears as soon
    as insertion starts; a successful paste must not leave a banner behind. In
    the dictionary form, confirm Return submits a populated pair and does not add
-   an empty or half-filled replacement.
+   an empty or half-filled replacement. Add an English product name the model
+   misspells, say it in an English sentence, and confirm it is written as
+   taught; delete the entry and confirm the same sentence reads as before.
 7. Double-press the hotkey to start hands-free recording, then press once to
    stop. While it records, the panel is the same size as when the key is held
    and shows only a red lock, the meter and the clock: no key cap and no

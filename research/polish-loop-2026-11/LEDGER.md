@@ -202,6 +202,27 @@ glass" while recognition waits for the main actor). A window-level fade at
 appearance and departure would not touch that path, but it changes the feel
 of the most-seen surface, so it is a proposal for Mik, not a change.
 
+## Published, 20 November
+
+Mik said to publish. Before the runtime went out, the Intel slice was
+checked, because S1 runs there too (Accelerate exists on Intel Macs) and
+every earlier comparison was on Apple silicon.
+
+Method. The comparison probe built for x86_64 with the CPU backend, once
+against the shipped framework and once against the new one, run under
+Rosetta on 12 English and 8 Russian FLEURS clips (210 s of audio).
+
+Result. The same text, token ids and token times on all 20 clips; token
+confidence differs by at most 1e-6. Decoding took 1,758 ms before and 855 ms
+after. The encoder, which is nearly all of the time on that path, is
+unchanged (179 s either way under Rosetta). Rosetta is not an Intel Mac, so
+this says the code path is right, not how fast a real one is.
+
+The fork's branch `openramble/v0.4.1` moved to `dacdba09` and the release
+`v0.4.1-dacdba09` carries the audited package (checksum `f181b34d…7d3d`).
+Against the published package the speech package's tests pass, the
+real-model ones included, and `TaughtWordsEndToEndTests` with them.
+
 ## Found, not done
 
 - **Leftover files.** `Takes/` in the installed app's support folder holds 66

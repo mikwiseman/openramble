@@ -19,8 +19,10 @@ let package = Package(
     ],
     targets: [
         // The transcribe.cpp inference runtime from our fork: release 0.4.1 plus
-        // the Parakeet long-form fix (upstream issue #235), built from commit
-        // c4cd60da by scripts/build-transcribe-xcframework.sh and published
+        // the Parakeet long-form fix (upstream issue #235), the decoder's
+        // per-step products on Accelerate, and phrase boosting for the words a
+        // person taught (upstream pull request #221), built from commit
+        // dacdba09 by scripts/build-transcribe-xcframework.sh and published
         // with the fork's release. core/ramble-engine builds the same commit;
         // its tests compare the two. Pinned by exact URL and checksum for the
         // same reason every other dependency here is: a build must not be able
@@ -34,8 +36,8 @@ let package = Package(
         // `scripts/check-network-surface.sh` re-runs that audit on every check.
         .binaryTarget(
             name: "CTranscribe",
-            url: "https://github.com/mikwiseman/transcribe.cpp/releases/download/v0.4.1-c4cd60da/TranscribeCpp.xcframework.zip",
-            checksum: "12eac3ece73ff53c5eff152db8e8e6b9b599d925e545f9d5dc18b79077e6549a"
+            url: "https://github.com/mikwiseman/transcribe.cpp/releases/download/v0.4.1-dacdba09/TranscribeCpp.xcframework.zip",
+            checksum: "f181b34da5aa9896bced3d9d0da4ad3a2b7d3b8028f0174abeb9c74449bf7d3d"
         ),
         .target(
             name: "LocalASR",
