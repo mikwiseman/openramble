@@ -32,6 +32,8 @@ public protocol DictationRecognizing: Sendable {
     func warmUpInference() async throws
     func unload() async
     func unloadIfIdle() async -> Bool
+    /// Words the person taught, for a recognizer that can lean toward them.
+    func setVocabulary(_ terms: [String]) async
 }
 
 extension DictationRecognizing {
@@ -40,6 +42,8 @@ extension DictationRecognizing {
     }
 
     public var idleDuration: Duration? { get async { nil } }
+
+    public func setVocabulary(_ terms: [String]) async {}
 }
 
 extension LocalTranscriber: DictationRecognizing {}

@@ -993,7 +993,34 @@ public final class AppState: ObservableObject {
 
     /// Replacement dictionary. Changes only through the methods below: direct write bypassed
     /// would check that the dictionary can be saved at all.
-    @Published public private(set) var replacements: [DictionaryReplacement]
+    @Published public private(set) var replacements: [DictionaryReplacement] {
+        didSet { publishVocabulary() }
+    }
+
+    /// The written forms of the person's own dictionary, for the decoder.
+    ///
+    /// Only what the person taught. The built-in starter set is Russian
+    /// spellings of English terms, which leaning toward the Latin form does
+    /// not fix (measured: 1 of 34 with and without), and someone who never
+    /// teaches a word decodes exactly as before. Entries marked
+    /// `noAcousticBoost` stay text-only, as they always have.
+    static func vocabularyTerms(from replacements: [DictionaryReplacement]) -> [String] {
+        var seen = Set<String>()
+        return replacements
+            .filter { !$0.noAcousticBoost }
+            .map(\.written)
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
+
+    /// Dictation and file transcription share the dictionary, so both
+    /// recognizers get the list.
+    private func publishVocabulary() {
+        let terms = Self.vocabularyTerms(from: replacements)
+        Task { [transcriber, importRecognizer] in
+            await transcriber?.setVocabulary(terms)
+            await importRecognizer?.setVocabulary(terms)
+        }
+    }
 
     private enum Keys {
         static let hotkey = "hotkey"
@@ -1311,6 +1338,9 @@ public final class AppState: ObservableObject {
         EngineNotes.isDetailed = detailedLogging
         diagnostics.record(.appLaunched)
         setUp()
+        // Observers do not run in an initializer; the loaded dictionary still
+        // has to reach the recognizers.
+        publishVocabulary()
 
         // We inform you after the build: before it there would have been nowhere to show the message.
         if let problem = loaded.problem {

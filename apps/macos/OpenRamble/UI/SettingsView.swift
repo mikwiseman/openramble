@@ -117,7 +117,7 @@ private struct GeneralSettings: View {
 
             BlockSection(
                 L10n.tr("Shortcuts"),
-                footer: L10n.tr("These work from any app. Paste last take puts your newest dictation into the app in front. Record starts and stops a recording. Record screen opens the screen recording choices, and stops a recording too.")
+                footer: L10n.tr("These work from any app. The same shortcut stops a recording.")
             ) {
                 BlockRow(
                     title: L10n.tr("Paste last take"),
@@ -320,16 +320,18 @@ private struct GeneralSettings: View {
                 .pickerStyle(.inline)
                 .labelsHidden()
             } label: {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(microphoneName)
-                        .font(.system(size: 24, weight: .regular))
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    Image(systemName: "chevron.up.chevron.down")
+                // The chevron is part of the line, so it follows the last
+                // word wherever a long name wraps.
+                (Text(microphoneName)
+                    + Text("\u{00A0}")
+                    + Text(Image(systemName: "chevron.up.chevron.down"))
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.tertiary)
-                }
-                .contentShape(Rectangle())
+                        .baselineOffset(4))
+                    .font(.system(size: 24, weight: .regular))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .contentShape(Rectangle())
             }
             .menuStyle(.button)
             .buttonStyle(.plain)

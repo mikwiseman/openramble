@@ -5314,7 +5314,7 @@ dependencies = [
 [[package]]
 name = "transcribe-cpp"
 version = "0.4.1"
-source = "git+https://github.com/mikwiseman/transcribe.cpp?rev=c4cd60daa560313292dc25772ed708e34c38be01#c4cd60daa560313292dc25772ed708e34c38be01"
+source = "git+https://github.com/mikwiseman/transcribe.cpp?rev=dacdba09be2b8d4dfe97a9d7464c51f462d5f622#dacdba09be2b8d4dfe97a9d7464c51f462d5f622"
 dependencies = [
  "log",
  "thiserror 2.0.20",
@@ -5324,7 +5324,7 @@ dependencies = [
 [[package]]
 name = "transcribe-cpp-sys"
 version = "0.4.1"
-source = "git+https://github.com/mikwiseman/transcribe.cpp?rev=c4cd60daa560313292dc25772ed708e34c38be01#c4cd60daa560313292dc25772ed708e34c38be01"
+source = "git+https://github.com/mikwiseman/transcribe.cpp?rev=dacdba09be2b8d4dfe97a9d7464c51f462d5f622#dacdba09be2b8d4dfe97a9d7464c51f462d5f622"
 dependencies = [
  "cmake",
  "serde_json",

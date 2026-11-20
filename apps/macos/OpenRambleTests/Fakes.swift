@@ -1044,6 +1044,10 @@ actor ScriptedImportRecognizer: DictationRecognizing {
     private var heldDecode: Int?
     private var lines: [String] = []
 
+    /// Every list of taught words handed over, in order.
+    private(set) var vocabularies: [[String]] = []
+    func setVocabulary(_ terms: [String]) { vocabularies.append(terms) }
+
     var isPrepared: Bool { loaded != nil }
     var isBusy: Bool { false }
     /// A decode is waiting for `releaseDecode()`.
