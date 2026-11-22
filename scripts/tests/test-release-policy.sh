@@ -103,6 +103,23 @@ do
     || fail_test "mounted artifact/offline gate disappeared: $mounted_artifact_gate"
 done
 
+# The check runs this Mac's own half of the universal binary and no other.
+# Run under Rosetta, the Intel half lands in macOS's Legacy Software list
+# against OpenRamble's bundle identifier, and the person at the release Mac is
+# told that OpenRamble "includes a component that will not open in macOS 28".
+# CI's "Intel Mac" job runs that half on an Intel Mac, and a release needs it.
+host_loops=$(grep -Fc 'for architecture in "$HOST_ARCH"; do' "$SMOKE_SCRIPT" || true)
+arch_runs=$(grep -Fc '/usr/bin/arch -"$architecture"' "$SMOKE_SCRIPT" || true)
+[[ "$arch_runs" -gt 0 && "$host_loops" == "$arch_runs" ]] \
+  || fail_test "the artifact check runs an architecture other than this Mac's own ($arch_runs runs, $host_loops host loops)"
+if grep -Eq 'arch -x86_64|arch -arch x86_64' "$SMOKE_SCRIPT"; then
+  fail_test "the artifact check runs Intel code under Rosetta"
+fi
+grep -Fq '"Intel Mac"' scripts/release.sh \
+  || fail_test "a release no longer requires the Intel Mac job"
+grep -Fq 'name: Intel Mac' .github/workflows/ci.yml \
+  || fail_test "CI no longer runs the Intel half on an Intel Mac"
+
 grep -Fq 'Checking the inference runtime binary' "$NETWORK_SCRIPT" \
   || fail_test "inference runtime binary network audit disappeared"
 grep -Fq 'except PermissionError as error:' "$SMOKE_SCRIPT" \

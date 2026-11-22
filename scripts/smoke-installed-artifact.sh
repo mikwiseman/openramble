@@ -167,7 +167,20 @@ EXECUTABLE="$APP/Contents/MacOS/$EXPECTED_APP_NAME"
 [[ -x "$EXECUTABLE" ]] || { echo "No executable: $EXECUTABLE" >&2; exit 1; }
 CLI="$APP/Contents/MacOS/openramble-cli"
 [[ -x "$CLI" ]] || { echo "No CLI executable: $CLI" >&2; exit 1; }
-for architecture in arm64 x86_64; do
+# This Mac's own half of the universal binary, and no other. Both halves are
+# checked without running them (slices, minimum system, signature), and CI's
+# "Intel Mac" job builds and runs the Intel half on an Intel Mac. Until 0.42.1
+# the Intel half was run here under Rosetta. macOS 27 files that under Legacy
+# Software, against OpenRamble's own bundle identifier, and tells the person
+# at this Mac that OpenRamble "includes a component that will not open in
+# macOS 28". hw.optional.arm64 and not `uname -m`, which answers x86_64 from
+# inside a translated shell.
+if [[ "$(sysctl -n hw.optional.arm64 2>/dev/null)" == "1" ]]; then
+  HOST_ARCH=arm64
+else
+  HOST_ARCH=x86_64
+fi
+for architecture in "$HOST_ARCH"; do
   /usr/bin/arch -"$architecture" "$CLI" --help >/dev/null
 done
 MCP_HELPER="$APP/Contents/MacOS/openramble-mcp"
@@ -365,7 +378,7 @@ sys.exit(4)'
 
   # Exercise the CLI from this artifact, including its embedded runtime.
   # Building a separate benchmark here would miss broken packaging.
-  for architecture in arm64 x86_64; do
+  for architecture in "$HOST_ARCH"; do
     CLI_STATUS=0
     WAI_MODELS_ROOT="$MODELS_ROOT" sandbox-exec -f "$PROFILE" /usr/bin/arch -"$architecture" "$CLI" "$FIXTURE" \
       > "$TEMP_DIRECTORY/transcript-$architecture.txt" 2> "$TEMP_DIRECTORY/diagnostics.txt" || CLI_STATUS=$?
@@ -385,4 +398,4 @@ sys.exit(4)'
     scripts/tests/test-cli-transcription.py --cli "$CLI" --audio "$FIXTURE"
 fi
 
-echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, universal arm64/x86_64 code, mounted DMG layout, embedded inference runtime and CLI, entitlement, signature and resources OK."
+echo "Installed artifact smoke: exact identity/version/build/feed/key/minOS, universal arm64/x86_64 code ($HOST_ARCH run here), mounted DMG layout, embedded inference runtime and CLI, entitlement, signature and resources OK."

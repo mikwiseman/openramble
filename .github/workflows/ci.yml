@@ -350,6 +350,43 @@ jobs:
       - name: LocalASR universal
         run: swift build --package-path Packages/LocalASR --arch arm64 --arch x86_64
 
+  # The Intel half of the universal app, built and run where it will run.
+  #
+  # The release check on an Apple Silicon Mac runs only that Mac's own half:
+  # run under Rosetta, the Intel half makes macOS 27 list OpenRamble under
+  # Legacy Software and warn that it "will not open in macOS 28". Rosetta also
+  # proved less than this does. Here the recognizer is compiled natively,
+  # installs the model through the app's own downloader, and has to recognize
+  # a spoken phrase on the processor. A release requires this job.
+  intel:
+    name: Intel Mac
+    runs-on: macos-15-intel
+    timeout-minutes: 40
+    env:
+      WAI_MODELS_ROOT: ${{ github.workspace }}/.intel-models
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: This is an Intel Mac
+        run: |
+          swift --version
+          [[ "$(uname -m)" == "x86_64" && "$(sysctl -n hw.optional.arm64 2>/dev/null || echo 0)" != "1" ]]
+
+      - name: The recognizer builds
+        run: swift build --package-path Packages/LocalASR -c release --product asr-bench
+
+      - name: The model installs
+        run: swift run --package-path Packages/LocalASR -c release --skip-build asr-bench install
+
+      - name: It recognizes speech
+        run: |
+          phrase="Checking work without the Internet"
+          say -v Samantha -o "$RUNNER_TEMP/probe.aiff" "$phrase"
+          afconvert -f WAVE -d LEI16@16000 -c 1 "$RUNNER_TEMP/probe.aiff" "$RUNNER_TEMP/probe.wav"
+          swift run --package-path Packages/LocalASR -c release --skip-build asr-bench transcribe "$RUNNER_TEMP/probe.wav" \
+            | tee "$RUNNER_TEMP/transcript.txt"
+          grep -Fqi "$phrase" "$RUNNER_TEMP/transcript.txt"
+
   release-build:
     name: Release build
     runs-on: macos-26

@@ -101,10 +101,12 @@ ci_is_green() {
   }
 
   # Not the whole matrix: the Windows and Linux desktop builds take half an
-  # hour and say nothing about the DMG being signed here.
+  # hour and say nothing about the DMG being signed here. "Intel Mac" is in:
+  # it is the only place the Intel half of this artifact's code is run.
   local required=(
     "Package tests" "Application build" "Release build" "Network surface"
     "Core matches macOS" "Swift calls the core" "Apple Silicon and Intel"
+    "Intel Mac"
   )
   local run_id jobs job outcome
   run_id=$(gh_retry run list --branch main --limit 10 \
