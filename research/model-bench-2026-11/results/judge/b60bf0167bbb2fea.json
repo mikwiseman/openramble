@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A delivers the same key finding (the reused `released` flag lets a key release end a hands-free take), plus the pre-listening stop risk, the fix direction and the tests, in far fewer words, while B adds speculative side issues and design musings a fast reader doesn't need."
-}

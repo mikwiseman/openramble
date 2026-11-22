@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A gives the same correct answer and steps, adds a useful check for unintended changes in the regenerated fixture diff, and leaves out B's irrelevant note about not running anything."
-}

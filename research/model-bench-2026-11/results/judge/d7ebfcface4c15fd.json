@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B gives the same correct answer and steps more tightly, adds the useful case where the Swift change was accidental, and skips A's irrelevant note about having no tools."
-}

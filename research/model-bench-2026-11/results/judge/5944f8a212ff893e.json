@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B gives the cause, the symptom, the fix, why the env var can't be scoped, and the effect on the shipped library in fewer, plainer words, while A repeats the investigation notes nearly verbatim and adds detail a commit message doesn't need."
-}

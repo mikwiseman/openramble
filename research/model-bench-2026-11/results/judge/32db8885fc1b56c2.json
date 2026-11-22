@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "It leads with the fix and concisely covers the bug, why it cannot occur in the shipping app, and the test setup and results."
-}

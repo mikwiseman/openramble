@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A quotes the exact `FORBIDDEN_PASTEBOARD: unbound variable` error so the commit can be found by searching for it, and it states the symptom, cause, fix, reason and verification in plain, ordered prose, whereas B leaves out the error text with no gain in brevity."
-}

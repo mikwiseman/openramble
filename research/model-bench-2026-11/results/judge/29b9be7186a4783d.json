@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "It gives the fix up front and concisely explains the build failure, the Cargo setting, and why the shipped library still targets macOS 14.0 on both architectures."
-}

@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A gives a tighter commit message in plainer words, with no filler like 'keeps the controller correct on its own', and adds one short, useful note that the 20 ms test hold is not in this diff, which matters because the 14-of-200 result depends on it."
-}

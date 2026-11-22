@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A states the fix and its test results, and also flags something he needs to know: the gate still fails open whenever a pattern variable goes missing, so this bug can recur. B is tighter but leaves that out."
-}

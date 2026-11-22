@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A covers the facts the owner needs: the silent-pass failure mode, why the definition now sits above the check, and the important caveat that scan errors still don't fail the gate, while B drops that remaining risk."
-}

@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A leads with the merge decision and gives the complete fix by checking the queued press’s mode in both handlers, preventing both a hands-free release and a hold-mode second press from ending the replayed take."
-}

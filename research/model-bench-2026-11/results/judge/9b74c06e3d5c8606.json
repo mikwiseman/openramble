@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "It leads with the fix and gives the owner the failure, cause, scope, and supported architectures without replaying the investigation."
-}

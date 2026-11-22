@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A answers 'no' first and adds the facts he needs: the two network paths, that update checks are on by default but can be turned off, that CI enforces the boundary, and that this is the documented promise rather than verified code. B states 'never uploads it' as verified fact with no basis."
-}

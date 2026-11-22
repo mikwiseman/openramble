@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "It answers no up front, gives the required fix and test command, and explains why the Swift edit alone couldn’t make the Rust replay fail."
-}

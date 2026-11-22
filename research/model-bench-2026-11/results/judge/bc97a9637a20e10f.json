@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A gives the fix, cause, risk and verification in a few plain lines, while B repeats the same facts at greater length and adds a doubtful 'no `set -u`' claim, since the 'unbound variable' message is the error `set -u` itself produces."
-}

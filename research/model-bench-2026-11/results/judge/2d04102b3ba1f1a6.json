@@ -1,9 +1,0 @@
-{
- "facts": [],
- "slop": [
-  {
-   "quote": "# Runs the gate on the fixture. Sets GATE_STATUS and GATE_OUTPUT.",
-   "class": "comment"
-  }
- ]
-}

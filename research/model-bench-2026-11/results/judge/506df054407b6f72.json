@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A leads with the fix and gives the owner the failure, the behavior change, the shipping impact, and the test results without making him read through code details."
-}

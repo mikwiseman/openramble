@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A gives every needed fact briefly and correctly, while B is longer and wrongly claims the script lacks `set -u`, even though bash prints 'unbound variable' only when `set -u` is on."
-}

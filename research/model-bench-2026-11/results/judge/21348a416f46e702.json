@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A leads with the failure, explains the cause and fix in plain words, and avoids presenting the regex fragment `declareTypes(` as a method call."
-}

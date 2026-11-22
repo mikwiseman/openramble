@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "It leads with what the fix does, explains why the gate falsely passed, and gives both verified exit codes in fewer words."
-}

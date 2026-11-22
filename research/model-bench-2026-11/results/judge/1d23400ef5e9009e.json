@@ -1,9 +1,0 @@
-{
- "facts": [],
- "slop": [
-  {
-   "quote": "local pattern=\"${1:?scan needs a pattern}\" out rc=0",
-   "class": "fallback"
-  }
- ]
-}

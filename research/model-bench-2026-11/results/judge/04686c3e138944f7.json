@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A states the key-up regression precisely, catches the hold-mode regression, and gives the smallest fix with tests for both modes."
-}

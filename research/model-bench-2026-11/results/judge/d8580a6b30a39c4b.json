@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A keeps every fact a future reader needs, including the exact dyld error, that /usr/bin/strip output loads fine, and why the deployment target can't be limited to the cross targets; B is tighter but drops that rationale for choosing this fix."
-}

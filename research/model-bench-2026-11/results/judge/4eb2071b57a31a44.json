@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A gives the same essential answer and fix in fewer words, and also covers the case where the Swift change was accidental, while B adds padding like 'the red test is doing its job' and an admission that it doesn't know the generator command."
-}

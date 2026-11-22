@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "It leads with the fix and concisely explains the failure, the reason for the override, and the unchanged macOS 14.0 target on both architectures."
-}

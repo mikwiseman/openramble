@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "It gives the answer first, covers both intentional and accidental Swift changes, and includes the exact test command and what to commit."
-}

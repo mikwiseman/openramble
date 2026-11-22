@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A explains the bug and fix precisely (seed 45, why stopHandsFree() was ignored, the `released`→`stopped` rename), and it correctly flags that the 20 ms test change is not in the diff, whereas B describes that test change as part of this commit without noticing it's missing."
-}

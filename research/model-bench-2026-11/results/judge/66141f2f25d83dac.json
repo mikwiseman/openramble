@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B gives the same plain 'no' first, covers the same facts more tightly, adds a concrete way to verify (run the script), and avoids A's unsupported claim that transcription runs locally through LocalASR, which the rules file never states."
-}

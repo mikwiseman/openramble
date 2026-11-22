@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A keeps every fact a reviewer needs, including the exact dyld error, that unstripped or /usr/bin/strip dylibs load, why the deployment target can't be limited to the cross targets, and that the shipped library is unchanged, while B drops these and so leaves the fix's scope and rationale unsupported."
-}

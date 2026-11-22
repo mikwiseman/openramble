@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A answers 'No' first and sticks to what the rules file actually says, including the CI enforcement and the honest note that the code wasn't checked, while B is shorter but states as fact that audio is transcribed locally, which the rules file never says."
-}

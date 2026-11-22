@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B explains the bug and fix more accurately and completely: it names the seed-45 symptom, notes that a hands-free release no longer counts as a stop, and states the 14-of-200 result correctly, while A's wording suggests the 20 ms test hold caused the failure drop and B rightly flags that the hold isn't in this diff."
-}

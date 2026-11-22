@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "A wrongly claims the script lacks `set -u`, but the 'unbound variable' message only appears under `set -u`; B correctly says the real gap is that a scan error doesn't fail the gate, and flags that as untested."
-}

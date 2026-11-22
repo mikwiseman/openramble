@@ -270,6 +270,9 @@ GPT-6.2 Sol each marked "slop" in all 88 and picked the better of every pair,
 **Decision at the time.** Report length beside what shipped, hold the judged
 scores until Mik votes on 30 pairs. L15 replaces that decision.
 
+The judges' answers behind this entry, and the harness that asked for them,
+are in the repository's history at commit `443bde3`.
+
 ## L14. One job, 20 times
 
 **Why.** In the first set three models answered "yes" to renaming the bundle

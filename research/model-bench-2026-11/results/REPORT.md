@@ -1,6 +1,6 @@
 # Pilot results
 
-Written by `bench report` on 2026-11-22 22:39. One run per model and task, so read each line as "this happened once". `index.html` is the same as a page.
+Written by `bench report` on 2026-11-22 22:41. One run per model and task, so read each line as "this happened once". `index.html` is the same as a page.
 
 | Model | Passed | Code, × what shipped | Words, × what was needed | The same without his instructions |
 |---|---|---|---|---|

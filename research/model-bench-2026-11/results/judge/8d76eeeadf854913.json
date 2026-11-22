@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "Both find the same blocking bug (a key release now ends a queued hands-free take), but A gives the fix as ready-to-use code and raises more useful checks, such as whether the second press reaches `stopHandsFree()` at all."
-}

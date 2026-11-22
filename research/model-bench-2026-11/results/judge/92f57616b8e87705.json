@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B states every needed fact, including the stop() change that a hands-free press's release no longer counts as its stop, the field rename, and the seed-45 CI failure, while A drops the stop() change and the CI origin, so B is the more complete and still plain record."
-}

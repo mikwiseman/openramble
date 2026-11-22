@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B states exactly what the request gives (the paste failed, the words are kept, they can be pasted later) in plain words, while A assumes the words are on the clipboard and that ⌘V will work, which the request never says."
-}

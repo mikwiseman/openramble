@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A states the cause, the fix, the risk, and the exit-1/exit-0 verification in a few plain lines, while B repeats the diff and restates the same facts at greater length; B's useful note that the script can still fail open does not make up for the padding this reader wants to avoid."
-}

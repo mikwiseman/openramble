@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B records every investigation fact a future reader needs: the dyld error, the /usr/bin/strip and unstripped checks, why RUSTFLAGS can't scope the target, and that the shipped library is unchanged. A drops several of these, though B's closing note about not committing is unneeded filler."
-}

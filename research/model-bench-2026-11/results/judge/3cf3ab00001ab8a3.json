@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A states every fact plainly and concisely, while B adds a redundant, unrequested claim about lowering the target for host builds and uses the jargon 'build-override artifacts' instead of 'host artifacts'."
-}

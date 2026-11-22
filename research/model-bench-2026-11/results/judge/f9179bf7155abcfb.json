@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "It leads with the regression, gives the exact rule for which events should stop the queued take, and covers both test cases in fewer words."
-}

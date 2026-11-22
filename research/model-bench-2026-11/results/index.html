@@ -203,11 +203,11 @@ const slop = () => {
       tabs(KINDS.filter(([k]) => k === "all" || DATA.slop.some((j) => j.situation === k)), S.kind, (k) => { S.kind = k; S.job = 0; show(); }),
       h("label", { class: "switch" }, h("input", { type: "checkbox", id: "told", checked: S.told ? "" : null, onchange: (e) => { S.told = e.target.checked; show(); } }), h("i"), "Mik's instructions")),
     h("div", { class: "title" }, h("h1", { text: "Words written for every word needed" }),
-      h("p", { class: "mono", text: `${jobs.length} writing ${jobs.length === 1 ? "job" : "jobs"} from OpenRamble's history / less is better / the first block is what was needed, pink is extra` })),
+      h("p", { class: "mono", text: `${jobs.length} writing ${jobs.length === 1 ? "job" : "jobs"} from OpenRamble's history / less is better` })),
     h("ol", { class: "board" },
       row("", { name: "Needed" }, strip(1, most, () => "first"), "1×", null, { ref: true }),
       rows.map((r, i) => row(String(i + 1), r.m, strip(r.value, most, (b) => (b ? "extra" : "first")), times(r.value),
-        r.holes ? `left a fact out in ${r.holes} of ${r.n}` : null,
+        r.holes ? `${r.holes} incomplete` : null,
         { best: i === 0, on: r.m.key === S.model, pick: () => { S.model = r.m.key; show(); } }))));
 
   const job = jobs[Math.min(S.job, jobs.length - 1)], m = DATA.models.find((x) => x.key === S.model);
@@ -234,7 +234,7 @@ const replay = () => {
   let rows, title, caption, body, figure, note = () => null, order;
   if (S.tab === "passed") {
     title = "Changes that passed the real change's tests";
-    caption = "one block is one task / green passed, amber changed code nothing built, red failed, empty has no result yet";
+    caption = `${tasks.length} real changes / green passed, amber changed code that nothing built, red failed`;
     rows = DATA.models.map((m) => ({ m, value: tasks.filter((t) => done(m, t) && done(m, t).state === "pass").length, of: tasks.filter((t) => done(m, t)).length }));
     order = (a, b) => b.value - a.value || (a.of - a.value) - (b.of - b.value);
     body = (r) => h("div", { class: "strip", style: `--n:${Math.max(3, tasks.length)}` }, tasks.map((t, i) => { const x = done(r.m, t);
@@ -243,7 +243,7 @@ const replay = () => {
     figure = (r) => r.value + "/" + r.of;
   } else if (S.tab === "code") {
     title = "Lines of code written for every line that shipped";
-    caption = "less is better / the first block is what shipped, pink is extra / tests are not counted";
+    caption = "less is better / tests are not counted";
     rows = DATA.models.map((m) => ({ m, value: mean(tasks.filter((t) => t.shipped.source && done(m, t)).map((t) => done(m, t).source / t.shipped.source)) }));
     order = (a, b) => a.value - b.value;
     figure = (r) => times(r.value);

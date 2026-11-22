@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B states the regression in its first line, gives a concrete fix that always returns early during the paste and gives the second press its own flag, and flags the real routing risk, while A is wordier and its fix lets a hands-free key-up fall through to the stop policy mid-paste."
-}

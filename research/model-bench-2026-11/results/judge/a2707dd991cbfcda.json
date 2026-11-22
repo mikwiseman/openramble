@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A answers first and correctly sees that the test compares Rust against the fixtures, so it diagnoses why it went red; B wrongly says the generator rewrites `corpus-text.json`, adds an irrelevant note about file cutting, and ends with filler about lacking tools."
-}

@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B leads with the regression, explains both mode-handling bugs, and gives a concrete fix and targeted tests without speculative detours."
-}

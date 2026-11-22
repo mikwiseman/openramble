@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B states the regression more plainly, gives a ready-to-paste fix, asks the one routing question that decides whether the fix works at all, and names a concrete test that fails on the current diff, while A adds a weaker mode-check point and an irrelevant note about having no tools."
-}

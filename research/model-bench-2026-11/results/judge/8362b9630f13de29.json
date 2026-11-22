@@ -1,9 +1,0 @@
-{
- "facts": [],
- "slop": [
-  {
-   "quote": "private func replayGesturesDuringInsertion() {",
-   "class": "abstraction"
-  }
- ]
-}

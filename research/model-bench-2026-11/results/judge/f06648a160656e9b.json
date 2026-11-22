@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B answers just as directly, but it also correctly points out that a Swift change alone can't turn the Rust replay test red and names the two likely causes, while A's causal explanation is subtly wrong and it adds an unrelated note about file cutting."
-}

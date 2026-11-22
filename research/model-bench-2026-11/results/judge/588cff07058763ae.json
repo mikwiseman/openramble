@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B's message is tighter and doesn't imply the 20 ms test change is part of this diff, and its short note flags that the test change is missing from the commit, which he needs to know."
-}

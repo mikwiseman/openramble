@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B gives the same 'no' up front but also correctly points out that a Swift change alone can't turn the Rust-replay test red, then tells him which step fixes each likely cause; A's 'fix the Swift regression and rerun against existing fixtures' branch misreads how the test works."
-}

@@ -1,4 +1,0 @@
-{
- "better": "A",
- "why": "A makes clear that the crate was built and failed to load, and explains why the flags cannot scope the deployment target without making B’s broader claim about host builds."
-}

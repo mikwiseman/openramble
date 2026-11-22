@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "It delivers a standalone commit message that explains the fix, its shipping impact, and the 20 ms test delay behind the seed counts."
-}

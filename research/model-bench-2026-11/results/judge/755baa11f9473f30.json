@@ -1,4 +1,0 @@
-{
- "better": "B",
- "why": "B says why stop() now ignores a hands-free press's release and accurately says the 20 ms hold widens the window, while A claims it makes the failure 'reproducible', which the notes don't support."
-}
