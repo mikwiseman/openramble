@@ -59,6 +59,17 @@ struct ore_model {
     float * out_w;    // [joint_n][joint_hidden]
     float * out_b;
     ore_vocab vocab;
+    // The speech-detection head and the long-audio settings (Parakeet Ultra).
+    int     has_vad, vad_hidden, vad_kernel;
+    const float * vad_proj_w;  // [H][d_model], in the model file
+    const float * vad_proj_b;
+    const float * vad_ctx_w;   // [H][H * K]
+    const float * vad_ctx_b;
+    const float * vad_out_w;   // [H]
+    float   vad_out_b;
+    float   vad_threshold;
+    double  vad_min_speech, vad_min_gap;          // seconds
+    double  seg_max, seg_min, seg_min_pause, seg_scan_block;
 };
 
 // A growable, 64-byte aligned buffer of floats.
@@ -158,6 +169,21 @@ void               ore_model_close_internal(struct ore_model * m);
 // [*T][d_model] floats owned by the session. Returns 0 on failure
 // (out of memory, clip too short, or aborted).
 int ore_encode(struct ore_session * s, const float * pcm, int n_samples, const float ** enc, int * T);
+
+// See ore_encoder.c.
+int ore_speech_probs(struct ore_session * s, const float * pcm, int n_samples, const float ** probs, int * n);
+
+// A stretch of a long clip to recognize on its own.
+typedef struct {
+    int64_t start, n_samples;
+} ore_segment;
+
+// Cuts a clip longer than the model's segment limit at pauses, as the
+// reference segmenter does. *out is malloc'd. Returns 0 on failure.
+int ore_segments(struct ore_session * s, const float * pcm, int64_t n_samples, ore_segment ** out, int * n_out);
+// True when the clip has to be cut (the model has a speech-detection head and
+// the clip is longer than one segment).
+int ore_needs_segments(const struct ore_model * m, int64_t n_samples);
 
 double ore_now_ms(void);
 

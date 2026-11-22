@@ -153,12 +153,14 @@ static void quantize_q80_sse(const float * x, size_t xstride, int tb0, int tb1, 
 // One 16-frame block against two weight rows, in vectors of four frames: the
 // AVX2 kernel at half the width, one function per number of vectors.
 ORE_SSE
-static void q4k_block_sse_1(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+static void q4k_block_sse_1(const uint8_t * w0, const uint8_t * w1, const ore_q4k_hdr * h0,
         const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
         float * o1) {
     __m128 s00 = _mm_setzero_ps();
     __m128 s10 = _mm_setzero_ps();
     for (int b = 0; b < nb; ++b) {
+        const uint8_t * q0 = w0 + (size_t) b * ORE_Q4K_BYTES + 16;
+        const uint8_t * q1 = w1 + (size_t) b * ORE_Q4K_BYTES + 16;
         __m128i S00 = _mm_setzero_si128();
         __m128i S10 = _mm_setzero_si128();
         __m128i M00 = _mm_setzero_si128();
@@ -166,20 +168,25 @@ static void q4k_block_sse_1(const uint32_t * u0, const uint32_t * u1, const ore_
         for (int g = 0; g < 8; ++g) {
             __m128i a00 = _mm_setzero_si128();
             __m128i a10 = _mm_setzero_si128();
-            const uint32_t * p0 = u0 + b * 64 + g * 8;
-            const uint32_t * p1 = u1 + b * 64 + g * 8;
-            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            // Groups 2j and 2j + 1 are the low and high halves of the same 32 bytes.
+            const uint8_t * p0 = q0 + (g >> 1) * 32;
+            const uint8_t * p1 = q1 + (g >> 1) * 32;
+            const int       sh = (g & 1) * 4;
+            const int8_t *  Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
             for (int c = 0; c < 8; ++c) {
-                const __m128i wb0 = _mm_set1_epi32((int) p0[c]);
-                const __m128i wb1 = _mm_set1_epi32((int) p1[c]);
+                uint32_t v0, v1;
+                memcpy(&v0, p0 + 4 * c, 4);
+                memcpy(&v1, p1 + 4 * c, 4);
+                const __m128i wb0 = _mm_set1_epi32((int) ((v0 >> sh) & 0x0f0f0f0fu));
+                const __m128i wb1 = _mm_set1_epi32((int) ((v1 >> sh) & 0x0f0f0f0fu));
                 const __m128i x0 = _mm_loadu_si128((const __m128i *) (Ag + c * 64));
                 a00 = _mm_add_epi16(a00, _mm_maddubs_epi16(wb0, x0));
                 a10 = _mm_add_epi16(a10, _mm_maddubs_epi16(wb1, x0));
             }
-            const __m128i sc0 = _mm_set1_epi32(h0[b].sc2[g]);
-            const __m128i mn0 = _mm_set1_epi32(h0[b].mn[g]);
-            const __m128i sc1 = _mm_set1_epi32(h1[b].sc2[g]);
-            const __m128i mn1 = _mm_set1_epi32(h1[b].mn[g]);
+            const __m128i sc0 = _mm_set1_epi32((int) h0[b].sm[g] * 0x10001);
+            const __m128i mn0 = _mm_set1_epi32((int) h0[b].sm[8 + g]);
+            const __m128i sc1 = _mm_set1_epi32((int) h1[b].sm[g] * 0x10001);
+            const __m128i mn1 = _mm_set1_epi32((int) h1[b].sm[8 + g]);
             const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
             const __m128i g0 = _mm_loadu_si128((const __m128i *) (Gg));
             S00 = _mm_add_epi32(S00, _mm_madd_epi16(a00, sc0));
@@ -199,12 +206,14 @@ static void q4k_block_sse_1(const uint32_t * u0, const uint32_t * u1, const ore_
 }
 
 ORE_SSE
-static void q4k_block_sse_2(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+static void q4k_block_sse_2(const uint8_t * w0, const uint8_t * w1, const ore_q4k_hdr * h0,
         const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
         float * o1) {
     __m128 s00 = _mm_setzero_ps(), s01 = _mm_setzero_ps();
     __m128 s10 = _mm_setzero_ps(), s11 = _mm_setzero_ps();
     for (int b = 0; b < nb; ++b) {
+        const uint8_t * q0 = w0 + (size_t) b * ORE_Q4K_BYTES + 16;
+        const uint8_t * q1 = w1 + (size_t) b * ORE_Q4K_BYTES + 16;
         __m128i S00 = _mm_setzero_si128(), S01 = _mm_setzero_si128();
         __m128i S10 = _mm_setzero_si128(), S11 = _mm_setzero_si128();
         __m128i M00 = _mm_setzero_si128(), M01 = _mm_setzero_si128();
@@ -212,12 +221,17 @@ static void q4k_block_sse_2(const uint32_t * u0, const uint32_t * u1, const ore_
         for (int g = 0; g < 8; ++g) {
             __m128i a00 = _mm_setzero_si128(), a01 = _mm_setzero_si128();
             __m128i a10 = _mm_setzero_si128(), a11 = _mm_setzero_si128();
-            const uint32_t * p0 = u0 + b * 64 + g * 8;
-            const uint32_t * p1 = u1 + b * 64 + g * 8;
-            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            // Groups 2j and 2j + 1 are the low and high halves of the same 32 bytes.
+            const uint8_t * p0 = q0 + (g >> 1) * 32;
+            const uint8_t * p1 = q1 + (g >> 1) * 32;
+            const int       sh = (g & 1) * 4;
+            const int8_t *  Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
             for (int c = 0; c < 8; ++c) {
-                const __m128i wb0 = _mm_set1_epi32((int) p0[c]);
-                const __m128i wb1 = _mm_set1_epi32((int) p1[c]);
+                uint32_t v0, v1;
+                memcpy(&v0, p0 + 4 * c, 4);
+                memcpy(&v1, p1 + 4 * c, 4);
+                const __m128i wb0 = _mm_set1_epi32((int) ((v0 >> sh) & 0x0f0f0f0fu));
+                const __m128i wb1 = _mm_set1_epi32((int) ((v1 >> sh) & 0x0f0f0f0fu));
                 const __m128i x0 = _mm_loadu_si128((const __m128i *) (Ag + c * 64));
                 a00 = _mm_add_epi16(a00, _mm_maddubs_epi16(wb0, x0));
                 a10 = _mm_add_epi16(a10, _mm_maddubs_epi16(wb1, x0));
@@ -225,10 +239,10 @@ static void q4k_block_sse_2(const uint32_t * u0, const uint32_t * u1, const ore_
                 a01 = _mm_add_epi16(a01, _mm_maddubs_epi16(wb0, x1));
                 a11 = _mm_add_epi16(a11, _mm_maddubs_epi16(wb1, x1));
             }
-            const __m128i sc0 = _mm_set1_epi32(h0[b].sc2[g]);
-            const __m128i mn0 = _mm_set1_epi32(h0[b].mn[g]);
-            const __m128i sc1 = _mm_set1_epi32(h1[b].sc2[g]);
-            const __m128i mn1 = _mm_set1_epi32(h1[b].mn[g]);
+            const __m128i sc0 = _mm_set1_epi32((int) h0[b].sm[g] * 0x10001);
+            const __m128i mn0 = _mm_set1_epi32((int) h0[b].sm[8 + g]);
+            const __m128i sc1 = _mm_set1_epi32((int) h1[b].sm[g] * 0x10001);
+            const __m128i mn1 = _mm_set1_epi32((int) h1[b].sm[8 + g]);
             const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
             const __m128i g0 = _mm_loadu_si128((const __m128i *) (Gg));
             S00 = _mm_add_epi32(S00, _mm_madd_epi16(a00, sc0));
@@ -260,12 +274,14 @@ static void q4k_block_sse_2(const uint32_t * u0, const uint32_t * u1, const ore_
 }
 
 ORE_SSE
-static void q4k_block_sse_3(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+static void q4k_block_sse_3(const uint8_t * w0, const uint8_t * w1, const ore_q4k_hdr * h0,
         const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
         float * o1) {
     __m128 s00 = _mm_setzero_ps(), s01 = _mm_setzero_ps(), s02 = _mm_setzero_ps();
     __m128 s10 = _mm_setzero_ps(), s11 = _mm_setzero_ps(), s12 = _mm_setzero_ps();
     for (int b = 0; b < nb; ++b) {
+        const uint8_t * q0 = w0 + (size_t) b * ORE_Q4K_BYTES + 16;
+        const uint8_t * q1 = w1 + (size_t) b * ORE_Q4K_BYTES + 16;
         __m128i S00 = _mm_setzero_si128(), S01 = _mm_setzero_si128(), S02 = _mm_setzero_si128();
         __m128i S10 = _mm_setzero_si128(), S11 = _mm_setzero_si128(), S12 = _mm_setzero_si128();
         __m128i M00 = _mm_setzero_si128(), M01 = _mm_setzero_si128(), M02 = _mm_setzero_si128();
@@ -273,12 +289,17 @@ static void q4k_block_sse_3(const uint32_t * u0, const uint32_t * u1, const ore_
         for (int g = 0; g < 8; ++g) {
             __m128i a00 = _mm_setzero_si128(), a01 = _mm_setzero_si128(), a02 = _mm_setzero_si128();
             __m128i a10 = _mm_setzero_si128(), a11 = _mm_setzero_si128(), a12 = _mm_setzero_si128();
-            const uint32_t * p0 = u0 + b * 64 + g * 8;
-            const uint32_t * p1 = u1 + b * 64 + g * 8;
-            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            // Groups 2j and 2j + 1 are the low and high halves of the same 32 bytes.
+            const uint8_t * p0 = q0 + (g >> 1) * 32;
+            const uint8_t * p1 = q1 + (g >> 1) * 32;
+            const int       sh = (g & 1) * 4;
+            const int8_t *  Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
             for (int c = 0; c < 8; ++c) {
-                const __m128i wb0 = _mm_set1_epi32((int) p0[c]);
-                const __m128i wb1 = _mm_set1_epi32((int) p1[c]);
+                uint32_t v0, v1;
+                memcpy(&v0, p0 + 4 * c, 4);
+                memcpy(&v1, p1 + 4 * c, 4);
+                const __m128i wb0 = _mm_set1_epi32((int) ((v0 >> sh) & 0x0f0f0f0fu));
+                const __m128i wb1 = _mm_set1_epi32((int) ((v1 >> sh) & 0x0f0f0f0fu));
                 const __m128i x0 = _mm_loadu_si128((const __m128i *) (Ag + c * 64));
                 a00 = _mm_add_epi16(a00, _mm_maddubs_epi16(wb0, x0));
                 a10 = _mm_add_epi16(a10, _mm_maddubs_epi16(wb1, x0));
@@ -289,10 +310,10 @@ static void q4k_block_sse_3(const uint32_t * u0, const uint32_t * u1, const ore_
                 a02 = _mm_add_epi16(a02, _mm_maddubs_epi16(wb0, x2));
                 a12 = _mm_add_epi16(a12, _mm_maddubs_epi16(wb1, x2));
             }
-            const __m128i sc0 = _mm_set1_epi32(h0[b].sc2[g]);
-            const __m128i mn0 = _mm_set1_epi32(h0[b].mn[g]);
-            const __m128i sc1 = _mm_set1_epi32(h1[b].sc2[g]);
-            const __m128i mn1 = _mm_set1_epi32(h1[b].mn[g]);
+            const __m128i sc0 = _mm_set1_epi32((int) h0[b].sm[g] * 0x10001);
+            const __m128i mn0 = _mm_set1_epi32((int) h0[b].sm[8 + g]);
+            const __m128i sc1 = _mm_set1_epi32((int) h1[b].sm[g] * 0x10001);
+            const __m128i mn1 = _mm_set1_epi32((int) h1[b].sm[8 + g]);
             const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
             const __m128i g0 = _mm_loadu_si128((const __m128i *) (Gg));
             S00 = _mm_add_epi32(S00, _mm_madd_epi16(a00, sc0));
@@ -336,12 +357,14 @@ static void q4k_block_sse_3(const uint32_t * u0, const uint32_t * u1, const ore_
 }
 
 ORE_SSE
-static void q4k_block_sse_4(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+static void q4k_block_sse_4(const uint8_t * w0, const uint8_t * w1, const ore_q4k_hdr * h0,
         const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
         float * o1) {
     __m128 s00 = _mm_setzero_ps(), s01 = _mm_setzero_ps(), s02 = _mm_setzero_ps(), s03 = _mm_setzero_ps();
     __m128 s10 = _mm_setzero_ps(), s11 = _mm_setzero_ps(), s12 = _mm_setzero_ps(), s13 = _mm_setzero_ps();
     for (int b = 0; b < nb; ++b) {
+        const uint8_t * q0 = w0 + (size_t) b * ORE_Q4K_BYTES + 16;
+        const uint8_t * q1 = w1 + (size_t) b * ORE_Q4K_BYTES + 16;
         __m128i S00 = _mm_setzero_si128(), S01 = _mm_setzero_si128(), S02 = _mm_setzero_si128(), S03 = _mm_setzero_si128();
         __m128i S10 = _mm_setzero_si128(), S11 = _mm_setzero_si128(), S12 = _mm_setzero_si128(), S13 = _mm_setzero_si128();
         __m128i M00 = _mm_setzero_si128(), M01 = _mm_setzero_si128(), M02 = _mm_setzero_si128(), M03 = _mm_setzero_si128();
@@ -349,12 +372,17 @@ static void q4k_block_sse_4(const uint32_t * u0, const uint32_t * u1, const ore_
         for (int g = 0; g < 8; ++g) {
             __m128i a00 = _mm_setzero_si128(), a01 = _mm_setzero_si128(), a02 = _mm_setzero_si128(), a03 = _mm_setzero_si128();
             __m128i a10 = _mm_setzero_si128(), a11 = _mm_setzero_si128(), a12 = _mm_setzero_si128(), a13 = _mm_setzero_si128();
-            const uint32_t * p0 = u0 + b * 64 + g * 8;
-            const uint32_t * p1 = u1 + b * 64 + g * 8;
-            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            // Groups 2j and 2j + 1 are the low and high halves of the same 32 bytes.
+            const uint8_t * p0 = q0 + (g >> 1) * 32;
+            const uint8_t * p1 = q1 + (g >> 1) * 32;
+            const int       sh = (g & 1) * 4;
+            const int8_t *  Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
             for (int c = 0; c < 8; ++c) {
-                const __m128i wb0 = _mm_set1_epi32((int) p0[c]);
-                const __m128i wb1 = _mm_set1_epi32((int) p1[c]);
+                uint32_t v0, v1;
+                memcpy(&v0, p0 + 4 * c, 4);
+                memcpy(&v1, p1 + 4 * c, 4);
+                const __m128i wb0 = _mm_set1_epi32((int) ((v0 >> sh) & 0x0f0f0f0fu));
+                const __m128i wb1 = _mm_set1_epi32((int) ((v1 >> sh) & 0x0f0f0f0fu));
                 const __m128i x0 = _mm_loadu_si128((const __m128i *) (Ag + c * 64));
                 a00 = _mm_add_epi16(a00, _mm_maddubs_epi16(wb0, x0));
                 a10 = _mm_add_epi16(a10, _mm_maddubs_epi16(wb1, x0));
@@ -368,10 +396,10 @@ static void q4k_block_sse_4(const uint32_t * u0, const uint32_t * u1, const ore_
                 a03 = _mm_add_epi16(a03, _mm_maddubs_epi16(wb0, x3));
                 a13 = _mm_add_epi16(a13, _mm_maddubs_epi16(wb1, x3));
             }
-            const __m128i sc0 = _mm_set1_epi32(h0[b].sc2[g]);
-            const __m128i mn0 = _mm_set1_epi32(h0[b].mn[g]);
-            const __m128i sc1 = _mm_set1_epi32(h1[b].sc2[g]);
-            const __m128i mn1 = _mm_set1_epi32(h1[b].mn[g]);
+            const __m128i sc0 = _mm_set1_epi32((int) h0[b].sm[g] * 0x10001);
+            const __m128i mn0 = _mm_set1_epi32((int) h0[b].sm[8 + g]);
+            const __m128i sc1 = _mm_set1_epi32((int) h1[b].sm[g] * 0x10001);
+            const __m128i mn1 = _mm_set1_epi32((int) h1[b].sm[8 + g]);
             const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
             const __m128i g0 = _mm_loadu_si128((const __m128i *) (Gg));
             S00 = _mm_add_epi32(S00, _mm_madd_epi16(a00, sc0));
@@ -436,11 +464,8 @@ static void gemm_q4k_sse(const uint8_t * w, int n_in, int r0, int r1, const ore_
         const uint8_t * w0   = w + (size_t) r * rb;
         const uint8_t * w1   = pair ? w0 + rb : w0;
         ore_q4k_hdr     h0[ORE_Q4K_MAX_BLOCKS], h1[ORE_Q4K_MAX_BLOCKS];
-        uint32_t        u0[ORE_Q4K_MAX_COLS / 4], u1[ORE_Q4K_MAX_COLS / 4];
         ore_q4k_decode_row(w0, nb, h0);
         ore_q4k_decode_row(w1, nb, h1);
-        ore_q4k_unpack_row(w0, nb, (uint8_t *) u0);
-        ore_q4k_unpack_row(w1, nb, (uint8_t *) u1);
         for (int tb = 0; tb < x->ntb; ++tb) {
             const int       valid = ORE_MIN(ORE_FB, x->rows - tb * ORE_FB);
             const int8_t *  A     = x->q + (size_t) tb * n4 * 64;
@@ -448,10 +473,10 @@ static void gemm_q4k_sse(const uint8_t * w, int n_in, int r0, int r1, const ore_
             const float *   D     = x->d + (size_t) tb * nb * ORE_FB;
             float           o0[16], o1[16];
             switch ((valid + 3) / 4) {
-                case 1: q4k_block_sse_1(u0, u1, h0, h1, nb, A, G, D, o0, o1); break;
-                case 2: q4k_block_sse_2(u0, u1, h0, h1, nb, A, G, D, o0, o1); break;
-                case 3: q4k_block_sse_3(u0, u1, h0, h1, nb, A, G, D, o0, o1); break;
-                default: q4k_block_sse_4(u0, u1, h0, h1, nb, A, G, D, o0, o1); break;
+                case 1: q4k_block_sse_1(w0, w1, h0, h1, nb, A, G, D, o0, o1); break;
+                case 2: q4k_block_sse_2(w0, w1, h0, h1, nb, A, G, D, o0, o1); break;
+                case 3: q4k_block_sse_3(w0, w1, h0, h1, nb, A, G, D, o0, o1); break;
+                default: q4k_block_sse_4(w0, w1, h0, h1, nb, A, G, D, o0, o1); break;
             }
             float * yr = y + (size_t) tb * ORE_FB * ystride + r;
             for (int f = 0; f < valid; ++f) {
@@ -464,24 +489,20 @@ static void gemm_q4k_sse(const uint8_t * w, int n_in, int r0, int r1, const ore_
 
 // ---- Q8_0 product -----------------------------------------------------------
 
+// Two weight rows against a block of 16 frames. Four 8-bit weights are read
+// from the model file and broadcast; each lane of the sum is one frame.
+// signed * signed goes through the unsigned * signed multiply: |w| times x
+// with w's sign.
 ORE_SSE
 static void gemm_q80_sse(const uint8_t * w, int n_in, int r0, int r1, const ore_qact * x, float * y, size_t ystride) {
-    const int     nb   = n_in / 32;
-    const size_t  rb   = (size_t) nb * ORE_Q80_BYTES;
-    const size_t  n4   = (size_t) n_in / 4;
+    const int    nb = n_in / 32;
+    const size_t rb = (size_t) nb * ORE_Q80_BYTES;
+    const size_t n4 = (size_t) n_in / 4;
     const __m128i ones = _mm_set1_epi16(1);
     for (int r = r0; r < r1; r += 2) {
         const int       pair = r + 1 < r1;
         const uint8_t * w0   = w + (size_t) r * rb;
         const uint8_t * w1   = pair ? w0 + rb : w0;
-        uint32_t        u0[ORE_Q4K_MAX_COLS / 4], u1[ORE_Q4K_MAX_COLS / 4];
-        float           dw0[ORE_Q4K_MAX_COLS / 32], dw1[ORE_Q4K_MAX_COLS / 32];
-        for (int b = 0; b < nb; ++b) {
-            memcpy((uint8_t *) u0 + b * 32, w0 + (size_t) b * ORE_Q80_BYTES + 2, 32);
-            memcpy((uint8_t *) u1 + b * 32, w1 + (size_t) b * ORE_Q80_BYTES + 2, 32);
-            dw0[b] = ore_f16_to_f32(ore_rd16(w0 + (size_t) b * ORE_Q80_BYTES));
-            dw1[b] = ore_f16_to_f32(ore_rd16(w1 + (size_t) b * ORE_Q80_BYTES));
-        }
         for (int tb = 0; tb < x->ntb; ++tb) {
             const int      valid = ORE_MIN(ORE_FB, x->rows - tb * ORE_FB);
             const int8_t * A     = x->q + (size_t) tb * n4 * 64;
@@ -489,13 +510,17 @@ static void gemm_q80_sse(const uint8_t * w, int n_in, int r0, int r1, const ore_
             __m128 s00 = _mm_setzero_ps(), s01 = _mm_setzero_ps(), s02 = _mm_setzero_ps(), s03 = _mm_setzero_ps();
             __m128 s10 = _mm_setzero_ps(), s11 = _mm_setzero_ps(), s12 = _mm_setzero_ps(), s13 = _mm_setzero_ps();
             for (int b = 0; b < nb; ++b) {
+                const uint8_t * k0 = w0 + (size_t) b * ORE_Q80_BYTES;
+                const uint8_t * k1 = w1 + (size_t) b * ORE_Q80_BYTES;
                 __m128i a00 = _mm_setzero_si128(), a01 = _mm_setzero_si128(), a02 = _mm_setzero_si128(), a03 = _mm_setzero_si128();
                 __m128i a10 = _mm_setzero_si128(), a11 = _mm_setzero_si128(), a12 = _mm_setzero_si128(), a13 = _mm_setzero_si128();
                 for (int c = 0; c < 8; ++c) {
                     const int8_t * Ac = A + ((size_t) b * 8 + c) * 64;
-                    // signed * signed through the unsigned * signed multiply: |w| * (x with w's sign)
-                    const __m128i wb0 = _mm_set1_epi32((int) u0[b * 8 + c]);
-                    const __m128i wb1 = _mm_set1_epi32((int) u1[b * 8 + c]);
+                    uint32_t       v0, v1;
+                    memcpy(&v0, k0 + 2 + 4 * c, 4);
+                    memcpy(&v1, k1 + 2 + 4 * c, 4);
+                    const __m128i wb0 = _mm_set1_epi32((int) v0);
+                    const __m128i wb1 = _mm_set1_epi32((int) v1);
                     const __m128i wa0 = _mm_abs_epi8(wb0), wa1 = _mm_abs_epi8(wb1);
                     const __m128i x0 = _mm_loadu_si128((const __m128i *) (Ac));
                     a00 = _mm_add_epi32(a00, _mm_madd_epi16(_mm_maddubs_epi16(wa0, _mm_sign_epi8(x0, wb0)), ones));
@@ -510,19 +535,20 @@ static void gemm_q80_sse(const uint8_t * w, int n_in, int r0, int r1, const ore_
                     a03 = _mm_add_epi32(a03, _mm_madd_epi16(_mm_maddubs_epi16(wa0, _mm_sign_epi8(x3, wb0)), ones));
                     a13 = _mm_add_epi32(a13, _mm_madd_epi16(_mm_maddubs_epi16(wa1, _mm_sign_epi8(x3, wb1)), ones));
                 }
-                const float * Db = D + (size_t) b * ORE_FB;
+                const float   dw0 = ore_f16_to_f32(ore_rd16(k0)), dw1 = ore_f16_to_f32(ore_rd16(k1));
+                const float * Db  = D + (size_t) b * ORE_FB;
                 const __m128 dx0 = _mm_loadu_ps(Db);
-                s00 = _mm_add_ps(s00, _mm_mul_ps(_mm_cvtepi32_ps(a00), _mm_mul_ps(dx0, _mm_set1_ps(dw0[b]))));
-                s10 = _mm_add_ps(s10, _mm_mul_ps(_mm_cvtepi32_ps(a10), _mm_mul_ps(dx0, _mm_set1_ps(dw1[b]))));
+                s00 = _mm_add_ps(s00, _mm_mul_ps(_mm_cvtepi32_ps(a00), _mm_mul_ps(dx0, _mm_set1_ps(dw0))));
+                s10 = _mm_add_ps(s10, _mm_mul_ps(_mm_cvtepi32_ps(a10), _mm_mul_ps(dx0, _mm_set1_ps(dw1))));
                 const __m128 dx1 = _mm_loadu_ps(Db + 4);
-                s01 = _mm_add_ps(s01, _mm_mul_ps(_mm_cvtepi32_ps(a01), _mm_mul_ps(dx1, _mm_set1_ps(dw0[b]))));
-                s11 = _mm_add_ps(s11, _mm_mul_ps(_mm_cvtepi32_ps(a11), _mm_mul_ps(dx1, _mm_set1_ps(dw1[b]))));
+                s01 = _mm_add_ps(s01, _mm_mul_ps(_mm_cvtepi32_ps(a01), _mm_mul_ps(dx1, _mm_set1_ps(dw0))));
+                s11 = _mm_add_ps(s11, _mm_mul_ps(_mm_cvtepi32_ps(a11), _mm_mul_ps(dx1, _mm_set1_ps(dw1))));
                 const __m128 dx2 = _mm_loadu_ps(Db + 8);
-                s02 = _mm_add_ps(s02, _mm_mul_ps(_mm_cvtepi32_ps(a02), _mm_mul_ps(dx2, _mm_set1_ps(dw0[b]))));
-                s12 = _mm_add_ps(s12, _mm_mul_ps(_mm_cvtepi32_ps(a12), _mm_mul_ps(dx2, _mm_set1_ps(dw1[b]))));
+                s02 = _mm_add_ps(s02, _mm_mul_ps(_mm_cvtepi32_ps(a02), _mm_mul_ps(dx2, _mm_set1_ps(dw0))));
+                s12 = _mm_add_ps(s12, _mm_mul_ps(_mm_cvtepi32_ps(a12), _mm_mul_ps(dx2, _mm_set1_ps(dw1))));
                 const __m128 dx3 = _mm_loadu_ps(Db + 12);
-                s03 = _mm_add_ps(s03, _mm_mul_ps(_mm_cvtepi32_ps(a03), _mm_mul_ps(dx3, _mm_set1_ps(dw0[b]))));
-                s13 = _mm_add_ps(s13, _mm_mul_ps(_mm_cvtepi32_ps(a13), _mm_mul_ps(dx3, _mm_set1_ps(dw1[b]))));
+                s03 = _mm_add_ps(s03, _mm_mul_ps(_mm_cvtepi32_ps(a03), _mm_mul_ps(dx3, _mm_set1_ps(dw0))));
+                s13 = _mm_add_ps(s13, _mm_mul_ps(_mm_cvtepi32_ps(a13), _mm_mul_ps(dx3, _mm_set1_ps(dw1))));
             }
             float o0[16], o1[16];
             _mm_storeu_ps(o0, s00);
@@ -788,27 +814,43 @@ static void dwconv_bias_sse(const float * const * taps, const float * w, int k, 
     }
 }
 
+// Two rows at a time, eight running sums.
 ORE_SSE
 static void gemv_f32_sse(const float * w, int rows, int cols, const float * x, float * y) {
-    for (int r = 0; r < rows; ++r) {
-        const float * wr = w + (size_t) r * cols;
-        __m128        a[4];
-        for (int j = 0; j < 4; ++j) a[j] = _mm_setzero_ps();
-        int k = 0;
-        for (; k + 16 <= cols; k += 16) {
-            for (int j = 0; j < 4; ++j) {
-                a[j] = _mm_add_ps(a[j], _mm_mul_ps(_mm_loadu_ps(wr + k + 4 * j), _mm_loadu_ps(x + k + 4 * j)));
+    const int full = cols & ~15;
+    float     tx[16] = { 0 };
+    for (int j = 0; full + j < cols; ++j) tx[j] = x[full + j];
+    for (int r = 0; r < rows; r += 2) {
+        const int     nr = ORE_MIN(2, rows - r);
+        const float * w0 = w + (size_t) r * cols;
+        const float * w1 = w + (size_t) (r + nr - 1) * cols;
+        __m128        a00 = _mm_setzero_ps(), a01 = a00, a02 = a00, a03 = a00;
+        __m128        a10 = a00, a11 = a00, a12 = a00, a13 = a00;
+#define ORE_GEMV_STEP(W0, W1, X)                                                 \
+    {                                                                            \
+        const __m128 x0 = _mm_loadu_ps(X), x1 = _mm_loadu_ps(X + 4);             \
+        const __m128 x2 = _mm_loadu_ps(X + 8), x3 = _mm_loadu_ps(X + 12);        \
+        a00 = _mm_add_ps(a00, _mm_mul_ps(_mm_loadu_ps(W0), x0));                 \
+        a01 = _mm_add_ps(a01, _mm_mul_ps(_mm_loadu_ps(W0 + 4), x1));             \
+        a02 = _mm_add_ps(a02, _mm_mul_ps(_mm_loadu_ps(W0 + 8), x2));             \
+        a03 = _mm_add_ps(a03, _mm_mul_ps(_mm_loadu_ps(W0 + 12), x3));            \
+        a10 = _mm_add_ps(a10, _mm_mul_ps(_mm_loadu_ps(W1), x0));                 \
+        a11 = _mm_add_ps(a11, _mm_mul_ps(_mm_loadu_ps(W1 + 4), x1));             \
+        a12 = _mm_add_ps(a12, _mm_mul_ps(_mm_loadu_ps(W1 + 8), x2));             \
+        a13 = _mm_add_ps(a13, _mm_mul_ps(_mm_loadu_ps(W1 + 12), x3));            \
+    }
+        for (int k = 0; k < full; k += 16) ORE_GEMV_STEP(w0 + k, w1 + k, x + k)
+        if (full < cols) {
+            float t0[16] = { 0 }, t1[16] = { 0 };
+            for (int j = 0; full + j < cols; ++j) {
+                t0[j] = w0[full + j];
+                t1[j] = w1[full + j];
             }
+            ORE_GEMV_STEP(t0, t1, tx)
         }
-        if (k < cols) {
-            float tw[16] = { 0 }, tx[16] = { 0 };
-            for (int j = 0; k + j < cols; ++j) {
-                tw[j] = wr[k + j];
-                tx[j] = x[k + j];
-            }
-            for (int j = 0; j < 4; ++j) a[j] = _mm_add_ps(a[j], _mm_mul_ps(_mm_loadu_ps(tw + 4 * j), _mm_loadu_ps(tx + 4 * j)));
-        }
-        y[r] = sum16v(a[0], a[1], a[2], a[3]);
+#undef ORE_GEMV_STEP
+        y[r] = sum16v(a00, a01, a02, a03);
+        if (nr > 1) y[r + 1] = sum16v(a10, a11, a12, a13);
     }
 }
 

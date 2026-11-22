@@ -133,22 +133,25 @@ static void quantize_q80_avx2(const float * x, size_t xstride, int tb0, int tb1,
 
 // One 16-frame block against two weight rows, in vectors of eight frames (one
 // function per number of vectors, so the last block of a clip does no more
-// than it must). Four weights are broadcast and multiplied with four columns
-// of every frame. The 16-bit pair sums of a whole group of 32 columns fit in
-// 16 bits (8 * 2 * 15 * 127 < 32768), so a group costs one 8-bit multiply per
-// four columns and a single 16-bit multiply at its end, which applies the
-// group scale and widens to one 32-bit sum per frame. A group sum of
-// activations fits in 16 bits too, so the same multiply applies the mins.
+// than it must). Four 4-bit weights are read straight from the model file,
+// widened to bytes in a general register, broadcast, and multiplied with four
+// columns of every frame. The 16-bit pair sums of a whole group of 32 columns
+// fit in 16 bits (8 * 2 * 15 * 127 < 32768), so a group costs one 8-bit
+// multiply per four columns and a single 16-bit multiply at its end, which
+// applies the group scale and widens to one 32-bit sum per frame. A group sum
+// of activations fits in 16 bits too, so the same multiply applies the mins.
 //
 // Every register has its own named variable: GCC and MSVC keep small arrays
 // of vectors in memory, which made this loop three times slower.
 ORE_AVX2
-static void q4k_block_avx2_1(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+static void q4k_block_avx2_1(const uint8_t * w0, const uint8_t * w1, const ore_q4k_hdr * h0,
         const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
         float * o1) {
     __m256 s00 = _mm256_setzero_ps();
     __m256 s10 = _mm256_setzero_ps();
     for (int b = 0; b < nb; ++b) {
+        const uint8_t * q0 = w0 + (size_t) b * ORE_Q4K_BYTES + 16;
+        const uint8_t * q1 = w1 + (size_t) b * ORE_Q4K_BYTES + 16;
         __m256i S00 = _mm256_setzero_si256();
         __m256i S10 = _mm256_setzero_si256();
         __m256i M00 = _mm256_setzero_si256();
@@ -156,20 +159,25 @@ static void q4k_block_avx2_1(const uint32_t * u0, const uint32_t * u1, const ore
         for (int g = 0; g < 8; ++g) {
             __m256i a00 = _mm256_setzero_si256();
             __m256i a10 = _mm256_setzero_si256();
-            const uint32_t * p0 = u0 + b * 64 + g * 8;
-            const uint32_t * p1 = u1 + b * 64 + g * 8;
-            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            // Groups 2j and 2j + 1 are the low and high halves of the same 32 bytes.
+            const uint8_t * p0 = q0 + (g >> 1) * 32;
+            const uint8_t * p1 = q1 + (g >> 1) * 32;
+            const int       sh = (g & 1) * 4;
+            const int8_t *  Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
             for (int c = 0; c < 8; ++c) {
-                const __m256i wb0 = _mm256_set1_epi32((int) p0[c]);
-                const __m256i wb1 = _mm256_set1_epi32((int) p1[c]);
+                uint32_t v0, v1;
+                memcpy(&v0, p0 + 4 * c, 4);
+                memcpy(&v1, p1 + 4 * c, 4);
+                const __m256i wb0 = _mm256_set1_epi32((int) ((v0 >> sh) & 0x0f0f0f0fu));
+                const __m256i wb1 = _mm256_set1_epi32((int) ((v1 >> sh) & 0x0f0f0f0fu));
                 const __m256i x0 = _mm256_loadu_si256((const __m256i *) (Ag + c * 64));
                 a00 = _mm256_add_epi16(a00, _mm256_maddubs_epi16(wb0, x0));
                 a10 = _mm256_add_epi16(a10, _mm256_maddubs_epi16(wb1, x0));
             }
-            const __m256i sc0 = _mm256_set1_epi32(h0[b].sc2[g]);
-            const __m256i mn0 = _mm256_set1_epi32(h0[b].mn[g]);
-            const __m256i sc1 = _mm256_set1_epi32(h1[b].sc2[g]);
-            const __m256i mn1 = _mm256_set1_epi32(h1[b].mn[g]);
+            const __m256i sc0 = _mm256_set1_epi32((int) h0[b].sm[g] * 0x10001);
+            const __m256i mn0 = _mm256_set1_epi32((int) h0[b].sm[8 + g]);
+            const __m256i sc1 = _mm256_set1_epi32((int) h1[b].sm[g] * 0x10001);
+            const __m256i mn1 = _mm256_set1_epi32((int) h1[b].sm[8 + g]);
             const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
             const __m256i g0 = _mm256_loadu_si256((const __m256i *) (Gg));
             S00 = _mm256_add_epi32(S00, _mm256_madd_epi16(a00, sc0));
@@ -189,12 +197,14 @@ static void q4k_block_avx2_1(const uint32_t * u0, const uint32_t * u1, const ore
 }
 
 ORE_AVX2
-static void q4k_block_avx2_2(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+static void q4k_block_avx2_2(const uint8_t * w0, const uint8_t * w1, const ore_q4k_hdr * h0,
         const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
         float * o1) {
     __m256 s00 = _mm256_setzero_ps(), s01 = _mm256_setzero_ps();
     __m256 s10 = _mm256_setzero_ps(), s11 = _mm256_setzero_ps();
     for (int b = 0; b < nb; ++b) {
+        const uint8_t * q0 = w0 + (size_t) b * ORE_Q4K_BYTES + 16;
+        const uint8_t * q1 = w1 + (size_t) b * ORE_Q4K_BYTES + 16;
         __m256i S00 = _mm256_setzero_si256(), S01 = _mm256_setzero_si256();
         __m256i S10 = _mm256_setzero_si256(), S11 = _mm256_setzero_si256();
         __m256i M00 = _mm256_setzero_si256(), M01 = _mm256_setzero_si256();
@@ -202,12 +212,17 @@ static void q4k_block_avx2_2(const uint32_t * u0, const uint32_t * u1, const ore
         for (int g = 0; g < 8; ++g) {
             __m256i a00 = _mm256_setzero_si256(), a01 = _mm256_setzero_si256();
             __m256i a10 = _mm256_setzero_si256(), a11 = _mm256_setzero_si256();
-            const uint32_t * p0 = u0 + b * 64 + g * 8;
-            const uint32_t * p1 = u1 + b * 64 + g * 8;
-            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            // Groups 2j and 2j + 1 are the low and high halves of the same 32 bytes.
+            const uint8_t * p0 = q0 + (g >> 1) * 32;
+            const uint8_t * p1 = q1 + (g >> 1) * 32;
+            const int       sh = (g & 1) * 4;
+            const int8_t *  Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
             for (int c = 0; c < 8; ++c) {
-                const __m256i wb0 = _mm256_set1_epi32((int) p0[c]);
-                const __m256i wb1 = _mm256_set1_epi32((int) p1[c]);
+                uint32_t v0, v1;
+                memcpy(&v0, p0 + 4 * c, 4);
+                memcpy(&v1, p1 + 4 * c, 4);
+                const __m256i wb0 = _mm256_set1_epi32((int) ((v0 >> sh) & 0x0f0f0f0fu));
+                const __m256i wb1 = _mm256_set1_epi32((int) ((v1 >> sh) & 0x0f0f0f0fu));
                 const __m256i x0 = _mm256_loadu_si256((const __m256i *) (Ag + c * 64));
                 a00 = _mm256_add_epi16(a00, _mm256_maddubs_epi16(wb0, x0));
                 a10 = _mm256_add_epi16(a10, _mm256_maddubs_epi16(wb1, x0));
@@ -215,10 +230,10 @@ static void q4k_block_avx2_2(const uint32_t * u0, const uint32_t * u1, const ore
                 a01 = _mm256_add_epi16(a01, _mm256_maddubs_epi16(wb0, x1));
                 a11 = _mm256_add_epi16(a11, _mm256_maddubs_epi16(wb1, x1));
             }
-            const __m256i sc0 = _mm256_set1_epi32(h0[b].sc2[g]);
-            const __m256i mn0 = _mm256_set1_epi32(h0[b].mn[g]);
-            const __m256i sc1 = _mm256_set1_epi32(h1[b].sc2[g]);
-            const __m256i mn1 = _mm256_set1_epi32(h1[b].mn[g]);
+            const __m256i sc0 = _mm256_set1_epi32((int) h0[b].sm[g] * 0x10001);
+            const __m256i mn0 = _mm256_set1_epi32((int) h0[b].sm[8 + g]);
+            const __m256i sc1 = _mm256_set1_epi32((int) h1[b].sm[g] * 0x10001);
+            const __m256i mn1 = _mm256_set1_epi32((int) h1[b].sm[8 + g]);
             const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
             const __m256i g0 = _mm256_loadu_si256((const __m256i *) (Gg));
             S00 = _mm256_add_epi32(S00, _mm256_madd_epi16(a00, sc0));
@@ -259,11 +274,8 @@ static void gemm_q4k_avx2(const uint8_t * w, int n_in, int r0, int r1, const ore
         const uint8_t * w0   = w + (size_t) r * rb;
         const uint8_t * w1   = pair ? w0 + rb : w0;
         ore_q4k_hdr     h0[ORE_Q4K_MAX_BLOCKS], h1[ORE_Q4K_MAX_BLOCKS];
-        uint32_t        u0[ORE_Q4K_MAX_COLS / 4], u1[ORE_Q4K_MAX_COLS / 4];
         ore_q4k_decode_row(w0, nb, h0);
         ore_q4k_decode_row(w1, nb, h1);
-        ore_q4k_unpack_row(w0, nb, (uint8_t *) u0);
-        ore_q4k_unpack_row(w1, nb, (uint8_t *) u1);
         for (int tb = 0; tb < x->ntb; ++tb) {
             const int       valid = ORE_MIN(ORE_FB, x->rows - tb * ORE_FB);
             const int8_t *  A     = x->q + (size_t) tb * n4 * 64;
@@ -271,9 +283,9 @@ static void gemm_q4k_avx2(const uint8_t * w, int n_in, int r0, int r1, const ore
             const float *   D     = x->d + (size_t) tb * nb * ORE_FB;
             float           o0[16], o1[16];
             if (valid > 8) {
-                q4k_block_avx2_2(u0, u1, h0, h1, nb, A, G, D, o0, o1);
+                q4k_block_avx2_2(w0, w1, h0, h1, nb, A, G, D, o0, o1);
             } else {
-                q4k_block_avx2_1(u0, u1, h0, h1, nb, A, G, D, o0, o1);
+                q4k_block_avx2_1(w0, w1, h0, h1, nb, A, G, D, o0, o1);
             }
             float * yr = y + (size_t) tb * ORE_FB * ystride + r;
             for (int f = 0; f < valid; ++f) {
@@ -286,60 +298,59 @@ static void gemm_q4k_avx2(const uint8_t * w, int n_in, int r0, int r1, const ore
 
 // ---- Q8_0 product -----------------------------------------------------------
 
+// Two weight rows against a block of 16 frames. Four 8-bit weights are read
+// from the model file and broadcast; each lane of the sum is one frame.
+// signed * signed goes through the unsigned * signed multiply: |w| times x
+// with w's sign.
 ORE_AVX2
 static void gemm_q80_avx2(const uint8_t * w, int n_in, int r0, int r1, const ore_qact * x, float * y, size_t ystride) {
-    const int     nb   = n_in / 32;
-    const size_t  rb   = (size_t) nb * ORE_Q80_BYTES;
-    const size_t  n4   = (size_t) n_in / 4;
+    const int    nb = n_in / 32;
+    const size_t rb = (size_t) nb * ORE_Q80_BYTES;
+    const size_t n4 = (size_t) n_in / 4;
     const __m256i ones = _mm256_set1_epi16(1);
     for (int r = r0; r < r1; r += 2) {
         const int       pair = r + 1 < r1;
         const uint8_t * w0   = w + (size_t) r * rb;
         const uint8_t * w1   = pair ? w0 + rb : w0;
-        uint32_t        u0[ORE_Q4K_MAX_COLS / 4], u1[ORE_Q4K_MAX_COLS / 4];
-        float           dw0[ORE_Q4K_MAX_COLS / 32], dw1[ORE_Q4K_MAX_COLS / 32];
-        for (int b = 0; b < nb; ++b) {
-            memcpy((uint8_t *) u0 + b * 32, w0 + (size_t) b * ORE_Q80_BYTES + 2, 32);
-            memcpy((uint8_t *) u1 + b * 32, w1 + (size_t) b * ORE_Q80_BYTES + 2, 32);
-            dw0[b] = ore_f16_to_f32(ore_rd16(w0 + (size_t) b * ORE_Q80_BYTES));
-            dw1[b] = ore_f16_to_f32(ore_rd16(w1 + (size_t) b * ORE_Q80_BYTES));
-        }
         for (int tb = 0; tb < x->ntb; ++tb) {
             const int      valid = ORE_MIN(ORE_FB, x->rows - tb * ORE_FB);
             const int8_t * A     = x->q + (size_t) tb * n4 * 64;
             const float *  D     = x->d + (size_t) tb * nb * ORE_FB;
-            __m256         s00 = _mm256_setzero_ps(), s01 = s00, s10 = s00, s11 = s00;
+            __m256 s00 = _mm256_setzero_ps(), s01 = _mm256_setzero_ps();
+            __m256 s10 = _mm256_setzero_ps(), s11 = _mm256_setzero_ps();
             for (int b = 0; b < nb; ++b) {
-                __m256i a00 = _mm256_setzero_si256(), a01 = a00, a10 = a00, a11 = a00;
+                const uint8_t * k0 = w0 + (size_t) b * ORE_Q80_BYTES;
+                const uint8_t * k1 = w1 + (size_t) b * ORE_Q80_BYTES;
+                __m256i a00 = _mm256_setzero_si256(), a01 = _mm256_setzero_si256();
+                __m256i a10 = _mm256_setzero_si256(), a11 = _mm256_setzero_si256();
                 for (int c = 0; c < 8; ++c) {
-                    // signed * signed through the unsigned * signed multiply:
-                    // |w| * (x with w's sign)
-                    const __m256i wb0 = _mm256_set1_epi32((int) u0[b * 8 + c]);
-                    const __m256i wb1 = _mm256_set1_epi32((int) u1[b * 8 + c]);
-                    const __m256i wa0 = _mm256_abs_epi8(wb0), wa1 = _mm256_abs_epi8(wb1);
                     const int8_t * Ac = A + ((size_t) b * 8 + c) * 64;
-                    const __m256i  x0 = _mm256_loadu_si256((const __m256i *) Ac);
-                    const __m256i  x1 = _mm256_loadu_si256((const __m256i *) (Ac + 32));
-#define ORE_Q80_STEP(acc, wa, wb, xv) \
-    acc = _mm256_add_epi32(acc, _mm256_madd_epi16(_mm256_maddubs_epi16(wa, _mm256_sign_epi8(xv, wb)), ones))
-                    ORE_Q80_STEP(a00, wa0, wb0, x0);
-                    ORE_Q80_STEP(a01, wa0, wb0, x1);
-                    ORE_Q80_STEP(a10, wa1, wb1, x0);
-                    ORE_Q80_STEP(a11, wa1, wb1, x1);
-#undef ORE_Q80_STEP
+                    uint32_t       v0, v1;
+                    memcpy(&v0, k0 + 2 + 4 * c, 4);
+                    memcpy(&v1, k1 + 2 + 4 * c, 4);
+                    const __m256i wb0 = _mm256_set1_epi32((int) v0);
+                    const __m256i wb1 = _mm256_set1_epi32((int) v1);
+                    const __m256i wa0 = _mm256_abs_epi8(wb0), wa1 = _mm256_abs_epi8(wb1);
+                    const __m256i x0 = _mm256_loadu_si256((const __m256i *) (Ac));
+                    a00 = _mm256_add_epi32(a00, _mm256_madd_epi16(_mm256_maddubs_epi16(wa0, _mm256_sign_epi8(x0, wb0)), ones));
+                    a10 = _mm256_add_epi32(a10, _mm256_madd_epi16(_mm256_maddubs_epi16(wa1, _mm256_sign_epi8(x0, wb1)), ones));
+                    const __m256i x1 = _mm256_loadu_si256((const __m256i *) (Ac + 32));
+                    a01 = _mm256_add_epi32(a01, _mm256_madd_epi16(_mm256_maddubs_epi16(wa0, _mm256_sign_epi8(x1, wb0)), ones));
+                    a11 = _mm256_add_epi32(a11, _mm256_madd_epi16(_mm256_maddubs_epi16(wa1, _mm256_sign_epi8(x1, wb1)), ones));
                 }
-                const __m256 dx0 = _mm256_loadu_ps(D + (size_t) b * ORE_FB);
-                const __m256 dx1 = _mm256_loadu_ps(D + (size_t) b * ORE_FB + 8);
-                const __m256 vd0 = _mm256_set1_ps(dw0[b]), vd1 = _mm256_set1_ps(dw1[b]);
-                s00 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(a00), _mm256_mul_ps(dx0, vd0), s00);
-                s01 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(a01), _mm256_mul_ps(dx1, vd0), s01);
-                s10 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(a10), _mm256_mul_ps(dx0, vd1), s10);
-                s11 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(a11), _mm256_mul_ps(dx1, vd1), s11);
+                const float   dw0 = ore_f16_to_f32(ore_rd16(k0)), dw1 = ore_f16_to_f32(ore_rd16(k1));
+                const float * Db  = D + (size_t) b * ORE_FB;
+                const __m256 dx0 = _mm256_loadu_ps(Db);
+                s00 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(a00), _mm256_mul_ps(dx0, _mm256_set1_ps(dw0)), s00);
+                s10 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(a10), _mm256_mul_ps(dx0, _mm256_set1_ps(dw1)), s10);
+                const __m256 dx1 = _mm256_loadu_ps(Db + 8);
+                s01 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(a01), _mm256_mul_ps(dx1, _mm256_set1_ps(dw0)), s01);
+                s11 = _mm256_fmadd_ps(_mm256_cvtepi32_ps(a11), _mm256_mul_ps(dx1, _mm256_set1_ps(dw1)), s11);
             }
             float o0[16], o1[16];
             _mm256_storeu_ps(o0, s00);
-            _mm256_storeu_ps(o0 + 8, s01);
             _mm256_storeu_ps(o1, s10);
+            _mm256_storeu_ps(o0 + 8, s01);
             _mm256_storeu_ps(o1 + 8, s11);
             float * yr = y + (size_t) tb * ORE_FB * ystride + r;
             for (int f = 0; f < valid; ++f) {
@@ -613,26 +624,49 @@ static void dwconv_bias_avx2(const float * const * taps, const float * w, int k,
     }
 }
 
+// Four rows at a time, so eight sums run side by side; each row is summed
+// exactly as the reference sums it.
 ORE_AVX2
 static void gemv_f32_avx2(const float * w, int rows, int cols, const float * x, float * y) {
-    for (int r = 0; r < rows; ++r) {
-        const float * wr = w + (size_t) r * cols;
-        __m256        a0 = _mm256_setzero_ps(), a1 = a0;
-        int           k  = 0;
-        for (; k + 16 <= cols; k += 16) {
-            a0 = _mm256_fmadd_ps(_mm256_loadu_ps(wr + k), _mm256_loadu_ps(x + k), a0);
-            a1 = _mm256_fmadd_ps(_mm256_loadu_ps(wr + k + 8), _mm256_loadu_ps(x + k + 8), a1);
-        }
-        if (k < cols) {
-            float tw[16] = { 0 }, tx[16] = { 0 };
-            for (int j = 0; k + j < cols; ++j) {
-                tw[j] = wr[k + j];
-                tx[j] = x[k + j];
+    const int full = cols & ~15;
+    float     tx[16] = { 0 };
+    for (int j = 0; full + j < cols; ++j) tx[j] = x[full + j];
+    for (int r = 0; r < rows; r += 4) {
+        const int     nr = ORE_MIN(4, rows - r);
+        const float * w0 = w + (size_t) r * cols;
+        const float * w1 = w + (size_t) (r + ORE_MIN(1, nr - 1)) * cols;
+        const float * w2 = w + (size_t) (r + ORE_MIN(2, nr - 1)) * cols;
+        const float * w3 = w + (size_t) (r + ORE_MIN(3, nr - 1)) * cols;
+        __m256        a00 = _mm256_setzero_ps(), a01 = a00, a10 = a00, a11 = a00;
+        __m256        a20 = a00, a21 = a00, a30 = a00, a31 = a00;
+#define ORE_GEMV_STEP(W0, W1, W2, W3, X)                                   \
+    {                                                                      \
+        const __m256 x0 = _mm256_loadu_ps(X), x1 = _mm256_loadu_ps(X + 8); \
+        a00 = _mm256_fmadd_ps(_mm256_loadu_ps(W0), x0, a00);               \
+        a01 = _mm256_fmadd_ps(_mm256_loadu_ps(W0 + 8), x1, a01);           \
+        a10 = _mm256_fmadd_ps(_mm256_loadu_ps(W1), x0, a10);               \
+        a11 = _mm256_fmadd_ps(_mm256_loadu_ps(W1 + 8), x1, a11);           \
+        a20 = _mm256_fmadd_ps(_mm256_loadu_ps(W2), x0, a20);               \
+        a21 = _mm256_fmadd_ps(_mm256_loadu_ps(W2 + 8), x1, a21);           \
+        a30 = _mm256_fmadd_ps(_mm256_loadu_ps(W3), x0, a30);               \
+        a31 = _mm256_fmadd_ps(_mm256_loadu_ps(W3 + 8), x1, a31);           \
+    }
+        for (int k = 0; k < full; k += 16) ORE_GEMV_STEP(w0 + k, w1 + k, w2 + k, w3 + k, x + k)
+        if (full < cols) {
+            float t0[16] = { 0 }, t1[16] = { 0 }, t2[16] = { 0 }, t3[16] = { 0 };
+            for (int j = 0; full + j < cols; ++j) {
+                t0[j] = w0[full + j];
+                t1[j] = w1[full + j];
+                t2[j] = w2[full + j];
+                t3[j] = w3[full + j];
             }
-            a0 = _mm256_fmadd_ps(_mm256_loadu_ps(tw), _mm256_loadu_ps(tx), a0);
-            a1 = _mm256_fmadd_ps(_mm256_loadu_ps(tw + 8), _mm256_loadu_ps(tx + 8), a1);
+            ORE_GEMV_STEP(t0, t1, t2, t3, tx)
         }
-        y[r] = sum16v(a0, a1);
+#undef ORE_GEMV_STEP
+        y[r] = sum16v(a00, a01);
+        if (nr > 1) y[r + 1] = sum16v(a10, a11);
+        if (nr > 2) y[r + 2] = sum16v(a20, a21);
+        if (nr > 3) y[r + 3] = sum16v(a30, a31);
     }
 }
 

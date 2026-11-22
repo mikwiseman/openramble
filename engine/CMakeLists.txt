@@ -22,6 +22,7 @@ set(ORE_SOURCES
     src/ore_kernels_neon.c
     src/ore_kernels_avx2.c
     src/ore_kernels_sse.c
+    src/ore_longform.c
     src/ore_mel.c
     src/ore_model.c
     src/ore_threads.c)
@@ -54,6 +55,15 @@ if(UNIX AND NOT APPLE)
     target_compile_definitions(kbench PRIVATE _POSIX_C_SOURCE=200809L)
     target_compile_definitions(ore-cli PRIVATE _POSIX_C_SOURCE=200809L)
 endif()
+
+# A check of every part that needs no model file: `ctest`, or run it directly.
+enable_testing()
+add_executable(selftest tests/selftest.c)
+target_link_libraries(selftest PRIVATE ore)
+if(UNIX AND NOT APPLE)
+    target_compile_definitions(selftest PRIVATE _POSIX_C_SOURCE=200809L _DEFAULT_SOURCE)
+endif()
+add_test(NAME selftest COMMAND selftest ${CMAKE_CURRENT_BINARY_DIR}/selftest.gguf)
 
 # Comparison tools need an installed transcribe.cpp (cmake --install with
 # TRANSCRIBE_INSTALL=ON); they are not part of the library.

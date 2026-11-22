@@ -476,7 +476,7 @@ static float confidence(const float * logits, int n, float * probs) {
     }
     double sum = 0.0;
     for (int i = 0; i < n; ++i) {
-        probs[i] = expf(logits[i] - mx);
+        probs[i] = ore_expf(logits[i] - mx);
         sum += (double) probs[i];
     }
     const float inv     = (float) (1.0 / sum);
@@ -519,9 +519,27 @@ static void job_proj(void * v, int b, int e, int thread) {
                       c->s->ts[thread].f.p);
 }
 
+// One vector through a large matrix, the rows shared among the threads. Each
+// row is summed by one thread exactly as it would be alone.
+typedef struct {
+    const ore_kernels * k;
+    const float *       w;
+    const float *       x;
+    float *             y;
+    int                 cols;
+} gemv_ctx;
+static void job_gemv(void * v, int b, int e, int thread) {
+    gemv_ctx * c = (gemv_ctx *) v;
+    (void) thread;
+    c->k->gemv_f32(c->w + (size_t) b * c->cols, e - b, c->cols, c->x, c->y + b);
+}
+static void gemv(struct ore_session * s, const float * w, int rows, int cols, const float * x, float * y) {
+    gemv_ctx c = { s->k, w, x, y, cols };
+    ore_parallel_for(s->pool, rows, 256, job_gemv, &c);
+}
+
 int ore_decode(struct ore_session * s, const float * enc, int T) {
     const struct ore_model * m  = s->m;
-    const ore_kernels *      k  = s->k;
     ore_dec *                d  = &s->dec;
     const int                H  = m->pred_hidden, L = m->pred_layers, JH = m->joint_hidden;
     const int                NT = m->n_token_cls, blank = m->blank_id;
@@ -578,22 +596,25 @@ int ore_decode(struct ore_session * s, const float * enc, int T) {
                 float *       hn = nxt + (size_t) (2 * l) * H;
                 float *       cn = nxt + (size_t) (2 * l + 1) * H;
                 const float * b  = m->lstm_b + (size_t) l * 4 * H;
-                k->gemv_f32(m->lstm_wx + (size_t) l * 4 * H * H, 4 * H, H, in, ga);
-                k->gemv_f32(m->lstm_wh + (size_t) l * 4 * H * H, 4 * H, H, hp, re);
+                gemv(s, m->lstm_wx + (size_t) l * 4 * H * H, 4 * H, H, in, ga);
+                gemv(s, m->lstm_wh + (size_t) l * 4 * H * H, 4 * H, H, hp, re);
                 for (int i = 0; i < 4 * H; ++i) {
                     const float sum = ga[i] + re[i];
                     ga[i]           = sum + b[i];
                 }
+                // exp is the engine's own and tanh is the double-precision one
+                // rounded once, so the result does not depend on how a C
+                // library rounds its single-precision functions.
                 for (int i = 0; i < H; ++i) {
-                    const float ig = 1.f / (1.f + expf(-ga[i]));
-                    const float fg = 1.f / (1.f + expf(-ga[H + i]));
-                    const float gg = tanhf(ga[2 * H + i]);
-                    const float og = 1.f / (1.f + expf(-ga[3 * H + i]));
+                    const float ig = 1.f / (1.f + ore_expf(-ga[i]));
+                    const float fg = 1.f / (1.f + ore_expf(-ga[H + i]));
+                    const float gg = (float) tanh((double) ga[2 * H + i]);
+                    const float og = 1.f / (1.f + ore_expf(-ga[3 * H + i]));
                     const float fc = fg * cp[i];
                     const float ii = ig * gg;
                     const float c_ = fc + ii;
                     cn[i]          = c_;
-                    hn[i]          = og * tanhf(c_);
+                    hn[i]          = og * (float) tanh((double) c_);
                 }
                 in = hn;
             }
@@ -603,13 +624,13 @@ int ore_decode(struct ore_session * s, const float * enc, int T) {
 
         // Joint network.
         const float * ep = proj + (size_t) step * JH;
-        k->gemv_f32(m->pred_w, JH, H, dec_out, act);
+        gemv(s, m->pred_w, JH, H, dec_out, act);
         for (int i = 0; i < JH; ++i) {
             const float pp     = act[i] + m->pred_b[i];
             const float summed = ep[i] + pp;
             act[i]             = summed > 0.f ? summed : 0.f;
         }
-        k->gemv_f32(m->out_w, m->joint_n, JH, act, logits);
+        gemv(s, m->out_w, m->joint_n, JH, act, logits);
         for (int i = 0; i < m->joint_n; ++i) logits[i] = logits[i] + m->out_b[i];
 
         // The model alone decides whether to write; taught words only choose

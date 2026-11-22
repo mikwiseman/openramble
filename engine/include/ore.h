@@ -58,6 +58,12 @@ void ore_session_set_abort(ore_session * session, int (*callback)(void * user), 
 // Recognizes one clip: mono, 16 kHz, samples in [-1, 1]. The result replaces
 // the session's previous one. A clip too short to hold speech gives ORE_OK and
 // empty text.
+//
+// A clip longer than the model's segment limit (30 s for Parakeet Ultra) is
+// cut at pauses with the model's own speech detector and recognized piece by
+// piece, as the model's reference implementation does. A model without that
+// detector takes clips of at most two minutes; longer ones give
+// ORE_ERR_INVALID.
 ore_status ore_run(ore_session * session, const float * samples, int n_samples);
 
 // The result of the last ore_run. Strings are UTF-8 and stay valid until the

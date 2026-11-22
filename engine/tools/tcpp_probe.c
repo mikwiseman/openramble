@@ -74,7 +74,7 @@ int main(int argc, char ** argv) {
                 printf("%s\tUNREADABLE\n", name);
                 continue;
             }
-            if (n > 16000 * 28) n = 16000 * 28;
+            if (n > 16000 * 28 && !getenv("ORE_WHOLE")) n = 16000 * 28;  // ORE_WHOLE: clips of any length
             struct transcribe_run_params rp;
             transcribe_run_params_init(&rp);
             rp.task       = TRANSCRIBE_TASK_TRANSCRIBE;

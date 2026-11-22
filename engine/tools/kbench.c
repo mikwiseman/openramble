@@ -227,6 +227,9 @@ int main(int argc, char ** argv) {
             memcpy(out + 3 * N, x + 2 * N, sizeof(float) * NS);
             k->softmax(out + 3 * N, NS);
             k->dwconv_bn_silu(taps, x, 9, 509, sc, bt, out + 3 * N + 160);
+            k->dwconv_bias(taps, x + N, 9, 131, bt, out + 3 * N + 700);
+            k->gemv_f32(x, 11, 77, x + 3 * N, out + 3 * N + 840);   // a ragged shape
+            k->gemv_f32(x, 9, 96, x + 4 * N, out + 3 * N + 860);    // whole sixteens
             if (ti > 0) {
                 printf("  %s\n", k->name);
                 compare("against the reference:", r, o, (size_t) N * 4);

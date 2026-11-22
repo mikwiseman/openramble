@@ -13,7 +13,7 @@ let package = Package(
         .target(
             name: "ORE",
             path: ".",
-            exclude: ["CMakeLists.txt", "tools", "scripts", "README.md", "NOTICE.md"],
+            exclude: ["CMakeLists.txt", "tools", "tests", "scripts", "README.md", "NOTICE.md"],
             sources: ["src"],
             publicHeadersPath: "include",
             cSettings: [.unsafeFlags(["-O3"])]

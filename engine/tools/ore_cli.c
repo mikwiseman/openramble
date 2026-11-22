@@ -97,7 +97,7 @@ int main(int argc, char ** argv) {
                 printf("%s\tUNREADABLE\n", name);
                 continue;
             }
-            if (n > 16000 * 28) n = 16000 * 28;
+            if (n > 16000 * 28 && !getenv("ORE_WHOLE")) n = 16000 * 28;  // ORE_WHOLE: clips of any length
             if (ore_run(s, pcm, (int) n) != ORE_OK) {
                 printf("%s\tFAILED\n", name);
                 free(pcm);

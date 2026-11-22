@@ -379,6 +379,51 @@ struct ore_model * ore_model_open_internal(const char * path, const char ** err)
             goto fail;
         }
     }
+    // ---- the speech-detection head, when the model has one ----
+    {
+        ore_tensor pw, pb, cw, cb, ow, ob;
+        int        vh = 0, vk = 0;
+        float      thr = 0, ms = 0, mg = 0, smax = 0, smin = 0, spause = 0, sblock = 0;
+        if (ore_gguf_tensor(g, "vad.proj.weight", &pw) && get_int(g, "stt.parakeet.vad.hidden", &vh) &&
+            get_int(g, "stt.parakeet.vad.context_kernel", &vk) && key_is(g, "stt.parakeet.vad.activation", "silu") &&
+            ore_gguf_f32(g, "stt.parakeet.vad.speech_threshold", &thr) &&
+            ore_gguf_f32(g, "stt.parakeet.vad.min_speech_seconds", &ms) &&
+            ore_gguf_f32(g, "stt.parakeet.vad.min_gap_seconds", &mg) &&
+            ore_gguf_f32(g, "stt.parakeet.segmenter.max_segment_seconds", &smax) &&
+            ore_gguf_f32(g, "stt.parakeet.segmenter.min_segment_seconds", &smin) &&
+            ore_gguf_f32(g, "stt.parakeet.segmenter.min_pause_seconds", &spause) &&
+            ore_gguf_f32(g, "stt.parakeet.segmenter.scan_block_seconds", &sblock)) {
+            e = "the speech-detection head has an unexpected shape";
+            if (vh < 1 || vh > 4096 || vk < 1 || vk > 63 || !(vk & 1) || smax < 1.0f || sblock < smax) goto fail;
+            bind_f32(g, "vad.proj.weight", &pw, 1, ud, (uint64_t) vh, &bad);
+            bind_f32(g, "vad.proj.bias", &pb, (uint64_t) vh, 0, 0, &bad);
+            bind_f32(g, "vad.ctx.weight", &cw, (uint64_t) vk, (uint64_t) vh, (uint64_t) vh, &bad);
+            bind_f32(g, "vad.ctx.bias", &cb, (uint64_t) vh, 0, 0, &bad);
+            bind_f32(g, "vad.out.weight", &ow, 0, 0, 0, &bad);
+            bind_f32(g, "vad.out.bias", &ob, 1, 0, 0, &bad);
+            if (bad || ow.bytes != (size_t) vh * 4) goto fail;
+            m->has_vad       = 1;
+            m->vad_hidden    = vh;
+            m->vad_kernel    = vk;
+            m->vad_proj_w    = (const float *) pw.data;
+            m->vad_proj_b    = (const float *) pb.data;
+            m->vad_ctx_w     = (const float *) cw.data;
+            m->vad_ctx_b     = (const float *) cb.data;
+            m->vad_out_w     = (const float *) ow.data;
+            m->vad_out_b     = ((const float *) ob.data)[0];
+            m->vad_threshold = thr;
+            // The file holds these as single precision; the reference uses
+            // the decimal numbers they were written from.
+            const float  raw[6] = { ms, mg, smax, smin, spause, sblock };
+            double *     dst[6] = { &m->vad_min_speech, &m->vad_min_gap, &m->seg_max,
+                                    &m->seg_min,        &m->seg_min_pause, &m->seg_scan_block };
+            for (int i = 0; i < 6; ++i) {
+                char buf[32];
+                snprintf(buf, sizeof buf, "%.6g", (double) raw[i]);
+                *dst[i] = strtod(buf, NULL);
+            }
+        }
+    }
     e = "the tokenizer is missing or damaged";
     if (!load_vocab(m) || m->vocab.n_tokens < pred_vocab - 1) goto fail;
     return m;

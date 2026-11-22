@@ -172,23 +172,25 @@ static void gemm_q4k_generic(const uint8_t * w, int n_in, int r0, int r1, const 
     for (int r = r0; r < r1; ++r) {
         const uint8_t * wr = w + (size_t) r * rb;
         ore_q4k_hdr     h[ORE_Q4K_MAX_BLOCKS];
-        uint8_t         wu[ORE_Q4K_MAX_COLS];
         ore_q4k_decode_row(wr, nb, h);
-        ore_q4k_unpack_row(wr, nb, wu);
         for (int t = 0; t < x->rows; ++t) {
             const int tb = t / ORE_FB, f = t % ORE_FB;
             float     sum = 0.0f;
             for (int b = 0; b < nb; ++b) {
-                int32_t M = 0, S = 0;
+                const uint8_t * qs = wr + (size_t) b * ORE_Q4K_BYTES + 16;
+                int32_t         M = 0, S = 0;
                 for (int g = 0; g < 8; ++g) {
-                    M += h[b].mn[g] * x->gs[(((size_t) tb * nb + b) * 8 + g) * ORE_FB + f];
-                    int32_t dot = 0;
+                    M += (int32_t) h[b].sm[8 + g] * x->gs[(((size_t) tb * nb + b) * 8 + g) * ORE_FB + f];
+                    // Groups 2j and 2j + 1 are the low and high halves of the
+                    // same 32 bytes.
+                    const uint8_t * u     = qs + (g >> 1) * 32;
+                    const int       shift = (g & 1) * 4;
+                    int32_t         dot   = 0;
                     for (int c = 0; c < 8; ++c) {
-                        const int8_t *  a = qcell(x, tb, b * 64 + g * 8 + c, f);
-                        const uint8_t * u = wu + b * 256 + g * 32 + c * 4;
-                        dot += u[0] * a[0] + u[1] * a[1] + u[2] * a[2] + u[3] * a[3];
+                        const int8_t * a = qcell(x, tb, b * 64 + g * 8 + c, f);
+                        for (int i = 0; i < 4; ++i) dot += (int32_t) ((u[4 * c + i] >> shift) & 0x0f) * a[i];
                     }
-                    S += h[b].sc[g] * dot;
+                    S += (int32_t) h[b].sm[g] * dot;
                 }
                 const float dx = x->d[((size_t) tb * nb + b) * ORE_FB + f];
                 sum            = fmaf(-(dx * h[b].dmin), (float) M, sum);

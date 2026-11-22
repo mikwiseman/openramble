@@ -38,6 +38,14 @@ jobs:
           - name: Windows x86_64
             os: windows-latest
             tcpp_args: ""
+          # A build of transcribe.cpp that could be given to everyone with a
+          # processor from 2013 on: AVX2, not whatever the build machine has.
+          - name: Linux x86_64 (transcribe.cpp built for AVX2)
+            os: ubuntu-latest
+            tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON"
+          - name: Windows x86_64 (transcribe.cpp built for AVX2)
+            os: windows-latest
+            tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON"
           - name: Linux arm64
             os: ubuntu-24.04-arm
             tcpp_args: ""
@@ -103,6 +111,11 @@ jobs:
           cmake -S engine -B engine/build -DCMAKE_BUILD_TYPE=Release -DORE_TCPP_PREFIX="$PWD/tcpp-prefix"
           cmake --build engine/build --config Release --parallel 4
 
+      # Every part that needs no model: kernels against the plain C ones,
+      # conversions, threads, the file reader, the mel front end.
+      - name: Self-test
+        run: ctest --test-dir engine/build -C Release --output-on-failure
+
       # What the library asks of the system: nothing that reaches a network.
       - name: Symbols
         if: runner.os != 'Windows'
@@ -150,6 +163,21 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
           cmp -s <(cut -f1,2 ore.tsv) <(cut -f1,2 tcpp.tsv)
           cmp -s ore-best.tsv ore-generic.tsv
+
+      # Longer than the model's 30 s limit: both runtimes cut it at pauses.
+      - name: A long clip
+        run: |
+          bin=engine/build; [ -d engine/build/Release ] && bin=engine/build/Release
+          echo tcpp/samples/cj-swimming-drop.wav > long.txt
+          ORE_WHOLE=1 "$bin/ore-cli" dump model.gguf long.txt 4 > ore-long.tsv
+          ORE_WHOLE=1 "$bin/tcpp-probe" dump model.gguf long.txt 4 > tcpp-long.tsv
+          {
+            echo "### A 70 s clip"
+            echo '```'
+            echo "words: $(cut -f2 ore-long.tsv | wc -w) and $(cut -f2 tcpp-long.tsv | wc -w)"
+            if cmp -s <(cut -f1,2 ore-long.tsv) <(cut -f1,2 tcpp-long.tsv); then echo "long clip text: identical"; else echo "long clip text: DIFFERENT"; fi
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Speed by clip length
         run: |

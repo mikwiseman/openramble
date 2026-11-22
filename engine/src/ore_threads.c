@@ -57,6 +57,29 @@ ORE_INLINE int a_cas(atomic_i32 * a, int expect, int v) {
 }
 #endif
 
+// How long a thread spins before it sleeps, in microseconds. Jobs inside one
+// recognition follow each other within tens of microseconds, and waking a
+// sleeping thread costs about as much, so workers stay awake across them. An
+// instruction count would not do: the pause instruction takes about 40 ns on
+// x86 and almost no time on arm64.
+#define ORE_SPIN_US 150.0
+
+#if defined(_WIN32)
+static double now_us(void) {
+    LARGE_INTEGER f, c;
+    QueryPerformanceFrequency(&f);
+    QueryPerformanceCounter(&c);
+    return (double) c.QuadPart * 1e6 / (double) f.QuadPart;
+}
+#else
+#include <time.h>
+static double now_us(void) {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (double) t.tv_sec * 1e6 + (double) t.tv_nsec * 1e-3;
+}
+#endif
+
 // `state` counts the workers inside the current job; the caller sets CLOSED
 // when it has no more chunks to hand out. A worker that wakes after that does
 // not join, so the caller never waits for a thread that never started.
@@ -130,12 +153,15 @@ static void * worker_main(void * arg) {
     pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0);
 #endif
     for (;;) {
-        // A short spin catches the next job when jobs come back to back,
-        // which they do inside one recognition; then sleep.
+        // Spin briefly for the next job, then sleep.
         int gen = a_load(&p->generation);
-        for (int spin = 0; gen == seen && spin < 2000; ++spin) {
-            cpu_relax();
-            gen = a_load(&p->generation);
+        if (gen == seen) {
+            const double until = now_us() + ORE_SPIN_US;
+            for (int spin = 1; gen == seen; ++spin) {
+                cpu_relax();
+                gen = a_load(&p->generation);
+                if ((spin & 63) == 0 && now_us() > until) break;
+            }
         }
         if (gen == seen) {
             mutex_lock(&p->mu);
@@ -246,7 +272,11 @@ void ore_parallel_for(ore_pool * p, int n, int grain, ore_range_fn fn, void * ct
     // Every chunk is claimed. Close the job and wait only for the workers
     // that are inside it.
     if (a_fetch_or(&p->state, JOB_CLOSED) != 0) {
-        for (int spin = 0; a_load(&p->state) != JOB_CLOSED && spin < 2000; ++spin) cpu_relax();
+        const double until = now_us() + ORE_SPIN_US;
+        for (int spin = 1; a_load(&p->state) != JOB_CLOSED; ++spin) {
+            cpu_relax();
+            if ((spin & 63) == 0 && now_us() > until) break;
+        }
         if (a_load(&p->state) != JOB_CLOSED) {
             mutex_lock(&p->mu);
             while (a_load(&p->state) != JOB_CLOSED) cond_wait(&p->cv_done, &p->mu);

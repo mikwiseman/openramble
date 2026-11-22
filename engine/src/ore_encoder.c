@@ -284,14 +284,18 @@ static int build_positions(struct ore_session * s, int T) {
     if (s->pos_T == T) return 1;
     float * pos = need(s, &s->pos, (size_t) P * d);
     if (!pos) return 0;
-    const float ln_10000 = logf(10000.0f);
+    // Single-precision values, as the model's reference computes them, but
+    // through the double-precision functions rounded once: C libraries agree
+    // on those, and not always on the single-precision ones.
+    const float ln_10000 = (float) log(10000.0);
     for (int i = 0; i < P; ++i) {
         const float rel = (float) (T - 1 - i);
         float *     row = pos + (size_t) i * d;
         for (int kq = 0; kq < d / 2; ++kq) {
-            const float div = expf((float) (2 * kq) * (-ln_10000 / (float) d));
-            row[2 * kq]     = sinf(rel * div);
-            row[2 * kq + 1] = cosf(rel * div);
+            const float div = (float) exp((double) ((float) (2 * kq) * (-ln_10000 / (float) d)));
+            const float arg = rel * div;
+            row[2 * kq]     = (float) sin((double) arg);
+            row[2 * kq + 1] = (float) cos((double) arg);
         }
     }
     s->pos_T = T;
@@ -426,22 +430,25 @@ static void job_pre(void * v, int e0, int e1, int thread) {
 
 static int aborted(struct ore_session * s) { return s->abort_fn && s->abort_fn(s->abort_user); }
 
-int ore_encode(struct ore_session * s, const float * pcm, int n_samples, const float ** enc, int * T_out) {
+// Mel features, the three subsampling stages and the projection to d_model:
+// s->x holds [*T_out][d_model]. With `all_frames` the frames past the valid
+// length are computed too, as the model computes them (the speech-detection
+// head looks at them); otherwise they are left out, because attention never
+// looks at them and the decoder never reads them. *valid_out is the number of
+// valid frames. Returns 0 on failure.
+static int pre_encode(struct ore_session * s, const float * pcm, int n_samples, int all_frames, int * T_out,
+                      int * valid_out) {
     const struct ore_model * m = s->m;
     const int                d = m->d_model, dff = m->d_ff;
-    s->oom                     = 0;
 
-    // ---- mel ----
     double    t0    = ore_now_ms();
     const int T_mel = ore_mel_frames(&m->mel, n_samples);
     if (T_mel < 3) return 0;
     float * mel = need(s, &s->mel, (size_t) m->n_mels * T_mel);
     if (!mel || !ore_mel_compute(&m->mel, pcm, n_samples, mel)) return 0;
-    dump(s, "enc.mel.in", mel, m->n_mels, T_mel);
-    s->t_mel = ore_now_ms() - t0;
-    t0       = ore_now_ms();
+    if (!all_frames) dump(s, "enc.mel.in", mel, m->n_mels, T_mel);
+    s->t_mel += ore_now_ms() - t0;
 
-    // ---- subsampling ----
     pre_ctx pc;
     pc.s     = s;
     pc.mel   = mel;
@@ -460,21 +467,133 @@ int ore_encode(struct ore_session * s, const float * pcm, int n_samples, const f
         pc.len2 = pc.H2;
         pc.len3 = pc.H3;
     }
-    // Frames past the valid length are padding: attention never looks at
-    // them and the decoder never reads them, so they are not computed.
-    const int T = ORE_MIN(pc.len3, pc.H3);
-    if (T < 1) return 0;
+    const int valid = ORE_MIN(pc.len3, pc.H3);
+    const int T     = all_frames ? pc.H3 : valid;
+    if (valid < 1) return 0;
     const int n_flat = m->sub_ch * (m->n_mels / 8);
     pc.flat          = need(s, &s->flat, (size_t) T * n_flat);
     for (int i = 0; i < s->n_threads; ++i) {
         size_t fs = (size_t) 6 * ORE_MAX(ORE_MAX(dff, d), ORE_MAX(n_flat, T));
         need(s, &s->ts[i].f, fs);
     }
+    float * x = need(s, &s->x, (size_t) T * d);
     if (s->oom) return 0;
     ore_parallel_for(s->pool, T, 8, job_pre, &pc);
     if (s->oom) return 0;
 
-    float * x  = need(s, &s->x, (size_t) T * d);
+    lin_in_set(&s->in_a, pc.flat, (size_t) n_flat, T, n_flat);
+    linear(s, &m->pre_out_w, &s->in_a, x, (size_t) d);
+    frame_ctx c = { 0 };
+    c.op        = OP_ADD_BIAS;
+    c.n         = d;
+    c.T         = T;
+    c.out       = x;
+    c.ostride   = (size_t) d;
+    c.a         = x;
+    c.astride   = (size_t) d;
+    c.p0        = (const float *) m->pre_out_b.data;
+    frames(s, &c);
+    if (s->oom) return 0;
+    *T_out     = T;
+    *valid_out = valid;
+    return 1;
+}
+
+typedef struct {
+    struct ore_session * s;
+    const float *        h;      // [T][H]
+    float *              patch;  // [T][H * K]
+    int                  T, H, K;
+} vad_ctx;
+static void job_vad_patch(void * v, int b, int e, int thread) {
+    vad_ctx * c = (vad_ctx *) v;
+    (void) thread;
+    const int half = c->K / 2;
+    for (int t = b; t < e; ++t) {
+        float * p = c->patch + (size_t) t * c->H * c->K;
+        for (int kk = 0; kk < c->K; ++kk) {
+            const int     tt  = t + kk - half;
+            const float * src = (tt >= 0 && tt < c->T) ? c->h + (size_t) tt * c->H : NULL;
+            for (int ic = 0; ic < c->H; ++ic) p[(size_t) ic * c->K + kk] = src ? src[ic] : 0.0f;
+        }
+    }
+}
+
+typedef struct {
+    struct ore_session * s;
+    const void *         w;
+    int                  n_in, rows;
+    const float *        xp;
+    float *              y;
+    size_t               ystride;
+} plain_ctx;
+static void job_plain_f32(void * v, int b, int e, int thread) {
+    plain_ctx * c = (plain_ctx *) v;
+    c->s->k->gemm_f32(c->w, 0, (size_t) c->n_in, c->n_in, b, e, c->xp, c->rows, c->y, c->ystride,
+                      c->s->ts[thread].f.p);
+}
+
+// The speech-detection head over one stretch of audio: the probability of
+// speech at each valid encoder frame (80 ms each). *probs points into the
+// session. Returns 0 on failure.
+int ore_speech_probs(struct ore_session * s, const float * pcm, int n_samples, const float ** probs, int * n) {
+    const struct ore_model * m = s->m;
+    const int                d = m->d_model, H = m->vad_hidden, K = m->vad_kernel;
+    const double             t0 = ore_now_ms();
+    int                      T = 0, valid = 0;
+    s->oom = 0;
+    if (!m->has_vad || !pre_encode(s, pcm, n_samples, 1, &T, &valid)) return 0;
+    const int ntb = ore_frame_blocks(T);
+    float *   h   = need(s, &s->h, (size_t) T * ORE_MAX(H, 1) * 2);
+    float *   c2  = h ? h + (size_t) T * H : NULL;
+    float *   pat = need(s, &s->y, (size_t) T * H * K);
+    float *   xp  = need(s, &s->in_a.xp, (size_t) ntb * ORE_MAX(d, H * K) * ORE_FB);
+    float *   pr  = need(s, &s->o, (size_t) T);
+    for (int i = 0; i < s->n_threads; ++i) need(s, &s->ts[i].f, (size_t) 6 * ORE_MAX(ORE_MAX(d, H * K), m->d_ff));
+    if (s->oom) return 0;
+
+    // proj (1x1 convolution), bias, SiLU.
+    ore_pack16(s->x.p, (size_t) d, T, d, 0, ntb, xp);
+    plain_ctx pc = { s, m->vad_proj_w, d, T, xp, h, (size_t) H };
+    ore_parallel_for(s->pool, H, 48, job_plain_f32, &pc);
+    for (int t = 0; t < T; ++t) {
+        float * r = h + (size_t) t * H;
+        for (int i = 0; i < H; ++i) r[i] = r[i] + m->vad_proj_b[i];
+        s->k->silu(r, (size_t) H);
+    }
+    // Context convolution over K frames, bias, SiLU.
+    vad_ctx vc = { s, h, pat, T, H, K };
+    ore_parallel_for(s->pool, T, 32, job_vad_patch, &vc);
+    ore_pack16(pat, (size_t) H * K, T, H * K, 0, ntb, xp);
+    plain_ctx cc = { s, m->vad_ctx_w, H * K, T, xp, c2, (size_t) H };
+    ore_parallel_for(s->pool, H, 48, job_plain_f32, &cc);
+    for (int t = 0; t < T; ++t) {
+        float * r = c2 + (size_t) t * H;
+        for (int i = 0; i < H; ++i) r[i] = r[i] + m->vad_ctx_b[i];
+        s->k->silu(r, (size_t) H);
+        // Output: one weight per channel, bias, sigmoid.
+        float acc = 0.0f;
+        for (int i = 0; i < H; ++i) acc = fmaf(m->vad_out_w[i], r[i], acc);
+        acc   = acc + m->vad_out_b;
+        pr[t] = 1.0f / (1.0f + ore_expf(-acc));
+    }
+    s->t_encode += ore_now_ms() - t0;
+    *probs = pr;
+    *n     = valid;
+    return 1;
+}
+
+int ore_encode(struct ore_session * s, const float * pcm, int n_samples, const float ** enc, int * T_out) {
+    const struct ore_model * m = s->m;
+    const int                d = m->d_model, dff = m->d_ff;
+    s->oom                     = 0;
+    int T = 0, valid = 0;
+    const double mel_before = s->t_mel;
+    double       t0         = ore_now_ms();
+    if (!pre_encode(s, pcm, n_samples, 0, &T, &valid)) return 0;
+    t0 += s->t_mel - mel_before;  // the mel's share is reported on its own
+
+    float * x  = s->x.p;
     float * xn = need(s, &s->xn, (size_t) T * d);
     float * h  = need(s, &s->h, (size_t) T * ORE_MAX(dff, 2 * d));
     float * y  = need(s, &s->y, (size_t) T * d);
@@ -496,21 +615,6 @@ int ore_encode(struct ore_session * s, const float * pcm, int n_samples, const f
         need(s, &s->ts[i].pk2, (size_t) ntb * T * ORE_FB);
     }
     if (s->oom || !build_positions(s, T)) return 0;
-
-    lin_in_set(&s->in_a, pc.flat, (size_t) n_flat, T, n_flat);
-    linear(s, &m->pre_out_w, &s->in_a, x, (size_t) d);
-    {
-        frame_ctx c = { 0 };
-        c.op        = OP_ADD_BIAS;
-        c.n         = d;
-        c.T         = T;
-        c.out       = x;
-        c.ostride   = (size_t) d;
-        c.a         = x;
-        c.astride   = (size_t) d;
-        c.p0        = (const float *) m->pre_out_b.data;
-        frames(s, &c);
-    }
     dump(s, "enc.pre_encode.out", x, T, d);
 
     for (int l = 0; l < m->n_layers && !s->oom; ++l) {
@@ -622,8 +726,8 @@ int ore_encode(struct ore_session * s, const float * pcm, int n_samples, const f
     }
     if (s->oom) return 0;
     dump(s, "enc.final", x, T, d);
-    s->t_encode = ore_now_ms() - t0;
-    *enc        = x;
-    *T_out      = T;
+    s->t_encode += ore_now_ms() - t0;
+    *enc   = x;
+    *T_out = T;
     return 1;
 }
