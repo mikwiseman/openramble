@@ -1,0 +1,120 @@
+name: Engine bench
+
+# Builds the engine on every platform it must run on and times it against
+# transcribe.cpp, the runtime the app ships today, on the same hosted machine.
+# The hosted runners stand in for slow computers: a few cores, no accelerator.
+# Runs on demand and on pushes to the engine's own branches, never on main.
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/own-engine-*"]
+    paths: ["engine/**", ".github/workflows/engine-bench.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+
+jobs:
+  bench:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # transcribe.cpp is configured the way each shipped build configures
+          # it: the Rust crate's defaults on Linux and Windows, and the fixed
+          # 2019 instruction floor it uses for the Intel Mac slice.
+          - name: Linux x86_64
+            os: ubuntu-latest
+            tcpp_args: ""
+          - name: Windows x86_64
+            os: windows-latest
+            tcpp_args: ""
+          - name: Linux arm64
+            os: ubuntu-24.04-arm
+            tcpp_args: ""
+          - name: Intel Mac (as shipped)
+            os: macos-15-intel
+            tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_BMI2=OFF"
+          - name: Intel Mac (AVX2 build)
+            os: macos-15-intel
+            tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Processor
+        run: |
+          {
+            echo "## ${{ matrix.name }}"
+            echo '```'
+            if command -v lscpu > /dev/null; then
+              lscpu | grep -E 'Model name|^CPU\(s\)|Thread|Core|MHz|Flags|Features|L2|L3' | cut -c1-600
+            elif [ "$(uname)" = Darwin ]; then
+              sysctl -n machdep.cpu.brand_string hw.ncpu hw.physicalcpu
+              sysctl -n machdep.cpu.features machdep.cpu.leaf7_features | cut -c1-600
+            else
+              powershell -Command "Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors | Format-List"
+            fi
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Model
+        run: |
+          curl -L --fail --retry 3 -o model.gguf "$MODEL_URL"
+          if command -v sha256sum > /dev/null; then
+            echo "$MODEL_SHA256  model.gguf" | sha256sum -c -
+          else
+            echo "$MODEL_SHA256  model.gguf" | shasum -a 256 -c -
+          fi
+
+      - name: Build transcribe.cpp
+        run: |
+          git clone --quiet https://github.com/mikwiseman/transcribe.cpp tcpp
+          git -C tcpp checkout --quiet "$TCPP_COMMIT"
+          cmake -S tcpp -B tcpp/build -DCMAKE_BUILD_TYPE=Release \
+            -DTRANSCRIBE_BUILD_TESTS=OFF -DTRANSCRIBE_BUILD_EXAMPLES=OFF \
+            -DTRANSCRIBE_BUILD_SHARED=OFF -DTRANSCRIBE_METAL=OFF -DTRANSCRIBE_INSTALL=ON \
+            ${{ matrix.tcpp_args }} > tcpp-configure.log
+          grep -iE 'native|march|arch:|avx|sse|x86|arm' tcpp-configure.log | head -40 || true
+          cmake --build tcpp/build --config Release --parallel 4 > tcpp-build.log 2>&1 || { tail -50 tcpp-build.log; exit 1; }
+          cmake --install tcpp/build --config Release --prefix "$PWD/tcpp-prefix" > /dev/null
+
+      - name: Build the engine
+        run: |
+          cmake -S engine -B engine/build -DCMAKE_BUILD_TYPE=Release -DORE_TCPP_PREFIX="$PWD/tcpp-prefix"
+          cmake --build engine/build --config Release --parallel 4
+
+      - name: Kernels
+        run: |
+          bin=engine/build; [ -d engine/build/Release ] && bin=engine/build/Release
+          {
+            echo "### Kernels, one thread"
+            echo '```'
+            "$bin/kbench-ggml" model.gguf 100 7
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: transcribe.cpp by clip length
+        run: |
+          bin=engine/build; [ -d engine/build/Release ] && bin=engine/build/Release
+          {
+            echo "### transcribe.cpp, CPU backend"
+            echo '```'
+            for threads in 1 2 4; do
+              "$bin/tcpp-probe" time model.gguf tcpp/samples/dots.wav "$threads" 3 2 4 8 16 30
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
