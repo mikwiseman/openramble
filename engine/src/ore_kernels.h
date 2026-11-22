@@ -11,7 +11,8 @@
 // from what the processor reports. Every table computes the same integers and
 // accumulates floats in the same order, so a clip gives the same bits whichever
 // table runs it, on any processor with fused multiply-add (every x86 with
-// AVX2, every arm64).
+// AVX2, every arm64). The "sse" table, for older x86 processors, has no fused
+// multiply-add and can differ from the others in the last bits.
 #ifndef ORE_KERNELS_H
 #define ORE_KERNELS_H
 
@@ -98,8 +99,8 @@ void ore_pack16(const float * x, size_t xstride, int rows, int n, int tb0, int t
 
 // The best table this processor can run.
 const ore_kernels * ore_kernels_pick(void);
-// A table by name ("generic", "neon", "avx2", ...), or NULL when this build or
-// this processor does not have it.
+// A table by name ("generic", "neon", "avx2", "sse"), or NULL when this build
+// or this processor does not have it.
 const ore_kernels * ore_kernels_named(const char * name);
 
 extern const ore_kernels ore_kernels_generic;
@@ -108,6 +109,7 @@ extern const ore_kernels ore_kernels_neon;
 #endif
 #if ORE_X86
 extern const ore_kernels ore_kernels_avx2;
+extern const ore_kernels ore_kernels_sse;
 #endif
 
 #endif  // ORE_KERNELS_H

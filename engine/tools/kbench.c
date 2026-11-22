@@ -28,6 +28,15 @@ static float    rnd(void) {
     return (s - 2.0f) * 1.7f;
 }
 
+static double last_rel = 0;
+
+// A table agrees when it gives the reference's bits, or, for the one table
+// that has no fused multiply-add, when it is within rounding of them.
+static int agrees(const ore_kernels * k, const float * a, const float * b, size_t n) {
+    if (strcmp(k->name, "sse") == 0) return last_rel < 1e-4;
+    return memcmp(a, b, n * sizeof(float)) == 0;
+}
+
 static void compare(const char * what, const float * a, const float * b, size_t n) {
     size_t diff = 0;
     double maxd = 0, maxv = 0;
@@ -40,6 +49,7 @@ static void compare(const char * what, const float * a, const float * b, size_t 
         if (v > maxv) maxv = v;
     }
     printf("    %-28s %zu of %zu differ, max |diff| %.3g (max |value| %.3g)\n", what, diff, n, maxd, maxv);
+    last_rel = maxv > 0 ? maxd / maxv : maxd;
     if (diff) {
         printf("      first values: %.6g %.6g %.6g %.6g  against  %.6g %.6g %.6g %.6g\n", a[0], a[1], a[2], a[3], b[0],
                b[1], b[2], b[3]);
@@ -69,6 +79,8 @@ int main(int argc, char ** argv) {
     tables[n_tables++]           = &ore_kernels_generic;
     const ore_kernels * best     = ore_kernels_pick();
     if (best != &ore_kernels_generic) tables[n_tables++] = best;
+    const ore_kernels * sse = ore_kernels_named("sse");
+    if (sse && sse != best) tables[n_tables++] = sse;
     printf("frames %d, reps %d, best table: %s\n", T, reps, best->name);
     const int ntb = ore_frame_blocks(T);
     int       bad = 0;
@@ -145,7 +157,7 @@ int main(int argc, char ** argv) {
                    macs / best_m / 1e6);
             if (ti > 0) {
                 compare("against the reference:", yref, y, (size_t) T * n_out);
-                if (memcmp(yref, y, (size_t) T * n_out * sizeof(float)) != 0) bad = 1;
+                if (!agrees(k, yref, y, (size_t) T * n_out)) bad = 1;
             }
         }
 
@@ -218,7 +230,7 @@ int main(int argc, char ** argv) {
             if (ti > 0) {
                 printf("  %s\n", k->name);
                 compare("against the reference:", r, o, (size_t) N * 4);
-                if (memcmp(r, o, sizeof(float) * N * 4) != 0) bad = 1;
+                if (!agrees(k, r, o, (size_t) N * 4)) bad = 1;
             }
         }
         ore_free(x);

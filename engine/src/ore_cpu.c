@@ -18,10 +18,19 @@ static int x86_has_avx2_fma_f16c(void) {
     __cpuidex(r, 7, 0);
     return (r[1] >> 5) & 1;
 }
+static int x86_has_sse41(void) {
+    int r[4];
+    __cpuid(r, 1);
+    return ((r[2] >> 9) & 1) && ((r[2] >> 19) & 1);  // SSSE3 and SSE4.1
+}
 #else
 static int x86_has_avx2_fma_f16c(void) {
     __builtin_cpu_init();
     return __builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma") && __builtin_cpu_supports("f16c");
+}
+static int x86_has_sse41(void) {
+    __builtin_cpu_init();
+    return __builtin_cpu_supports("ssse3") && __builtin_cpu_supports("sse4.1");
 }
 #endif
 #endif
@@ -53,6 +62,7 @@ const ore_kernels * ore_kernels_named(const char * name) {
 #endif
 #if ORE_X86
     if (strcmp(name, "avx2") == 0) return x86_has_avx2_fma_f16c() ? &ore_kernels_avx2 : NULL;
+    if (strcmp(name, "sse") == 0) return x86_has_sse41() ? &ore_kernels_sse : NULL;
 #endif
     return NULL;
 }
@@ -63,6 +73,7 @@ const ore_kernels * ore_kernels_pick(void) {
 #endif
 #if ORE_X86
     if (x86_has_avx2_fma_f16c()) return &ore_kernels_avx2;
+    if (x86_has_sse41()) return &ore_kernels_sse;
 #endif
     return &ore_kernels_generic;
 }

@@ -21,6 +21,7 @@ set(ORE_SOURCES
     src/ore_kernels_generic.c
     src/ore_kernels_neon.c
     src/ore_kernels_avx2.c
+    src/ore_kernels_sse.c
     src/ore_mel.c
     src/ore_model.c
     src/ore_threads.c)
