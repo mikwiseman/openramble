@@ -13,7 +13,7 @@ def parse(lines):
     runs = []   # (runtime, kernels, threads, {seconds: wall_min})
     cur = None
     for line in lines:
-        m = re.match(r'^ore [\d.]+, (\w+), threads (\d+)', line)
+        m = re.match(r'^ore [\d.]+, ([\w+]+), threads (\d+)', line)
         if m:
             cur = ('ore', m.group(1), int(m.group(2)), {}); runs.append(cur); continue
         m = re.match(r'^transcribe\.cpp [\d.]+, backend CPU, threads (\d+)', line)
@@ -38,7 +38,7 @@ for path in sys.argv[1:]:
         m = re.match(r'^(?:Model name:\s*|Name\s*:\s*)?((?:Intel|Apple|AMD|INTEL|Neoverse).*)$', line)
         if m and not cpu:
             cpu = m.group(1).strip()
-        m = re.match(r'^ore [\d.]+, (\w+), threads (\d+)', line)
+        m = re.match(r'^ore [\d.]+, ([\w+]+), threads (\d+)', line)
         if m:
             cur = ('ore', m.group(1), int(m.group(2)), {}); runs.append(cur); continue
         m = re.match(r'^transcribe\.cpp [\d.]+, backend CPU, threads (\d+)', line)
