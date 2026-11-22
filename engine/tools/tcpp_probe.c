@@ -3,6 +3,8 @@
 //
 //   tcpp_probe time MODEL.gguf CLIP.wav THREADS [REPS] [SECONDS...]
 //   tcpp_probe dump MODEL.gguf LIST.txt THREADS      (one WAV path per line)
+//
+// ORE_VOCABULARY, as for ore-cli, is a file of words to favour, one per line.
 #include "tools.h"
 
 #include <transcribe.h>
@@ -40,6 +42,22 @@ int main(int argc, char ** argv) {
     }
     const double load_ms = now_ms() - t0;
 
+    static char  vbuf[512][128];
+    const char * vocab[512];
+    int          n_vocab = 0;
+    const char * vpath   = getenv("ORE_VOCABULARY");
+    if (vpath && *vpath) {
+        FILE * vf = fopen(vpath, "r");
+        while (vf && n_vocab < 512 && fgets(vbuf[n_vocab], 128, vf)) {
+            vbuf[n_vocab][strcspn(vbuf[n_vocab], "\r\n")] = 0;
+            if (vbuf[n_vocab][0]) {
+                vocab[n_vocab] = vbuf[n_vocab];
+                ++n_vocab;
+            }
+        }
+        if (vf) fclose(vf);
+    }
+
     if (dump) {
         FILE * list = fopen(argv[3], "r");
         if (!list) return 1;
@@ -61,6 +79,10 @@ int main(int argc, char ** argv) {
             transcribe_run_params_init(&rp);
             rp.task       = TRANSCRIBE_TASK_TRANSCRIBE;
             rp.timestamps = TRANSCRIBE_TIMESTAMPS_TOKEN;
+            if (n_vocab > 0) {
+                rp.vocabulary   = vocab;
+                rp.n_vocabulary = n_vocab;
+            }
             transcribe_reset_timings(s);
             if (transcribe_run(s, pcm, (int) n, &rp) != TRANSCRIBE_OK) {
                 printf("%s\tFAILED\n", name);

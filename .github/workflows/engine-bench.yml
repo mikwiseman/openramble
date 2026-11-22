@@ -69,7 +69,8 @@ jobs:
               lscpu | grep -E 'Model name|^CPU\(s\)|Thread|Core|MHz|Flags|Features|L2|L3' | cut -c1-600
             elif [ "$(uname)" = Darwin ]; then
               sysctl -n machdep.cpu.brand_string hw.ncpu hw.physicalcpu
-              sysctl -n machdep.cpu.features machdep.cpu.leaf7_features | cut -c1-600
+              # Intel only; Apple silicon has no such keys.
+              (sysctl -n machdep.cpu.features machdep.cpu.leaf7_features 2> /dev/null || true) | cut -c1-600
             else
               powershell -Command "Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors | Format-List"
             fi
