@@ -26,16 +26,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
-      # One instruction set for everyone, not the build machine's. Left alone,
-      # ggml compiles the recognition runtime for the processor of whichever
-      # machine this job is given, and 0.37.0 for Linux was given one with
-      # AVX-512: recognition stopped with an illegal instruction on every
-      # computer without it. These are the instructions of x86-64-v3, which
-      # Intel has had since 2013 and AMD since 2015. The fork's build script
-      # passes this variable to CMake after its own settings.
+      # Nothing of the build machine goes into the packages. Left alone, the
+      # recognition runtime is compiled for the processor of whichever machine
+      # this job is given and linked against that machine's BLAS library.
+      # 0.37.0 for Linux got both: it needs AVX-512, which most computers
+      # lack, and libblas.so.3, which the package does not ask for. So the
+      # instruction set is fixed at x86-64-v3 (AVX2, FMA, F16C and BMI2, in
+      # Intel Core since 2013 and AMD since 2015) and the system BLAS is left
+      # out. The fork's build script passes this variable to CMake after its
+      # own settings.
       TRANSCRIBE_CMAKE_ARGS: >-
         -DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON
         -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON
+        -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
@@ -59,9 +62,9 @@ jobs:
         run: cargo tauri build --config apps/desktop/src-tauri/tauri.conf.json
 
       # The setting above is a request. This reads what was compiled.
-      - name: The runtime must not need AVX-512
+      - name: The runtime must not need the build machine
         shell: bash
-        run: scripts/check-desktop-instruction-sets.sh
+        run: scripts/check-desktop-portability.sh
 
       - name: Collect the packages
         shell: bash
