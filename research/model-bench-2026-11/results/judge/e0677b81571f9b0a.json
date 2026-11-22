@@ -1,0 +1,52 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": ", and I'd recommend keeping it",
+   "class": "padding"
+  },
+  {
+   "quote": "But you're the owner, so you can lift that rule if you decide the cost is acceptable.",
+   "class": "padding"
+  },
+  {
+   "quote": "**Why it's locked:**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**Accessibility grants:**",
+   "class": "decoration"
+  },
+  {
+   "quote": "- **Sparkle updates:** Sparkle is built to update the same app, and I believe it rejects an update whose bundle ID differs from the installed one. Existing installs may not be able to auto-update to the renamed build. I can't verify that here, so test it before relying on it.",
+   "class": "padding"
+  },
+  {
+   "quote": "- **Per-ID data:** preferences, caches and Application Support folders are keyed by bundle ID, so existing users' settings would be orphaned.",
+   "class": "padding"
+  },
+  {
+   "quote": "**The deciding question:** who has the current build installed?",
+   "class": "offer"
+  },
+  {
+   "quote": "If it's only you and a few testers, the cost is a one-time re-grant and the rename is cheap. If there are real users or beta testers you don't want to disrupt, keep the ID.",
+   "class": "padding"
+  },
+  {
+   "quote": ", and users never see it",
+   "class": "restate"
+  },
+  {
+   "quote": "**If you do decide to rename:**\n1. Amend the release invariants in the rules file, `docs/release.md` and `AGENTS.md` so the rule and the code don't contradict each other.\n2. Keep the existing Sparkle EdDSA key. That rule is independent of the bundle ID, and replacing the key would break updates on its own.\n3. Re-sign the Sparkle nested code from the inside out, without `codesign --deep`.\n4. Test a real update from an old build to the new one, and test a fresh install's Accessibility prompt.",
+   "class": "offer"
+  },
+  {
+   "quote": "I haven't touched any files, and I can't see `docs/release.md` from this session, so check it for any other places the ID is hard-coded.",
+   "class": "padding"
+  }
+ ]
+}

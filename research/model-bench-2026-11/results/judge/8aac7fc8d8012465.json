@@ -1,0 +1,21 @@
+{
+ "facts": [
+  true,
+  false,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "This restores the pattern.",
+   "class": "restate"
+  },
+  {
+   "quote": "**Follow-up (not in this PR)**\nA missing pattern should fail the gate, not pass it. Worth a separate change.",
+   "class": "offer"
+  },
+  {
+   "quote": "I did not run the script myself. The verification results above are from your run.",
+   "class": "padding"
+  }
+ ]
+}

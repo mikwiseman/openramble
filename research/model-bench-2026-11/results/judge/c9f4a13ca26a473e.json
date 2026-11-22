@@ -1,0 +1,22 @@
+{
+ "facts": [
+  true,
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The same dylib loads when left unstripped\nor stripped with /usr/bin/strip.",
+   "class": "padding"
+  },
+  {
+   "quote": "SDKROOT has no effect.",
+   "class": "padding"
+  },
+  {
+   "quote": "Scoping the deployment target to the two cross\ntargets is not an option: rustc reads it only from the environment, so\nRUSTFLAGS or a link argument cannot do it.",
+   "class": "padding"
+  }
+ ]
+}

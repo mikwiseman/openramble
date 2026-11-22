@@ -1,0 +1,12 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "You can launch under the name **OpenRamble** by changing the app’s display name and keeping the existing bundle identifier.",
+   "class": "padding"
+  }
+ ]
+}

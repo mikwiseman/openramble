@@ -1,0 +1,41 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": ", and passed.",
+   "class": "restate"
+  },
+  {
+   "quote": "It looked like it was running and was not.",
+   "class": "restate"
+  },
+  {
+   "quote": "This check is what keeps that from shipping.",
+   "class": "padding"
+  },
+  {
+   "quote": ", with a comment explaining why it lives there",
+   "class": "padding"
+  },
+  {
+   "quote": "## Not in this change",
+   "class": "decoration"
+  },
+  {
+   "quote": "The check can still pass when its own scan errors out, so another missing variable would fail the same silent way. Making a scan error fail the gate is a separate fix.",
+   "class": "padding"
+  },
+  {
+   "quote": "The last section is my reading of the failure, not something I tested",
+   "class": "hedge"
+  },
+  {
+   "quote": "drop it if you would rather not raise it here.",
+   "class": "offer"
+  }
+ ]
+}

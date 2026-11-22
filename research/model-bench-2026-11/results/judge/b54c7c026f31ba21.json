@@ -1,0 +1,14 @@
+{
+ "facts": [
+  false,
+  true,
+  true,
+  false
+ ],
+ "slop": [
+  {
+   "quote": "The shipped static library targets\nmacOS 14.0 on both Apple Silicon and Intel.",
+   "class": "padding"
+  }
+ ]
+}

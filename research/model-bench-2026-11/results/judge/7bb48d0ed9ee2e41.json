@@ -1,0 +1,12 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": ", so copy them from the clipboard or the history panel",
+   "class": "padding"
+  }
+ ]
+}

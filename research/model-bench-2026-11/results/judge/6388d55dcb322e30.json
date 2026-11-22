@@ -1,0 +1,65 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "**Title:**",
+   "class": "decoration"
+  },
+  {
+   "quote": "This PR defines the pattern again.",
+   "class": "restate"
+  },
+  {
+   "quote": "The gate exists to block that.",
+   "class": "padding"
+  },
+  {
+   "quote": ", and the clipboard check was left behind without it",
+   "class": "restate"
+  },
+  {
+   "quote": ", with a comment explaining the risk and the regression",
+   "class": "padding"
+  },
+  {
+   "quote": "This restores only the pasteboard pattern. The ASR worker's control-plane scan is not restored, since that worker is retired.",
+   "class": "padding"
+  },
+  {
+   "quote": "I ran these checks outside this session",
+   "class": "unproven"
+  },
+  {
+   "quote": " and am reporting the results as given.",
+   "class": "padding"
+  },
+  {
+   "quote": "The reviewer should rerun the planted-call case before merging.",
+   "class": "offer"
+  },
+  {
+   "quote": "**Review notes**",
+   "class": "decoration"
+  },
+  {
+   "quote": "The pattern is a plain text match, so it will also flag any legitimate `declareTypes(` call in shipping code. If there is one, it needs an explicit allowlist entry, not a weaker pattern.",
+   "class": "padding"
+  },
+  {
+   "quote": "The underlying problem is that an unset variable let the gate pass.",
+   "class": "restate"
+  },
+  {
+   "quote": "This PR fixes this instance only.",
+   "class": "padding"
+  },
+  {
+   "quote": "A follow-up should make the script fail closed on any unset variable and should add a CI check that a planted forbidden call makes the gate fail, so a future deletion cannot silently disable a check again.",
+   "class": "offer"
+  }
+ ]
+}

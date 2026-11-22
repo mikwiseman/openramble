@@ -1,0 +1,16 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "**Faster dictation start after your Mac has been idle**",
+   "class": "decoration"
+  },
+  {
+   "quote": "It turns on only when you press the key.",
+   "class": "padding"
+  }
+ ]
+}

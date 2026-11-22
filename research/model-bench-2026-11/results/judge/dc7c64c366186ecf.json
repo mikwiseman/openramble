@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "regenerate the fixtures",
+   "class": "restate"
+  }
+ ]
+}

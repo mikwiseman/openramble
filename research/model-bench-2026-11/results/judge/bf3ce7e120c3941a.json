@@ -1,0 +1,37 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "the test passes",
+   "class": "unproven"
+  },
+  {
+   "quote": "The red test is doing its job:",
+   "class": "stock"
+  },
+  {
+   "quote": "The fix is to bring the two in line and regenerate in the same commit:",
+   "class": "padding"
+  },
+  {
+   "quote": "**Decide whether the Swift change is intended.** If it isn't, revert it and stop there.",
+   "class": "padding"
+  },
+  {
+   "quote": "If the change touches file cutting, also update `apps/cli/src/plan.rs` and `FileAudioChunks.swift` together, since their tests pin the same cut frames.",
+   "class": "padding"
+  },
+  {
+   "quote": "I can't run any of this from here because the session has no tools or repository access.",
+   "class": "padding"
+  },
+  {
+   "quote": "If you paste the Swift diff, I can work out the matching Rust change and tell you which cases the regenerated corpus should show.",
+   "class": "offer"
+  }
+ ]
+}

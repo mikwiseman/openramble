@@ -1,0 +1,18 @@
+{
+ "facts": [
+  true,
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "SDKROOT has no effect.",
+   "class": "padding"
+  },
+  {
+   "quote": "Limiting the deployment target to the two cross\ntargets is not an option: rustc reads it only from the environment, so\nRUSTFLAGS or a link argument cannot scope it.",
+   "class": "padding"
+  }
+ ]
+}

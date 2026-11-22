@@ -1,0 +1,14 @@
+{
+ "facts": [
+  true,
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The same dylib loads when unstripped or\nstripped with /usr/bin/strip.",
+   "class": "padding"
+  }
+ ]
+}

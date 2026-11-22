@@ -1,0 +1,12 @@
+{
+ "facts": [
+  false,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "That gives users the new name and preserves their existing permissions.",
+   "class": "restate"
+  }
+ ]
+}

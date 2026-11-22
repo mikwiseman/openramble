@@ -1,0 +1,12 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "and never uploads it",
+   "class": "restate"
+  }
+ ]
+}

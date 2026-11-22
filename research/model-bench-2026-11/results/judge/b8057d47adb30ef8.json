@@ -1,0 +1,20 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "**Faster first dictation after the app has been idle**",
+   "class": "decoration"
+  },
+  {
+   "quote": "without running it",
+   "class": "restate"
+  },
+  {
+   "quote": "It only runs while you're dictating.",
+   "class": "restate"
+  }
+ ]
+}

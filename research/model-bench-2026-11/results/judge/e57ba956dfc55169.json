@@ -1,0 +1,21 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "This only restores the pattern. An error inside a scan still does not\nfail the gate.",
+   "class": "padding"
+  },
+  {
+   "quote": "The last paragraph is my inference from the diff, which only adds the definition and leaves the error handling as it was.",
+   "class": "padding"
+  },
+  {
+   "quote": "Drop it if the script is hardened elsewhere.",
+   "class": "hedge"
+  }
+ ]
+}

@@ -5,7 +5,7 @@
  "tool": "claude",
  "effort": "high",
  "rep": 1,
- "started": "2026-11-22 16:32",
+ "finished": "2026-11-22 16:32",
  "exit": 0,
  "timed_out": false,
  "seconds": 218,
@@ -34,7 +34,6 @@
  "outside_reads": [],
  "test_runs": 11,
  "last_test_run_failed": false,
- "claims_green": true,
  "asked_instead": false,
  "final_words": 217
 }

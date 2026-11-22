@@ -1,0 +1,16 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "**Faster microphone start after the app has been idle**",
+   "class": "decoration"
+  },
+  {
+   "quote": "It is only set up in advance, and it starts when you press the key.",
+   "class": "padding"
+  }
+ ]
+}

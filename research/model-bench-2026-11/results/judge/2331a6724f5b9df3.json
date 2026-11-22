@@ -1,0 +1,39 @@
+{
+ "facts": [
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The symmetry with `stop()` is right, but ",
+   "class": "padding"
+  },
+  {
+   "quote": "Likely ",
+   "class": "hedge"
+  },
+  {
+   "quote": " (the normal case if a tap starts hands-free)",
+   "class": "hedge"
+  },
+  {
+   "quote": "The same handling is needed on this path.",
+   "class": "padding"
+  },
+  {
+   "quote": "**3. No test.** Nothing covers either case.",
+   "class": "padding"
+  },
+  {
+   "quote": ", or leave `released` alone for hands-free presses",
+   "class": "restate"
+  },
+  {
+   "quote": "I haven't run anything. This review is from reading the diff and the excerpt only, and I don't know how `pressDuringInsertion` is created.",
+   "class": "padding"
+  },
+  {
+   "quote": "If the queued press can be a hands-free press that was released before any second press, point 1 is a real regression.",
+   "class": "restate"
+  }
+ ]
+}

@@ -1,0 +1,32 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "(`LocalASR/ModelDownloading.swift`)",
+   "class": "padding"
+  },
+  {
+   "quote": "Nothing is uploaded.",
+   "class": "restate"
+  },
+  {
+   "quote": "(`SparkleUpdater.swift`)",
+   "class": "padding"
+  },
+  {
+   "quote": "scheduled checks are on by default and can be turned off in Settings. Installing an update always requires a click.",
+   "class": "padding"
+  },
+  {
+   "quote": "I haven't read the code or run that script in this session, so this answer comes from the rules file.",
+   "class": "hedge"
+  },
+  {
+   "quote": "To verify it yourself, run the script.",
+   "class": "offer"
+  }
+ ]
+}

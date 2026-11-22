@@ -1,0 +1,12 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "### OpenRamble 0.34.1",
+   "class": "decoration"
+  }
+ ]
+}

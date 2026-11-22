@@ -15,6 +15,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.288
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 5996,
@@ -34,6 +38,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 22609,
@@ -53,6 +61,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.085
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 7509,
@@ -72,6 +84,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.068
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 5618,
@@ -91,6 +107,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.208
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 4205,
@@ -110,6 +130,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.153
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 14854,
@@ -135,6 +159,10 @@
      "quote": "I didn't commit anything, since I have no shell access in this session. To commit, save the message to a file and run `git commit -F <file>` with the change staged."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.134,
+    "gpt": 0.429
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 6130,
@@ -160,6 +188,10 @@
      "quote": "and lowering it for host builds isn't possible without also changing it for the shipped library"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.097,
+    "gpt": 0.412
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 3925,
@@ -179,6 +211,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.28
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 5312,
@@ -198,6 +234,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 22300,
@@ -217,6 +257,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.216
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 6668,
@@ -236,6 +280,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.371
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 5272,
@@ -255,6 +303,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.263
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 4205,
@@ -274,6 +326,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 14316,
@@ -299,6 +355,10 @@
      "quote": "The commit message is ready to paste, but"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.046,
+    "gpt": 0.431
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 4856,
@@ -318,6 +378,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.214
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 3490,
@@ -337,6 +401,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.086
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 7045,
@@ -362,6 +430,10 @@
      "quote": "Hold-to-talk still replays the key release."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.071,
+    "gpt": 0.0
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 16199,
@@ -387,6 +459,10 @@
      "quote": "A hold's release still replays through stop()."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.04,
+    "gpt": 0.092
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 7748,
@@ -412,6 +488,10 @@
      "quote": "The fix keeps the controller correct on its own."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.047,
+    "gpt": 0.125
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 6103,
@@ -431,6 +511,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.113
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 5102,
@@ -450,6 +534,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 21922,
@@ -469,6 +557,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.286
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 6287,
@@ -494,6 +586,10 @@
      "quote": "The `released` flag becomes `stopped`."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.026,
+    "gpt": 0.068
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 4313,
@@ -513,6 +609,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 4549,
@@ -532,6 +632,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 22095,
@@ -551,6 +655,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 1,
    "facts_required": 2,
    "tokens": 5199,
@@ -570,6 +678,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 4393,
@@ -589,6 +701,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 2708,
@@ -608,6 +724,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 20826,
@@ -627,6 +747,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.611
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 3382,
@@ -646,6 +770,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.158
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 2565,
@@ -665,6 +793,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 3,
    "facts_required": 4,
    "tokens": 4883,
@@ -684,6 +816,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 15412,
@@ -703,6 +839,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 5635,
@@ -722,6 +862,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 4707,
@@ -741,6 +885,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 3024,
@@ -760,6 +908,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 21183,
@@ -779,6 +931,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 3708,
@@ -798,6 +954,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 4,
    "facts_required": 4,
    "tokens": 2673,
@@ -817,6 +977,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.136
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 4810,
@@ -836,6 +1000,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.045
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 22480,
@@ -866,6 +1034,10 @@
      "quote": "It only runs while you're dictating."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.11,
+    "gpt": 0.205
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 5652,
@@ -896,6 +1068,10 @@
      "quote": "It's only set up and ready, and it turns on when you press the key."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.24,
+    "gpt": 0.24
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 4658,
@@ -921,6 +1097,10 @@
      "quote": "It is only set up in advance, and it starts when you press the key."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.136,
+    "gpt": 0.218
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 3059,
@@ -940,6 +1120,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.043
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 21238,
@@ -970,6 +1154,10 @@
      "quote": "**Faster dictation start after your Mac has been idle**"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.176,
+    "gpt": 0.176
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 4266,
@@ -989,6 +1177,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.165
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 2933,
@@ -1019,6 +1211,10 @@
      "quote": "drop it if you would rather not raise it here."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.093,
+    "gpt": 0.434
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 5858,
@@ -1044,6 +1240,10 @@
      "quote": "## Summary"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.026,
+    "gpt": 0.0
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 15654,
@@ -1069,6 +1269,10 @@
      "quote": "I did not run the script myself. The verification results above are from your run."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.134,
+    "gpt": 0.339
+   },
    "facts": 2,
    "facts_required": 3,
    "tokens": 7172,
@@ -1099,6 +1303,10 @@
      "quote": "If you want it, it is a one-line follow-up."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.233,
+    "gpt": 0.328
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 5404,
@@ -1134,6 +1342,10 @@
      "quote": "That is worth a follow-up."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.21,
+    "gpt": 0.233
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 4428,
@@ -1159,6 +1371,10 @@
      "quote": "## Summary"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.022,
+    "gpt": 0.0
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 14443,
@@ -1199,6 +1415,10 @@
      "quote": "The gate exists to block that."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.182,
+    "gpt": 0.577
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 5486,
@@ -1224,6 +1444,10 @@
      "quote": "A plain `clearContents()` or `declareTypes()` puts dictation on Universal Clipboard, where it reaches every device on the Apple ID. The comment also records how the definition was lost, so the next cl"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.139,
+    "gpt": 0.48
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 3875,
@@ -1249,6 +1473,10 @@
      "quote": "which are scheduled by default and can be turned off in Settings. Installing an update always needs a click."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.198,
+    "gpt": 0.708
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 5250,
@@ -1268,6 +1496,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.143
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 15293,
@@ -1293,6 +1525,10 @@
      "quote": "scheduled checks are on by default and can be turned off in Settings. Installing an update always requires a click."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.23,
+    "gpt": 0.598
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 6596,
@@ -1323,6 +1559,10 @@
      "quote": "Transcription runs locally through `LocalASR`."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.13,
+    "gpt": 0.759
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 5034,
@@ -1363,6 +1603,10 @@
      "quote": "The update check does contact the update server, so by default the app makes some network requests, but they carry no audio."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.51,
+    "gpt": 0.654
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 3483,
@@ -1382,6 +1626,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 14145,
@@ -1447,6 +1695,10 @@
      "quote": "The rules file doesn't say what metadata Sparkle sends with an update check (typically app and OS version, and possibly a system profile if profiling is enabled). Confirm that setting in the Sparkle c"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.537,
+    "gpt": 0.872
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 4892,
@@ -1512,6 +1764,10 @@
      "quote": "If you want independent confirmation, you could run the check script yourself or watch the app's traffic with something like Little Snitch or `nettop` while dictating."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.588,
+    "gpt": 0.824
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 3535,
@@ -1537,6 +1793,10 @@
      "quote": "How many installs exist today?"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.043,
+    "gpt": 0.73
+   },
    "facts": 1,
    "facts_required": 2,
    "tokens": 5922,
@@ -1562,6 +1822,10 @@
      "quote": "**OpenRamble**"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.018,
+    "gpt": 0.193
+   },
    "facts": 1,
    "facts_required": 2,
    "tokens": 15492,
@@ -1587,6 +1851,10 @@
      "quote": "If you still want the new identifier, you'd first need to change the invariant in the rules file."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.158,
+    "gpt": 0.737
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 6384,
@@ -1622,6 +1890,10 @@
      "quote": "If not, I'll make the change and update the rules file and `docs/release.md` to match."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.319,
+    "gpt": 0.83
+   },
    "facts": 1,
    "facts_required": 2,
    "tokens": 5392,
@@ -1652,6 +1924,10 @@
      "quote": "If you do go ahead, update the rules file and release docs in the same change so the invariant names the new identifier."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.149,
+    "gpt": 0.655
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 3754,
@@ -1671,6 +1947,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.328
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 14156,
@@ -1716,6 +1996,10 @@
      "quote": "I'd treat that as a separate decision and not fold it into the launch."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.269,
+    "gpt": 0.907
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 4667,
@@ -1766,6 +2050,10 @@
      "quote": "**If you do decide to rename:**"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.172,
+    "gpt": 0.797
+   },
    "facts": 2,
    "facts_required": 2,
    "tokens": 3827,
@@ -1791,6 +2079,10 @@
      "quote": "(don't edit them by hand)"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.047,
+    "gpt": 0.415
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 5974,
@@ -1810,6 +2102,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 15724,
@@ -1835,6 +2131,10 @@
      "quote": "Confirm the Swift change is what you intend."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.082,
+    "gpt": 0.306
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 6631,
@@ -1860,6 +2160,10 @@
      "quote": "The red test is doing its job"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.056,
+    "gpt": 0.397
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 5674,
@@ -1885,6 +2189,10 @@
      "quote": "the rules file forbids exactly this"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.03,
+    "gpt": 0.465
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 4392,
@@ -1904,6 +2212,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.039
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 21464,
@@ -1949,6 +2261,10 @@
      "quote": "**Commit the Swift change, the Rust change, and the regenerated fixtures together.**"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.396,
+    "gpt": 0.449
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 5015,
@@ -1989,6 +2305,10 @@
      "quote": "The red test is doing its job: it shows the Rust port has drifted from your Swift change."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.302,
+    "gpt": 0.63
+   },
    "facts": 3,
    "facts_required": 3,
    "tokens": 3939,
@@ -2008,6 +2328,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.128
+   },
    "facts": 1,
    "facts_required": 1,
    "tokens": 8103,
@@ -2027,6 +2351,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.0
+   },
    "facts": 1,
    "facts_required": 1,
    "tokens": 16075,
@@ -2052,6 +2380,10 @@
      "quote": "since this session has no tools"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.022,
+    "gpt": 0.14
+   },
    "facts": 1,
    "facts_required": 1,
    "tokens": 12164,
@@ -2082,6 +2414,10 @@
      "quote": "Alternatively, add a separate `secondPress` field, which is clearer but heavier."
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.093,
+    "gpt": 0.121
+   },
    "facts": 1,
    "facts_required": 1,
    "tokens": 7669,
@@ -2122,6 +2458,10 @@
      "quote": "## Other issues"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.168,
+    "gpt": 0.323
+   },
    "facts": 1,
    "facts_required": 1,
    "tokens": 7208,
@@ -2141,6 +2481,10 @@
    "judged": true,
    "slop_share": 0.0,
    "slop": [],
+   "slop_share_by_judge": {
+    "opus": 0.0,
+    "gpt": 0.113
+   },
    "facts": 1,
    "facts_required": 1,
    "tokens": 14980,
@@ -2181,6 +2525,10 @@
      "quote": "That contradicts \"releasing the key means nothing in hands-free mode.\""
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.124,
+    "gpt": 0.255
+   },
    "facts": 1,
    "facts_required": 1,
    "tokens": 10913,
@@ -2211,6 +2559,10 @@
      "quote": "In hands-free mode this should mean nothing, but"
     }
    ],
+   "slop_share_by_judge": {
+    "opus": 0.077,
+    "gpt": 0.326
+   },
    "facts": 1,
    "facts_required": 1,
    "tokens": 6721,
@@ -2218,6 +2570,34 @@
   }
  ],
  "work": [
+  {
+   "run": "r39-clipboard-gate.fable.high.1",
+   "task": "r39-clipboard-gate",
+   "model": "claude-fable-5-2",
+   "words": 342,
+   "stock": 0,
+   "decoration": 22,
+   "offers": 0,
+   "tool_markup": 0,
+   "house_style": 1,
+   "report_slop_share": 0.0,
+   "report_slop": [],
+   "code_slop": []
+  },
+  {
+   "run": "r39-clipboard-gate.gpt.high.1",
+   "task": "r39-clipboard-gate",
+   "model": "gpt-6.2-sol",
+   "words": 79,
+   "stock": 0,
+   "decoration": 0,
+   "offers": 0,
+   "tool_markup": 0,
+   "house_style": 0,
+   "report_slop_share": 0.0,
+   "report_slop": [],
+   "code_slop": []
+  },
   {
    "run": "r39-clipboard-gate.haiku.high.1",
    "task": "r39-clipboard-gate",
@@ -2237,6 +2617,56 @@
      "quote": "# Runs the gate on the fixture. Sets GATE_STATUS and GATE_OUTPUT."
     }
    ]
+  },
+  {
+   "run": "t-exists.gpt.high.1",
+   "task": "t-exists",
+   "model": "gpt-6.2-sol",
+   "words": 75,
+   "stock": 0,
+   "decoration": 3,
+   "offers": 0,
+   "tool_markup": 0,
+   "house_style": 1,
+   "report_slop_share": 0.107,
+   "report_slop": [
+    {
+     "class": "unproven",
+     "words": 8,
+     "quote": "The preference survives relaunch, **Check Now** still works"
+    }
+   ],
+   "code_slop": []
+  },
+  {
+   "run": "t-exists.sonnet.high.1",
+   "task": "t-exists",
+   "model": "claude-sonnet-5-5",
+   "words": 162,
+   "stock": 0,
+   "decoration": 1,
+   "offers": 0,
+   "tool_markup": 0,
+   "house_style": 0,
+   "report_slop_share": 0.265,
+   "report_slop": [
+    {
+     "class": "padding",
+     "words": 9,
+     "quote": "The README and `CLAUDE.md` already describe all of this."
+    },
+    {
+     "class": "padding",
+     "words": 11,
+     "quote": "The same section has a \"Check Now\" button for manual checks."
+    },
+    {
+     "class": "offer",
+     "words": 23,
+     "quote": "If it's discoverability, the simplest fix is to link to it from the privacy text in Settings, but I haven't made that change."
+    }
+   ],
+   "code_slop": []
   }
  ]
 }

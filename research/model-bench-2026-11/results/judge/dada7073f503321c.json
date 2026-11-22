@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The release of a hands-free press is not recorded,\nbecause it does not end the take.",
+   "class": "padding"
+  }
+ ]
+}

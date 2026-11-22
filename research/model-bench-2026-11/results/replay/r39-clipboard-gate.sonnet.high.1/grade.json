@@ -1,10 +1,10 @@
 {
  "task": "r39-clipboard-gate",
- "load": "10.9",
+ "load": "6.8",
  "check": {
   "ok": true,
   "code": 0,
-  "seconds": 3
+  "seconds": 1
  },
  "network_gate": {
   "ok": true,
@@ -23,12 +23,12 @@
   "tries": 1
  },
  "size": {
-  "source": 44,
-  "tests": 104,
+  "source": 50,
+  "tests": 77,
   "fixtures": 0,
   "other": 0,
   "reference_source": 6,
-  "ratio": 7.33
+  "ratio": 8.33
  },
  "unasked_files": [],
  "weakened_tests": {

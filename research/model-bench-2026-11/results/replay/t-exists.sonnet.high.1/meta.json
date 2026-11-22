@@ -1,0 +1,42 @@
+{
+ "run": "t-exists.sonnet.high.1",
+ "task": "t-exists",
+ "model": "claude-sonnet-5-5",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 18:46",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 13,
+ "slept_seconds": 0,
+ "load_before": "9.2",
+ "load_after": "8.7",
+ "memories_written": 0,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/t-exists.sonnet.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 4,
+ "by_kind": {
+  "Bash": 4
+ },
+ "turns": 5,
+ "usage": {
+  "input": 10,
+  "cache_write": 24356,
+  "cached_input": 115964,
+  "output": 1336
+ },
+ "tokens": 141666,
+ "cost_usd": 0.12240039999999999,
+ "models_used": [
+  "claude-sonnet-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 0,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 162
+}

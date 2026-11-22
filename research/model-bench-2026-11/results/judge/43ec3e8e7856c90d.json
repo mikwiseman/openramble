@@ -1,0 +1,44 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": ", and I'd recommend against it",
+   "class": "padding"
+  },
+  {
+   "quote": "macOS ties Accessibility grants to the app's bundle identifier and signing identity.",
+   "class": "restate"
+  },
+  {
+   "quote": "- **Sparkle updates:** an update whose bundle ID differs from the installed app is not a clean in-place update, so existing users would likely need a manual reinstall.",
+   "class": "padding"
+  },
+  {
+   "quote": "- **Other state:** preferences, other permissions such as Microphone, and any login item registration are also tied to the identifier and would not carry over.",
+   "class": "padding"
+  },
+  {
+   "quote": ", the icon and the marketing copy",
+   "class": "padding"
+  },
+  {
+   "quote": "**If you still want it, before launch is the cheapest time.** As the owner you can retire the invariant, and the cost grows with every install.",
+   "class": "padding"
+  },
+  {
+   "quote": "The wording \"existing grants\" implies there are already installs (beta testers, your own machines), and each would need to re-grant permissions and probably reinstall.",
+   "class": "restate"
+  },
+  {
+   "quote": "I can't see `docs/release.md` or `AGENTS.md` in this session, so there may be other dependencies on the identifier that I can't check, such as notarization setup or the appcast.",
+   "class": "hedge"
+  },
+  {
+   "quote": "If you do go ahead, update the rules file and release docs in the same change so the invariant names the new identifier.",
+   "class": "padding"
+  }
+ ]
+}

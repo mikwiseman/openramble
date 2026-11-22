@@ -1,0 +1,44 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "through `LocalASR/ModelDownloading.swift`",
+   "class": "padding"
+  },
+  {
+   "quote": "These fetch model files to your machine and only run when you request a download.",
+   "class": "padding"
+  },
+  {
+   "quote": "through `SparkleUpdater.swift`",
+   "class": "padding"
+  },
+  {
+   "quote": "Scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update requires a click.",
+   "class": "padding"
+  },
+  {
+   "quote": "I can't confirm this from the code, since I have no file access in this session.",
+   "class": "hedge"
+  },
+  {
+   "quote": "Three things would settle it:",
+   "class": "stock"
+  },
+  {
+   "quote": "- **Run `scripts/check-network-surface.sh`** and confirm it passes. The rules say CI enforces the boundary, but I haven't seen that output.",
+   "class": "offer"
+  },
+  {
+   "quote": "- **Check what the Sparkle update request contains.** The rules file doesn't say what metadata Sparkle sends with an update check (typically app and OS version, and possibly a system profile if profiling is enabled). Confirm that setting in the Sparkle configuration.",
+   "class": "offer"
+  },
+  {
+   "quote": "- **Check the enforcement method.** The rules say the check is by filename, so it only catches network calls if the denied API list covers the APIs the Mac code uses and the allowed files are the only ones touching them.",
+   "class": "offer"
+  }
+ ]
+}

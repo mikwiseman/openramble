@@ -1,0 +1,14 @@
+{
+ "facts": [
+  true,
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "Its objects still target\nmacOS 14.0 on both architectures.",
+   "class": "padding"
+  }
+ ]
+}

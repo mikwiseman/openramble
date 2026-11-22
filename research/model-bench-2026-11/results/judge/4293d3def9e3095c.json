@@ -1,0 +1,17 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The\nfield is renamed from `released` to `stopped`, since it covers both.",
+   "class": "padding"
+  },
+  {
+   "quote": "the release of a\nhands-free press is not its stop.",
+   "class": "restate"
+  }
+ ]
+}

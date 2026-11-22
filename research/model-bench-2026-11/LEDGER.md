@@ -197,3 +197,33 @@ Claude Opus 5.5 and by GPT-6.2 Sol, and the report gives how often they agree
 and how many pairs each model wins under each judge. What a run's report claims
 ("done", "checks pass") is also read by the judge, because a word pattern for
 it matched ordinary sentences.
+
+## L11. A stopped run that kept working
+
+**Measured.** I compared each run's time as the harness measured it with the
+duration in the tool's own result record. For Sonnet on `r39` the harness said
+56 s and the record said 95.6 s. The transcript held two sessions.
+
+**Cause.** I had stopped the pilot with `pkill`. The harness died, and the
+Claude Code process it had started lived on, because the tool runs in its own
+process group. The next Sonnet run exported a fresh checkout to the same path
+and started while the first process was still editing there. Both wrote to one
+transcript.
+
+**Decision.** That run is void and was run again. The harness now kills the
+tool's process group whenever it stops, also on SIGTERM. A transcript with more
+than one session makes the run void. I checked the other five runs made by
+then, and each transcript has one session.
+
+## L12. The Mac slept in the middle of the pilot
+
+**Measured.** `pmset -g log` shows the lid closed at 17:07 and opened at 18:35,
+with the Mac on battery at 19% and then 11%. A Sonnet run was open across the
+sleep, and the judge calls made in that time failed with DNS errors. The
+harness had marked each failed judge call as missing, and a second pass got all
+of them (88 marks and 264 picks, none missing).
+
+**Decision.** A run's time is now measured on the monotonic clock, which stops
+while the Mac sleeps, and the seconds asleep are recorded beside it. The pilot
+runs under `caffeinate -i`, which holds off idle sleep and cannot hold off a
+closed lid. The two tasks that build Swift waited until the Mac was on power.

@@ -1,0 +1,12 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "**Faster microphone startup**",
+   "class": "decoration"
+  }
+ ]
+}

@@ -1,0 +1,27 @@
+{
+ "facts": [
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The diff fixes the double-press case but breaks a different case that currently works.",
+   "class": "restate"
+  },
+  {
+   "quote": "The cause is that `released` now means two different things.",
+   "class": "restate"
+  },
+  {
+   "quote": "This sequence now misbehaves:\n\n1. A paste is finishing, and the user presses the key in hands-free mode. The press is queued with `handsFree == true`.\n2. The user releases the key. In hands-free mode this should mean nothing, but `stop()`'s early branch still sets `released = true`.\n3. The paste finishes and the replay runs `begin(handsFree: true)`, then sees `released` and calls `stopHandsFree()`.",
+   "class": "padding"
+  },
+  {
+   "quote": "The take stops immediately. Before this change it would have kept listening, which is correct. Every hands-free press that lands during a paste and is then released normally, which is the normal way to press a key, now produces a dead take.",
+   "class": "restate"
+  },
+  {
+   "quote": "- **A third press during the paste is untested.** The second press is idempotent with this change. Confirm what the key handler does with further presses while `pressDuringInsertion` is non-nil.",
+   "class": "padding"
+  }
+ ]
+}

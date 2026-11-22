@@ -483,13 +483,19 @@ def run_tool(model_key, effort, folder, prompt, transcript, tools=True, timeout=
     with open(transcript, "wb") as out, open(str(transcript) + ".stderr", "wb") as err:
         process = subprocess.Popen(sandbox(folder) + command, cwd=folder, env=env, stdin=subprocess.PIPE,
                                    stdout=out, stderr=err, start_new_session=True)
+        timed_out = False
         try:
             process.communicate(prompt.encode(), timeout=timeout)
-            timed_out = False
         except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
-            process.wait()
             timed_out = True
+        finally:
+            # Also when the harness itself is stopped. A tool left running
+            # goes on editing the folder the next run is about to use.
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.wait()
     seconds = time.monotonic() - started
     return {"exit": process.returncode, "timed_out": timed_out, "seconds": round(seconds),
             "slept_seconds": max(0, round(time.time() - started_wall - seconds)),
@@ -577,6 +583,9 @@ def read_transcript(path, tool):
                     usage[key] = usage.get(key, 0) + value
             elif kind in ("turn.failed", "error"):
                 problems.append("tool: " + json.dumps(event)[:300])
+    sessions = len(re.findall(r'"type": ?"result"|"type": ?"thread.started"', Path(path).read_text(errors="replace")))
+    if sessions > 1:
+        problems.append(f"{sessions} sessions wrote this transcript, so two tools worked in one folder")
     if tool == "codex":
         turns = len(calls) + 1  # codex reports one turn; a model step per call is the comparable count
     return {"calls": calls, "final": final, "usage": usage, "problems": problems, "turns": turns, "cost_usd": cost,
@@ -641,7 +650,7 @@ def replay_run(task, model_key, rep=1, effort=EFFORT, force=False):
         for call in parsed["calls"]:
             trace.write(json.dumps(call) + "\n")
     meta = {"run": run_id, "task": task.id, "model": MODELS[model_key][1], "tool": MODELS[model_key][0],
-            "effort": effort, "rep": rep, "started": time.strftime("%Y-%m-%d %H:%M"), **ran,
+            "effort": effort, "rep": rep, "finished": time.strftime("%Y-%m-%d %H:%M"), **ran,
             "owner_instructions": hashlib.sha256(OWNER_INSTRUCTIONS.read_bytes()).hexdigest()[:12]
             if OWNER_INSTRUCTIONS.exists() else None,
             "transcript": str(transcript), "problems": parsed["problems"]}
@@ -848,14 +857,22 @@ def slop_score():
                      if patch.strip() else None})
 
     # Ask everything at once; the loops below then read the kept answers.
-    parallel(judge, [text_prompt(o) for o in outputs] + [r[k] for r in runs for k in ("report", "change") if r[k]])
+    # Both judges mark the text outputs, so the report can show whether the
+    # slop share depends on who is asked. The classes come from the first.
+    parallel(lambda job: judge(*job), [(text_prompt(o), who) for o in outputs for who in PAIR_JUDGES]
+             + [(r[k], JUDGE) for r in runs for k in ("report", "change") if r[k]])
     rows = []
     for o in outputs:
         item, verdict = items[o["item"]], judge(text_prompt(o))
         found, share = marked(o["output"], verdict)
         got = (verdict or {}).get("facts") or []
+        by_judge = {}
+        for who in PAIR_JUDGES:
+            other = judge(text_prompt(o), who)
+            by_judge[who] = marked(o["output"], other)[1] if other else None
         rows.append({**{k: o[k] for k in ("item", "situation", "condition", "model")}, **counts(o["output"]),
                      "judged": verdict is not None, "slop_share": share if verdict else None, "slop": found,
+                     "slop_share_by_judge": by_judge,
                      "facts": sum(bool(x) for x in got[:len(item["required"])]), "facts_required": len(item["required"]),
                      "tokens": sum(o["usage"].values()), "cost_usd": o["cost_usd"]})
     work = []
@@ -905,7 +922,13 @@ def slop_vote(count=30):
     items = {i["id"]: i for i in slop_items()}
     votes_path = RESULTS / "slop/votes-owner.jsonl"
     done = {json.loads(l)["id"] for l in votes_path.read_text().splitlines()} if votes_path.exists() else set()
-    sample = random.Random(2026).sample(pairs, min(count, len(pairs)))
+    # Half from the pairs the judges disagree on, which is where his vote
+    # says which judge has his taste, and half from the pairs they agree on.
+    rng = random.Random(2026)
+    split = lambda same: [pair for pair in pairs if (len(set(pair["picks"].values())) == 1) == same]
+    sample = rng.sample(split(False), min(count // 2, len(split(False))))
+    sample += rng.sample(split(True), min(count - len(sample), len(split(True))))
+    rng.shuffle(sample)
     outputs = lambda pair, model: json.loads(
         (RESULTS / "slop/outputs" / f"{pair['item']}.{pair['condition']}.{model}.json").read_text())["output"]
     for number, pair in enumerate(sample, 1):
@@ -990,13 +1013,14 @@ def report():
         models = [m for m in MODELS if any(r["model"] == m for r in rows)]
         judges = sorted({who for pair in pairs for who in pair["picks"]})
         lines += ["## Slop, text situations", "", f"The judge that marks slop is {scores['judge']}. \"Words per fact\" "
-                  "counts only outputs that state every required fact. \"Slop share\" is the share of words the judge "
-                  "marked, as a median over outputs. \"Pairs won\" is a judge's pick between two anonymous outputs "
+                  "counts only outputs that state every required fact. \"Slop share\" is the share of all the words "
+                  "a model wrote that a judge marked. \"Pairs won\" is a judge's pick between two anonymous outputs "
                   "for the same request.", "",
-                  "| Model | His instructions | Outputs | Median words | All facts stated | Words per fact | Slop share | "
-                  "Stock phrases per 100 words | Decoration per output | Offers | Dashes and curly quotes | "
+                  "| Model | His instructions | Outputs | Median words | All facts stated | Words per fact | "
+                  + " | ".join(f"Slop share, judge {MODELS[j][1]}" for j in judges)
+                  + " | Stock phrases per 100 words | Decoration per output | Offers | Dashes and curly quotes | "
                   + " | ".join(f"Pairs won, judge {MODELS[j][1]}" for j in judges) + " |",
-                  "|---|---|---|---|---|---|---|---|---|---|---|" + "---|" * len(judges)]
+                  "|---|---|---|---|---|---|---|---|---|---|" + "---|" * (2 * len(judges))]
         for model in models:
             for condition in CONDITIONS:
                 mine = [r for r in rows if r["model"] == model and r["condition"] == condition]
@@ -1013,7 +1037,8 @@ def report():
                              f"{short(median([r['words'] for r in mine]))} | "
                              f"{len(complete)} of {sum(1 for r in mine if r['judged'])} | "
                              f"{short(median([r['words'] / r['facts_required'] for r in complete]))} | "
-                             f"{short(median([r['slop_share'] for r in mine]))} | "
+                             + " | ".join(f"{100 * sum((r['slop_share_by_judge'].get(j) or 0) * r['words'] for r in mine) / max(words, 1):.0f}%"
+                                          for j in judges) + " | "
                              f"{100 * sum(r['stock'] for r in mine) / max(words, 1):.2f} | "
                              f"{sum(r['decoration'] for r in mine) / len(mine):.1f} | {sum(r['offers'] for r in mine)} | "
                              f"{sum(r['house_style'] for r in mine)} | " + " | ".join(won) + " |")
@@ -1099,6 +1124,8 @@ def pilot(effort):
 
 
 def main():
+    # Stopping the harness has to run the cleanup above.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("words", nargs="+")
     parser.add_argument("--rep", type=int, default=1)

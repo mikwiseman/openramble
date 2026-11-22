@@ -1,0 +1,36 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": ", not before launch, and not without changing the rules first",
+   "class": "padding"
+  },
+  {
+   "quote": "macOS keys those grants to the bundle identifier, so a renamed app would look like a new app to the system.",
+   "class": "restate"
+  },
+  {
+   "quote": ", and the app would lose its permission state on update",
+   "class": "restate"
+  },
+  {
+   "quote": "Sparkle also matches updates by bundle identifier, so a rename would likely break the update path for existing installs too. I haven't verified that against the Sparkle version this project uses.",
+   "class": "padding"
+  },
+  {
+   "quote": "If the goal is the \"openramble\" name at launch, you can probably get most of it without touching the identifier:\n\n- **Display name:** change `CFBundleDisplayName` and/or `CFBundleName` to \"OpenRamble\". The Finder name, menu bar, and About box will show the new name.\n- **Product and file names:** the `.app` bundle name and the executable name can change, as long as `CFBundleIdentifier` stays `is.waiwai.dictation`.\n- **Domain and marketing:** the website, download links, and appcast URL can use \"openramble\" without any change to the bundle ID.",
+   "class": "offer"
+  },
+  {
+   "quote": "If you still want the identifier changed, that's a decision for you as the owner, and it needs a plan for migrating Accessibility grants and for existing Sparkle users. It also means editing the invariant in the rules file. I'd treat that as a separate decision and not fold it into the launch.",
+   "class": "padding"
+  },
+  {
+   "quote": "I can't open the repo in this session, so I'm working from the excerpt you pasted. Before you decide, check `docs/release.md` for any existing migration notes or requirements about the update feed.",
+   "class": "padding"
+  }
+ ]
+}

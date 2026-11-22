@@ -1,0 +1,16 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "Before, that first press started the microphone late.",
+   "class": "restate"
+  },
+  {
+   "quote": "It's only set up and ready, and it turns on when you press the key.",
+   "class": "restate"
+  }
+ ]
+}

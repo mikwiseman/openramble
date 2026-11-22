@@ -1,0 +1,32 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": " (`LocalASR/ModelDownloading.swift`), which only happen when you explicitly ask for one",
+   "class": "padding"
+  },
+  {
+   "quote": " (`SparkleUpdater.swift`), which run on a schedule by default and can be turned off in Settings",
+   "class": "padding"
+  },
+  {
+   "quote": "Downloading and installing an update always needs your click.",
+   "class": "padding"
+  },
+  {
+   "quote": "Neither path carries audio.",
+   "class": "restate"
+  },
+  {
+   "quote": "The rules say no other shipping code may touch the network, and `scripts/check-network-surface.sh` enforces that in CI.",
+   "class": "padding"
+  },
+  {
+   "quote": "I'm going only from the rules file. I haven't read the code or run the check script, so this is the documented promise, not something I verified.",
+   "class": "hedge"
+  }
+ ]
+}

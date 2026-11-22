@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "If it's meant to go in this commit, it needs its own mention in the body,",
+   "class": "padding"
+  }
+ ]
+}

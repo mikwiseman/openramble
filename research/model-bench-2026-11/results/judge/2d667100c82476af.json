@@ -1,0 +1,49 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The red test is doing its job: it shows the Rust port has drifted from your Swift change.",
+   "class": "padding"
+  },
+  {
+   "quote": "What to do instead:",
+   "class": "stock"
+  },
+  {
+   "quote": "1. **Decide whether the Swift change was intended.** If the new output is what you wanted, continue. If it was accidental, fix the Swift side and the test goes green again.",
+   "class": "padding"
+  },
+  {
+   "quote": ", so the fixture will reflect the new Mac behavior",
+   "class": "restate"
+  },
+  {
+   "quote": "I can't see the generator's name or invocation in what you pasted, so",
+   "class": "padding"
+  },
+  {
+   "quote": ", so the replay test will stay red until the port matches the regenerated fixtures",
+   "class": "padding"
+  },
+  {
+   "quote": "**Commit all of it together.**",
+   "class": "restate"
+  },
+  {
+   "quote": ", as the rules require",
+   "class": "padding"
+  },
+  {
+   "quote": "5. **Review the fixture diff before committing.** It should show only the changes you meant to make. Unexpected changes in other cases mean your Swift edit had side effects.",
+   "class": "padding"
+  },
+  {
+   "quote": "If your change touches file cutting, the rules also say to change `apps/cli/src/plan.rs` and `FileAudioChunks.swift` together, or neither.",
+   "class": "padding"
+  }
+ ]
+}

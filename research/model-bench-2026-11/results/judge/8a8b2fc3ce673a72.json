@@ -1,0 +1,64 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": " (`LocalASR/ModelDownloading.swift`)",
+   "class": "padding"
+  },
+  {
+   "quote": ", and they fetch ASR models to your machine",
+   "class": "restate"
+  },
+  {
+   "quote": " (\"LocalASR\")",
+   "class": "padding"
+  },
+  {
+   "quote": " (`SparkleUpdater.swift`)",
+   "class": "padding"
+  },
+  {
+   "quote": "Scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update always requires a click.",
+   "class": "padding"
+  },
+  {
+   "quote": "The rules file says no other shipping code may access the network.",
+   "class": "restate"
+  },
+  {
+   "quote": "`scripts/check-network-surface.sh` keeps a denied-API list that CI enforces by filename, so a violation should fail the build.",
+   "class": "padding"
+  },
+  {
+   "quote": "- **This is a statement of policy, not a code audit.** I only have the rules text. I haven't read the Swift sources or the CI script, so I can't confirm the code matches.",
+   "class": "hedge"
+  },
+  {
+   "quote": "- **The update check is still an outbound request.**",
+   "class": "restate"
+  },
+  {
+   "quote": "The rules don't describe what it sends.",
+   "class": "padding"
+  },
+  {
+   "quote": "It's an update check, not audio upload",
+   "class": "restate"
+  },
+  {
+   "quote": ", but if you want to rule out any outbound traffic, turn off scheduled checks in Settings.",
+   "class": "offer"
+  },
+  {
+   "quote": "- **The Linux and desktop items don't apply to the Mac app.** Items 3 and 4 cover the Tauri desktop app (Windows, Linux) and the Linux server's inbound listener.",
+   "class": "padding"
+  },
+  {
+   "quote": "If you want independent confirmation, you could run the check script yourself or watch the app's traffic with something like Little Snitch or `nettop` while dictating.",
+   "class": "offer"
+  }
+ ]
+}

@@ -1,0 +1,32 @@
+{
+ "facts": [
+  false,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "so it's a decision rather than just a rename.",
+   "class": "padding"
+  },
+  {
+   "quote": "and Microphone",
+   "class": "padding"
+  },
+  {
+   "quote": "Preferences stored under `is.waiwai.dictation` also reset unless we migrate them.",
+   "class": "padding"
+  },
+  {
+   "quote": "If the only installs today are yours and a few testers, do it now, because after launch it is effectively never. If there's a real beta base, keep it, since users never see the bundle ID.",
+   "class": "offer"
+  },
+  {
+   "quote": "If you go ahead, I'd keep the Sparkle key, test an old-to-new update, and rewrite the invariant to name the new ID.",
+   "class": "offer"
+  },
+  {
+   "quote": "How many installs exist today?",
+   "class": "offer"
+  }
+ ]
+}

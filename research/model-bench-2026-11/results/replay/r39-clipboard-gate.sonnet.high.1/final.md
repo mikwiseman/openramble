@@ -1,18 +1,26 @@
-The clipboard check in the network gate was never running, so the gate's "all fine" meant nothing for clipboard writes. The gate now runs that check and catches violations, and the fix is committed on `work`. I didn't push.
+The network gate now blocks plain clipboard writes. The `FORBIDDEN_PASTEBOARD: unbound variable` error was a real hole in the clipboard check, and the gate had been passing without running it. The fix is committed on `work`, not pushed.
 
-**What happened:** `scripts/check-network-surface.sh` used `$FORBIDDEN_PASTEBOARD`, but nothing ever defined it. With `set -u`, the unbound variable killed the subshell running that check. Nothing reached the main script, and the surrounding `|| true` hid the failure, so the gate carried on and printed its pass message. The "no `clearContents()`" rule in CLAUDE.md therefore had no enforcement in this script.
+**What happened**
+- `scripts/check-network-surface.sh` used `$FORBIDDEN_PASTEBOARD` but never defined it.
+- `set -u` killed the subshell that feeds the clipboard loop. The loop saw no lines, and the script's exit code was 0.
+- So the clipboard check never ran. A plain `clearContents()` would have passed.
+- The two release callers (`check.sh` and `release.sh`) hide the gate's stdout, so the "all clear" was invisible. Only the stderr line showed.
 
-**The fix:**
-- I defined the pattern as `clearContents(` and `declareTypes(`. The old `declareTypes` call is another write that Universal Clipboard would sync.
-- All source scans (network, clipboard, logging) now go through one helper. If grep errors, or a shipping path no longer exists, the gate stops with exit 2 and a `GATE ERROR` line.
+**The fix**
+- I defined the pattern as `clearContents\(|declareTypes\(`. I reconstructed it from CLAUDE.md, since the original definition isn't anywhere in the repo. Say so if you want a wider list. Comment lines are still ignored.
+- The network, clipboard and text-logging checks now collect matches with `hits=$(scan …)` instead of `< <(…)`. A broken pattern, an unset variable or a grep error now aborts the gate with a non-zero exit instead of looking clean.
+- I did not touch the two `nm`/`otool` loops in the runtime-binary audit. They have the same `< <(…)` weakness, but the runtime binary isn't built here, so I couldn't exercise a change.
 
-**Proof it catches things:**
-- **Real tree:** a temporary `NSPasteboard.general.clearContents()` file got `VIOLATION: flushing buffer…` and exit 1. A clean tree passes with no error output.
-- **New test:** `scripts/tests/test-network-surface-gate.sh` builds throwaway fake repos and checks each rule fires: clipboard, forbidden network symbol, missing update keys, and transcript logging. It also checks that comments, the sanctioned `.currentHostOnly` write and the two allowed network files pass.
-- **Original bug:** the test also confirms a gate with the variable undefined, a missing shipping path, or a broken pattern now fails.
-- **Old gate:** the test fails against the old script on the unbound variable, so it would have caught this bug.
-- **CI:** I added the test to CI next to `test-release-policy.sh`, and that existing test still passes.
-
-**Decision for you:** I made the missing shipping path fatal. A renamed source folder would otherwise scan nothing and pass.
-
-**Not done:** the runtime-binary check still skips itself when no build exists. That is the existing, documented behaviour and I left it alone.
+**Proof**
+- The new `scripts/tests/test-network-gate.sh` runs the real gate against throwaway trees. It also runs in CI.
+- It confirms a clean tree passes. Comments mentioning the banned calls, and `URLSession` in the two allowed files, don't trip it.
+- These seeded violations all fail the gate:
+  - `clearContents()`
+  - `declareTypes`
+  - `URLSession` outside the allowed files
+  - `Data(contentsOf:)`
+  - a logged transcript
+  - a missing update key
+- A gate with the pattern deleted and a gate with an invalid regex both fail instead of passing.
+- Against the old gate, the same test fails on the first seeded violation (`clearContents()` passed). The fixed gate passes it, including under `/bin/bash`.
+- I ran only the gate and its test. I did not run `check.sh` or the Swift suites, since nothing in the Swift code changed.

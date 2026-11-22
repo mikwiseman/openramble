@@ -1,0 +1,33 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The red test is doing its job:",
+   "class": "stock"
+  },
+  {
+   "quote": "and Rust now lags behind it.",
+   "class": "restate"
+  },
+  {
+   "quote": "The fix:",
+   "class": "stock"
+  },
+  {
+   "quote": "I don't have its exact command here, so ",
+   "class": "padding"
+  },
+  {
+   "quote": "3. Read the fixture diff. It should show only the behavior you meant to change. Anything else is an unintended Swift regression.",
+   "class": "padding"
+  },
+  {
+   "quote": "It should be green now.",
+   "class": "padding"
+  }
+ ]
+}

@@ -1,0 +1,40 @@
+{
+ "facts": [
+  false,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "it's your call, and before launch it's the cheapest it will ever be.",
+   "class": "padding"
+  },
+  {
+   "quote": "The rules file calls the ID permanent only because of existing users.",
+   "class": "restate"
+  },
+  {
+   "quote": "**Cost:**",
+   "class": "decoration"
+  },
+  {
+   "quote": "Their preferences and Keychain items under the old ID also won't carry over.",
+   "class": "padding"
+  },
+  {
+   "quote": "**If only your own machines have it:** the cost is one re-grant, so rename now.",
+   "class": "padding"
+  },
+  {
+   "quote": "**If beta users have it:** it's still possible, but it's a visible break for them.",
+   "class": "padding"
+  },
+  {
+   "quote": "**Unchanged:** the Sparkle EdDSA key stays, and so does inside-out signing. Only the ID changes.",
+   "class": "padding"
+  },
+  {
+   "quote": "Has any build with the current ID reached people outside your own machines? If not, I'll make the change and update the rules file and `docs/release.md` to match.",
+   "class": "offer"
+  }
+ ]
+}

@@ -1,0 +1,44 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "I only have the rules file in this session, so I'm reporting the stated policy and have not checked the code myself.",
+   "class": "hedge"
+  },
+  {
+   "quote": ", and neither sends audio",
+   "class": "restate"
+  },
+  {
+   "quote": " (`LocalASR/ModelDownloading.swift`)",
+   "class": "padding"
+  },
+  {
+   "quote": "The `LocalASR` name suggests transcription then runs on your machine.",
+   "class": "padding"
+  },
+  {
+   "quote": " (`SparkleUpdater.swift`)",
+   "class": "padding"
+  },
+  {
+   "quote": "scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update always requires a click.",
+   "class": "padding"
+  },
+  {
+   "quote": "No other shipping code may touch the network.",
+   "class": "restate"
+  },
+  {
+   "quote": ", which holds the list of denied network APIs",
+   "class": "padding"
+  },
+  {
+   "quote": "The update check does contact the update server, so by default the app makes some network requests, but they carry no audio.",
+   "class": "restate"
+  }
+ ]
+}
