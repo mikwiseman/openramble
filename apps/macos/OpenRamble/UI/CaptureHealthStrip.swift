@@ -47,7 +47,7 @@ struct CaptureHealthStrip: View {
                         .font(.system(size: 13, weight: .semibold))
                     if let detail {
                         Text(detail)
-                            .font(.caption)
+                            .font(.detail)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -67,7 +67,7 @@ struct CaptureHealthStrip: View {
                     // A dead button without a reason is where setup ends
                     // for a blind person.
                     Text(L10n.tr("Finish the current recording first — relaunching now would end it."))
-                        .font(.caption)
+                        .font(.detail)
                         .foregroundStyle(.tertiary)
                 }
             }

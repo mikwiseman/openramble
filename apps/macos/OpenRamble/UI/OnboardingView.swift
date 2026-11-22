@@ -97,7 +97,7 @@ struct OnboardingView: View {
                 // the footer with the buttons is up, and the content area is down.
                 // The step where the permit had just been issued was twitching entirely.
                 Text(navigationBlockReason ?? " ")
-                    .font(.caption)
+                    .font(.detail)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -199,34 +199,29 @@ struct OnboardingView: View {
             .padding(.bottom, 32)
 
             Divider()
-            VStack(alignment: .leading, spacing: 10) {
-                BlockLabel(L10n.tr("Speech model"))
+            ModelStatusView(
+                status: modelCard,
+                install: state.installModel,
+                cancel: state.cancelModelInstall,
+                delete: state.deleteModel
+            )
+            // Only on a Mac with a Hebrew keyboard; Settings shows it to
+            // everyone. See `HebrewModelRule`.
+            if state.offersHebrewModelInSetup {
+                Divider()
                 ModelStatusView(
-                    status: modelCard,
-                    install: state.installModel,
-                    cancel: state.cancelModelInstall,
-                    delete: state.deleteModel
+                    status: ModelStatus.hebrew(
+                        state: state.hebrewModelState,
+                        place: .onboarding,
+                        downloadMegabytes: state.hebrewModelMegabytes,
+                        hasKeyboard: state.hasHebrewKeyboard
+                    ),
+                    install: state.installHebrewModel,
+                    cancel: state.cancelHebrewModelInstall,
+                    delete: state.deleteHebrewModel,
+                    openKeyboardSettings: state.openKeyboardSettings
                 )
-                // Only on a Mac with a Hebrew keyboard; Settings shows it to
-                // everyone. See `HebrewModelRule`.
-                if state.offersHebrewModelInSetup {
-                    Divider().padding(.vertical, 6)
-                    ModelStatusView(
-                        status: ModelStatus.hebrew(
-                            state: state.hebrewModelState,
-                            place: .onboarding,
-                            downloadMegabytes: state.hebrewModelMegabytes,
-                            hasKeyboard: state.hasHebrewKeyboard
-                        ),
-                        install: state.installHebrewModel,
-                        cancel: state.cancelHebrewModelInstall,
-                        delete: state.deleteHebrewModel,
-                        openKeyboardSettings: state.openKeyboardSettings
-                    )
-                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 18)
             Divider()
 
             OnboardingPermission(
@@ -264,12 +259,12 @@ struct OnboardingView: View {
                         state.openAccessibilitySettings()
                     }
                 }
-                .font(.caption)
+                .font(.detail)
             }
 
             Divider()
             Text(L10n.tr("Accessibility is used only to notice your dictation key and insert finished text. Other keystrokes are never logged or stored. Input Monitoring is not needed."))
-                .font(.system(size: 12))
+                .font(.detail)
                 .foregroundStyle(.secondary)
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -343,7 +338,8 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 0) {
                 TextEditor(text: $trial)
                     .font(.words(20))
-                    .frame(height: 120)
+                    // The note takes the room the page has: it is the page.
+                    .frame(minHeight: 120, maxHeight: .infinity)
                     .focused($trialFocused)
                     .scrollContentBackground(.hidden)
                     .onAppear { trialFocused = true }
@@ -352,7 +348,7 @@ struct OnboardingView: View {
                         if trial.isEmpty {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(L10n.tr("Try saying"))
-                                    .font(.system(size: 12))
+                                    .font(.detail)
                                 Text(OnboardingStep.tryOutSuggestion())
                                     .font(.words(20))
                                     .fixedSize(horizontal: false, vertical: true)
@@ -389,7 +385,7 @@ struct OnboardingView: View {
                         }
                         .accessibilityElement(children: .combine)
                         Text(L10n.tr("OpenRamble lives in your menu bar at the top of the screen. Settings can move it to the Dock instead — never to neither."))
-                            .font(.system(size: 12))
+                            .font(.detail)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     } else if isListening {
@@ -405,7 +401,7 @@ struct OnboardingView: View {
                             StateGlyphView(glyph: .attention, size: 12)
                                 .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
                             Text(warning)
-                                .font(.system(size: 12))
+                                .font(.detail)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -416,32 +412,34 @@ struct OnboardingView: View {
                             .font(.system(size: 13))
                             .foregroundStyle(.secondary)
                         Text(L10n.tr("Click the key to choose another."))
-                            .font(.system(size: 12))
+                            .font(.detail)
                             .foregroundStyle(.tertiary)
                     }
                 }
-                Spacer(minLength: 0)
+                Spacer(minLength: 12)
+
+                // The way out, on the key's own line and at the column's
+                // edge: under the key it read as a fourth thing to do.
+                if !trialSucceeded {
+                    HStack(spacing: 12) {
+                        if isDictationBusy {
+                            Button(L10n.tr("Cancel Dictation")) { state.cancelCurrentDictation() }
+                                .buttonStyle(.bordered)
+                                .accessibilityHint(L10n.tr("Stops the current dictation so you can continue setup."))
+                        }
+                        Button(L10n.tr("Skip the try-out")) { finishOnboarding() }
+                            .buttonStyle(.borderless)
+                            .disabled(isDictationBusy)
+                            .accessibilityHint(
+                                isDictationBusy ? L10n.tr("Finish or cancel the current dictation first") : ""
+                            )
+                    }
+                    .font(.detail)
+                    .fixedSize()
+                }
             }
             .frame(minHeight: KeyCap.Size.large.height + KeyCap.Size.large.travel)
-
-            if !trialSucceeded {
-                HStack(spacing: 12) {
-                    Button(L10n.tr("Skip the try-out")) { finishOnboarding() }
-                        .buttonStyle(.borderless)
-                        .disabled(isDictationBusy)
-                        .accessibilityHint(
-                            isDictationBusy ? L10n.tr("Finish or cancel the current dictation first") : ""
-                        )
-                    if isDictationBusy {
-                        Button(L10n.tr("Cancel Dictation")) { state.cancelCurrentDictation() }
-                            .buttonStyle(.bordered)
-                            .accessibilityHint(L10n.tr("Stops the current dictation so you can continue setup."))
-                    }
-                }
-                .font(.system(size: 12))
-            }
-
-            Spacer(minLength: 0)
+            .padding(.bottom, 12)
         }
     }
 
@@ -597,8 +595,9 @@ private struct OnboardingProgressDots: View {
     }
 }
 
-/// A permission as a row: what it is for, and the one button that grants
-/// it. Granted, its ring becomes a green check and the button goes.
+/// A permission as a row of the setup list: what it is for, and the one
+/// button that grants it. Granted, its ring becomes a green check and the
+/// button goes.
 private struct OnboardingPermission<Secondary: View>: View {
     let status: PermissionStatus
     let action: () -> Void
@@ -615,33 +614,19 @@ private struct OnboardingPermission<Secondary: View>: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            StateGlyphView(glyph: status.granted ? .pasted : .silent, size: 16)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(status.title)
-                    .font(.system(size: 15, weight: .medium))
-                Text(status.detail)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(status.accessibilityLabel)
-            .accessibilityValue(status.accessibilityValue)
-
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 4) {
+        SetupRow(
+            glyph: status.glyph,
+            title: status.title,
+            detail: status.detail,
+            spoken: (status.accessibilityLabel, status.accessibilityValue),
+            action: {
                 if let title = status.actionTitle {
                     Button(title, action: action)
                         .buttonStyle(.bordered)
                         .accessibilityLabel(status.actionAccessibilityLabel ?? title)
                 }
-                secondary
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 16)
+            },
+            below: { secondary.padding(.top, 4) }
+        )
     }
 }

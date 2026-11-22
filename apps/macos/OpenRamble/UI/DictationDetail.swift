@@ -61,7 +61,7 @@ struct DictationDetail: View {
                         .accessibilityLabel(L10n.tr("Recognize this recording again"))
                     } else {
                         Text(L10n.tr("Recording no longer on disk"))
-                            .font(.caption)
+                            .font(.detail)
                             .foregroundStyle(.tertiary)
                     }
 
@@ -120,12 +120,12 @@ struct WaitingTakePin: View {
             HStack(alignment: .center, spacing: GlassTokens.Space.inline) {
                 if let fix = waiting.lastingFix {
                     Text(fix)
-                        .font(.system(size: 12))
+                        .font(.detail)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if let note = waiting.note {
                     Text(note)
-                        .font(.system(size: 12))
+                        .font(.detail)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -161,7 +161,7 @@ struct UnfinishedDictationsNote: View {
             Text(state.recordingRecoveryStorageFaulted
                 ? L10n.tr("The app could not record what is safe to delete, so it stops rather than guess about your voice data.")
                 : L10n.tr("Their audio was kept so nothing was lost. It is deleted within seven days."))
-                .font(.system(size: 12))
+                .font(.detail)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Button(L10n.tr("Show in Finder")) { state.revealRecoveredRecordings() }

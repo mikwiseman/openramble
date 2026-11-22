@@ -289,7 +289,7 @@ private struct GeneralSettings: View {
                     .accessibilityLabel(L10n.tr("Key warning. %@", String(describing: warning)))
             } else {
                 Text(L10n.tr("Hold to talk. Double-press for hands-free."))
-                    .font(.system(size: 12))
+                    .font(.detail)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -344,7 +344,7 @@ private struct GeneralSettings: View {
                 attention(notice)
             } else {
                 Text(state.inputDeviceUID == nil ? L10n.tr("Follows your Mac.") : L10n.tr("Always this one, while it is connected."))
-                    .font(.system(size: 12))
+                    .font(.detail)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -366,7 +366,7 @@ private struct GeneralSettings: View {
             StateGlyphView(glyph: .attention, size: 12)
                 .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
             Text(text)
-                .font(.system(size: 12))
+                .font(.detail)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -498,35 +498,31 @@ private struct SetupSettings: View {
                 L10n.tr("Speech model"),
                 footer: L10n.tr("The speech model runs entirely on this Mac. Once downloaded and verified, recognition works offline — audio is never uploaded. History keeps your recent dictations with their audio, as many as you choose to keep. Other dictation audio is retained only after a disclosed technical failure or interrupted process, then pruned within seven days. Interrupted dictations appear in History, with the rest of your recordings.")
             ) {
-                BlockCell {
-                    ModelStatusView(
-                        status: ModelStatus.make(
-                            state: state.modelState,
-                            preparation: state.enginePreparation,
-                            place: .settings,
-                            downloadMegabytes: state.remainingDownloadMegabytes,
-                            isEngineReady: state.isEngineReady,
-                            isPreparingEngine: state.isPreparingEngine,
-                            hasMirror: state.modelHasMirror
-                        ),
-                        install: state.installModel,
-                        cancel: state.cancelModelInstall,
-                        // Delete sits beside ordinary buttons and used to act
-                        // on the first click: a miss cost half a gigabyte and
-                        // a new download. Nothing undoes it, so it asks.
-                        delete: { showDeleteConfirmation = true }
-                    )
-                }
+                ModelStatusView(
+                    status: ModelStatus.make(
+                        state: state.modelState,
+                        preparation: state.enginePreparation,
+                        place: .settings,
+                        downloadMegabytes: state.remainingDownloadMegabytes,
+                        isEngineReady: state.isEngineReady,
+                        isPreparingEngine: state.isPreparingEngine,
+                        hasMirror: state.modelHasMirror
+                    ),
+                    install: state.installModel,
+                    cancel: state.cancelModelInstall,
+                    // Delete sits beside ordinary buttons and used to act
+                    // on the first click: a miss cost half a gigabyte and
+                    // a new download. Nothing undoes it, so it asks.
+                    delete: { showDeleteConfirmation = true }
+                )
                 if let upgrade = state.upgradeState {
                     BlockDivider()
-                    BlockCell {
-                        ModelStatusView(
-                            status: ModelStatus.upgrade(state: upgrade, downloadMegabytes: state.remainingDownloadMegabytes),
-                            install: state.installModel,
-                            cancel: state.cancelModelInstall,
-                            delete: {}
-                        )
-                    }
+                    ModelStatusView(
+                        status: ModelStatus.upgrade(state: upgrade, downloadMegabytes: state.remainingDownloadMegabytes),
+                        install: state.installModel,
+                        cancel: state.cancelModelInstall,
+                        delete: {}
+                    )
                 }
             }
             .confirmationDialog(
@@ -557,22 +553,20 @@ private struct SetupSettings: View {
                     L10n.tr("More languages"),
                     footer: L10n.tr("The speech model hears 25 European languages and tells them apart by itself. Hebrew needs a model of its own.")
                 ) {
-                    BlockCell {
-                        ModelStatusView(
-                            status: ModelStatus.hebrew(
-                                state: state.hebrewModelState,
-                                place: .settings,
-                                downloadMegabytes: state.hebrewModelMegabytes,
-                                hasKeyboard: state.hasHebrewKeyboard
-                            ),
-                            install: state.installHebrewModel,
-                            cancel: state.cancelHebrewModelInstall,
-                            // Asks first, as the main model's button does:
-                            // a slip costs the whole download again.
-                            delete: { showHebrewRemovalConfirmation = true },
-                            openKeyboardSettings: state.openKeyboardSettings
-                        )
-                    }
+                    ModelStatusView(
+                        status: ModelStatus.hebrew(
+                            state: state.hebrewModelState,
+                            place: .settings,
+                            downloadMegabytes: state.hebrewModelMegabytes,
+                            hasKeyboard: state.hasHebrewKeyboard
+                        ),
+                        install: state.installHebrewModel,
+                        cancel: state.cancelHebrewModelInstall,
+                        // Asks first, as the main model's button does:
+                        // a slip costs the whole download again.
+                        delete: { showHebrewRemovalConfirmation = true },
+                        openKeyboardSettings: state.openKeyboardSettings
+                    )
                 }
             }
 
@@ -580,14 +574,13 @@ private struct SetupSettings: View {
                 L10n.tr("Permissions"),
                 footer: L10n.tr("Finished text is pasted through the clipboard; its previous contents are restored shortly afterward.")
             ) {
-                BlockCell {
-                    PermissionRow(
-                        status: PermissionStatus.accessibility(
-                            state: state.accessibilityState,
-                            detail: L10n.tr("Notices your dictation key and types the finished text at your cursor."),
-                        ),
-                        action: performAccessibilityAction
-                    )
+                PermissionRow(
+                    status: PermissionStatus.accessibility(
+                        state: state.accessibilityState,
+                        detail: L10n.tr("Notices your dictation key and types the finished text at your cursor."),
+                    ),
+                    action: performAccessibilityAction
+                ) {
                     if needsAccessibilityRepair {
                         HStack {
                             Button(L10n.tr("Show in Finder")) {
@@ -597,6 +590,8 @@ private struct SetupSettings: View {
                                 state.openAccessibilitySettings()
                             }
                         }
+                        .controlSize(.small)
+                        .padding(.top, 6)
                     }
                     if AccessibilityRepairLink.isShown(
                         state: state.accessibilityState,
@@ -605,26 +600,23 @@ private struct SetupSettings: View {
                         AccessibilityRepairLinkButton(modelState: state.modelState) {
                             showAccessibilityRepairConfirmation = true
                         }
+                        .padding(.top, 4)
                     }
                 }
                 BlockDivider()
-                BlockCell {
-                    PermissionRow(
-                        status: PermissionStatus(
-                            title: L10n.tr("Microphone"),
-                            detail: L10n.tr("Hears your voice during dictation and recordings you start."),
-                            granted: state.microphoneGranted
-                        ),
-                        action: state.requestMicrophone
-                    )
-                }
+                PermissionRow(
+                    status: PermissionStatus(
+                        title: L10n.tr("Microphone"),
+                        detail: L10n.tr("Hears your voice during dictation and recordings you start."),
+                        granted: state.microphoneGranted
+                    ),
+                    action: state.requestMicrophone
+                )
                 BlockDivider()
-                BlockCell {
-                    PermissionRow(
-                        status: PermissionStatus.systemAudio(mode: state.systemAudioPermission),
-                        action: state.performSystemAudioAction
-                    )
-                }
+                PermissionRow(
+                    status: PermissionStatus.systemAudio(mode: state.systemAudioPermission),
+                    action: state.performSystemAudioAction
+                )
             }
 
             CommandLineToolSettings()
@@ -677,7 +669,7 @@ struct AccessibilityRepairLinkButton: View {
         let enabled = AccessibilityRepairLink.isEnabled(modelState: modelState)
         Button(L10n.tr("Already on? Repair"), action: action)
             .buttonStyle(.link)
-            .font(.caption)
+            .font(.detail)
             .disabled(!enabled)
             .help(enabled ? "" : L10n.tr("Available once the model has downloaded."))
             .accessibilityHint(
@@ -688,36 +680,37 @@ struct AccessibilityRepairLinkButton: View {
     }
 }
 
-private struct PermissionRow: View {
+/// A permission in Settings: the same row the first run draws, so the list a
+/// person granted from and the list they come back to are one list.
+private struct PermissionRow<Secondary: View>: View {
     let status: PermissionStatus
     let action: () -> Void
+    @ViewBuilder var secondary: () -> Secondary
+
+    init(
+        status: PermissionStatus,
+        action: @escaping () -> Void,
+        @ViewBuilder secondary: @escaping () -> Secondary = { EmptyView() }
+    ) {
+        self.status = status
+        self.action = action
+        self.secondary = secondary
+    }
 
     var body: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(status.title)
-                Text(status.detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(status.accessibilityLabel)
-            .accessibilityValue(status.accessibilityValue)
-
-            Spacer()
-            if let title = status.actionTitle {
-                Button(title, action: action)
-                    .accessibilityLabel(status.actionAccessibilityLabel ?? title)
-            } else if status.granted {
-                Label(L10n.tr("Granted"), systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(StatusColorRole.success.color)
-                    .labelStyle(.iconOnly)
-                    .font(.title3)
-                    // The checkmark has already been read as a string value: second time
-                    // “issued” without an owner only gets in the way.
-                    .accessibilityHidden(true)
-            }
-        }
+        SetupRow(
+            glyph: status.glyph,
+            title: status.title,
+            detail: status.detail,
+            spoken: (status.accessibilityLabel, status.accessibilityValue),
+            action: {
+                if let title = status.actionTitle {
+                    Button(title, action: action)
+                        .accessibilityLabel(status.actionAccessibilityLabel ?? title)
+                }
+            },
+            below: secondary
+        )
     }
 }
 
@@ -738,7 +731,7 @@ private struct DictionarySettings: View {
                     Label(L10n.tr("Dictionary can't be edited"), systemImage: "lock.fill")
                         .font(.system(size: 15, weight: .semibold))
                     Text(problem.message)
-                        .font(.system(size: 12))
+                        .font(.detail)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -758,7 +751,7 @@ private struct DictionarySettings: View {
                             .font(.headline)
                             .foregroundStyle(.secondary)
                         Text(L10n.tr("Add a pair below: what the model hears on the left, what should be written on the right."))
-                            .font(.caption)
+                            .font(.detail)
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -773,13 +766,13 @@ private struct DictionarySettings: View {
                             Text(replacement.spoken)
                                 .foregroundStyle(.secondary)
                             Image(systemName: "arrow.right")
-                                .font(.caption2)
+                                .font(.small)
                                 .foregroundStyle(.tertiary)
                             Text(replacement.written)
                             if replacement.noAcousticBoost {
                                 Spacer(minLength: 8)
                                 Text(L10n.tr("text only"))
-                                    .font(.caption2)
+                                    .font(.small)
                                     .foregroundStyle(.tertiary)
                             } else {
                                 Spacer(minLength: 8)
@@ -814,7 +807,7 @@ private struct DictionarySettings: View {
                         .accessibilityLabel(L10n.tr("Heard as"))
                         .onSubmit(addReplacement)
                     Image(systemName: "arrow.right")
-                        .font(.caption)
+                        .font(.small)
                         .foregroundStyle(.tertiary)
                         .accessibilityHidden(true)
                     TextField(L10n.tr("Write as"), text: $written, prompt: Text(L10n.tr("Final spelling")))
@@ -842,7 +835,7 @@ private struct DictionarySettings: View {
                     .accessibilityHint(L10n.tr("Saves all phrases to a file"))
                 }
                 .buttonStyle(.borderless)
-                .font(.system(size: 12))
+                .font(.detail)
             }
 
             BlockSection(
@@ -1005,7 +998,7 @@ private struct AboutView: View {
                     Text(L10n.tr("Private dictation and recording for your Mac"))
                         .foregroundStyle(.secondary)
                     Text(version)
-                        .font(.caption.monospacedDigit())
+                        .font(.small.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
@@ -1028,22 +1021,27 @@ private struct AboutView: View {
                         .accessibilityHint(L10n.tr("The only switch that changes the app's network behavior"))
                         .disabled(updater.startupFailure != nil)
                 }
-                BlockDivider()
-                BlockCell {
-                    Button(L10n.tr("Check Now"), action: updater.checkForUpdates)
-                        .disabled(!updater.canCheckForUpdates)
-                    if let failure = updater.startupFailure {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Label(L10n.tr("Updates are not working"), systemImage: "exclamationmark.triangle.fill")
-                                .foregroundStyle(StatusColorRole.attention.color)
-                            Text(failure)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel(L10n.tr("Updates are not working. %@", String(describing: failure)))
-                    }
+                if let failure = updater.startupFailure {
+                    BlockDivider()
+                    // The same row a failed model wears: the glyph says
+                    // attention, the name stays in ink.
+                    SetupRow(
+                        glyph: .attention,
+                        title: L10n.tr("Updates are not working"),
+                        detail: failure,
+                        spoken: (L10n.tr("Updates are not working. %@", String(describing: failure)), ""),
+                        action: { EmptyView() },
+                        below: { EmptyView() }
+                    )
                 }
+            } accessory: {
+                // Beside the heading, as the dictionary's own actions are: a
+                // lone button on a row of its own read as a row with its
+                // name missing.
+                Button(L10n.tr("Check Now"), action: updater.checkForUpdates)
+                    .disabled(!updater.canCheckForUpdates)
+                    .buttonStyle(.borderless)
+                    .font(.detail)
             }
 
             BlockSection(
@@ -1091,7 +1089,7 @@ private struct AboutView: View {
                             Text(L10n.tr("Parakeet Ultra © Moondream and Parakeet TDT 0.6B v3 © NVIDIA, licensed under CC BY 4.0. GGUF conversions by handy-computer."))
                             Text(L10n.tr("The optional Hebrew model is Parakeet TDT 0.6B v3 Hebrew © Yakov Kolani, licensed under CC BY 4.0, trained on ivrit.ai audio. GGUF conversion by vladkens."))
                         }
-                        .font(.caption)
+                        .font(.detail)
                         .foregroundStyle(.secondary)
                         .padding(.top, 6)
                     }

@@ -21,13 +21,13 @@ struct CommandLineToolSettings: View {
                 if let link {
                     Text(L10n.tr("Installed at %@", String(describing: link.path)))
                     Text(L10n.tr("Run: openramble audio.m4a"))
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .textSelection(.enabled)
                     Text(L10n.tr("If your terminal says 'command not found', add this line to your shell startup file, such as ~/.zshrc, then open a new terminal:"))
-                        .font(.caption)
+                        .font(.detail)
                         .fixedSize(horizontal: false, vertical: true)
                     Text("export PATH=\"$HOME/.local/bin:$PATH\"")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .textSelection(.enabled)
                 }
                 if let failure {

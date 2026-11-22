@@ -126,6 +126,11 @@ struct PermissionStatus: Equatable {
         }
     }
 
+    /// The shape of the state at the head of the row: a green check when
+    /// granted, a hollow ring while there is still something to grant or
+    /// macOS has not been asked yet.
+    var glyph: StateGlyph { granted ? .pasted : .silent }
+
     /// The title and explanation are about the same thing and are read together.
     var accessibilityLabel: String { "\(title). \(detail)" }
 

@@ -166,7 +166,7 @@ struct TranscriptTurnView: View {
 
     private var timestamp: some View {
         Text(RecordingTime.clock(utterance.start))
-            .font(.caption)
+            .font(.small)
             .monospacedDigit()
             .foregroundStyle(.secondary)
             .fixedSize()

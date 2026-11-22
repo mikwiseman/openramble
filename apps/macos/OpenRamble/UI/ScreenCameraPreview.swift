@@ -29,7 +29,7 @@ struct ScreenCameraPreview: View {
                                 .font(.title3)
                                 .foregroundStyle(.white.opacity(0.36))
                             Text(L10n.tr("Your display"))
-                                .font(.caption)
+                                .font(.small)
                                 .foregroundStyle(.white.opacity(0.42))
                         }
                     }

@@ -35,7 +35,7 @@ struct RecordBar: View {
                 if isRecording {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(state.meetingState == .paused ? L10n.tr("Paused") : L10n.tr("Recording"))
-                            .font(.caption)
+                            .font(.small)
                             .foregroundStyle(.secondary)
                         Text(RecordingTime.clock(state.liveDuration))
                             .font(.system(size: 19, weight: .semibold))
@@ -47,7 +47,7 @@ struct RecordBar: View {
                     .accessibilityValue(RecordingTime.spoken(state.liveDuration))
                 } else {
                     Text(line)
-                        .font(.caption)
+                        .font(.detail)
                         .foregroundStyle(.secondary)
                 }
             }
