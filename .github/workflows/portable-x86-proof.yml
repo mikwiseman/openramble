@@ -69,6 +69,7 @@ jobs:
           {
             echo "## ${{ matrix.name }}"
             echo '```'
+            if [ "$RUNNER_OS" = Linux ]; then gcc --version | head -1; fi
             cat built-on.txt
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
@@ -208,6 +209,12 @@ jobs:
     needs: runtime
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      # The first proof run built its programs on a Xeon Platinum 8573C, which
+      # has AVX-512: its "shipped" program is what a release job on such a
+      # machine produces, as the published 0.37.0 Linux package was.
+      OLDER_RUN: "45049794830"
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -220,6 +227,8 @@ jobs:
           curl -L --fail --retry 3 -o dots.wav "$CLIP_URL"
           echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
           chmod +x clock-shipped clock-fixed clock-portable
+          gh run download "$OLDER_RUN" --repo "$GITHUB_REPOSITORY" --name clocks --dir older
+          chmod +x older/clock-shipped
           cat > features.c <<'EOF'
           #include <stdio.h>
           int main(void) {
@@ -263,21 +272,53 @@ jobs:
               echo "$variant:"
               try ./clock-$variant q8 dots.wav 1 2
             done
+            echo "shipped, as built on a machine with AVX-512 (run $OLDER_RUN):"
+            try older/clock-shipped q8 dots.wav 1 2
             echo "--- on an emulated processor: $(qemu-x86_64 --version | head -1)"
             echo "emulated: $(qemu-x86_64 -cpu max ./features)"
-            for variant in shipped fixed portable; do
-              echo "$variant:"
-              try qemu-x86_64 -cpu max ./clock-$variant q8 dots.wav 1 2
-              if [ "$variant" = portable ]; then echo "$code" > code-portable-emulated.txt; cp err.txt err-portable-emulated.txt; fi
-            done
+            echo "shipped, as built on a machine with AVX-512 (run $OLDER_RUN):"
+            try qemu-x86_64 -cpu max older/clock-shipped q8 dots.wav 1 2
+            echo "$code" > code-older-emulated.txt
+            echo "portable:"
+            try qemu-x86_64 -cpu max ./clock-portable q8 dots.wav 1 2
+            echo "$code" > code-portable-emulated.txt; cp err.txt err-portable-emulated.txt
             echo "--- the build machine heard"
             head -1 heard-portable-q8.txt
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
           [ "$(cat code-portable-stock.txt)" = 0 ]
           [ "$(cat code-portable-emulated.txt)" = 0 ]
+          [ "$(cat code-older-emulated.txt)" = 132 ]
           cmp <(grep '^heard 2 s' err-portable-stock.txt) <(head -1 heard-portable-q8.txt)
           cmp <(grep '^heard 2 s' err-portable-emulated.txt) <(head -1 heard-portable-q8.txt)
+
+      # The research built its reference on this image, whose compiler is two
+      # major versions newer than the one the packages are built with. Same
+      # source, same switches, same machine: what the compiler alone changes.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          path: src
+
+      - name: The compiler alone
+        shell: bash
+        run: |
+          here=$PWD
+          (cd src && CARGO_TARGET_DIR="$here/target-newer" TRANSCRIBE_CMAKE_ARGS="$PORTABLE_ARGS" cargo build --release -p ramble-engine --example clock --locked)
+          mkdir q4
+          curl -L --fail --retry 3 -o q4/model.gguf "$Q4_URL"
+          echo "$Q4_SHA256  q4/model.gguf" | sha256sum -c -
+          {
+            echo "### The same build by two compilers, on this machine, one thread, milliseconds"
+            echo '```'
+            echo "this image: $(gcc --version | head -1)"
+            for round in 1 2; do
+              for model in q8 q4; do
+                ./clock-portable $model dots.wav 3 2 8 16 30 2> /dev/null | sed "s/^/round $round | $model | built on 22.04 | /"
+                target-newer/release/examples/clock $model dots.wav 3 2 8 16 30 2> /dev/null | sed "s/^/round $round | $model | built on 24.04 | /"
+              done
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
   # The packages themselves: the published 0.37.0 ones, and the ones a run of
   # desktop-release.yml built on the branch with the change.
@@ -289,6 +330,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Inspect
+        shell: bash
         run: |
           set -u
           inspect() {
@@ -312,6 +354,7 @@ jobs:
               # Where they are. The Linux executable keeps its function names.
               rm -f other.txt
               awk '
+                BEGIN { split("", by) }
                 /^[0-9a-f]+ <.*>:$/ { fn = $2; next }
                 /%zmm|%k[0-7]/ {
                   if (fn ~ /aws_lc_|iv_len_12_init_IV/) tls++
