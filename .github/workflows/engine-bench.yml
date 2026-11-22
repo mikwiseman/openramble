@@ -158,3 +158,40 @@ jobs:
             done
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # transcribe.cpp is built for whatever processor the build machine has
+  # (ggml's GGML_NATIVE default), so a package can end up needing instructions
+  # a buyer's computer lacks. This looks at the packages that were actually
+  # published and counts the instructions that need AVX-512 or AVX2.
+  shipped:
+    name: Published packages, instruction sets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RELEASE: desktop-v0.37.0
+    steps:
+      - name: Inspect
+        run: |
+          set -u
+          base="https://github.com/mikwiseman/openramble/releases/download/$RELEASE"
+          mkdir deb exe
+          curl -L --fail --retry 3 -o deb/pkg.deb "$base/OpenRamble_0.37.0_amd64.deb"
+          curl -L --fail --retry 3 -o exe/setup.exe "$base/OpenRamble_0.37.0_x64-setup.exe"
+          (cd deb && ar x pkg.deb && mkdir root && tar -xf data.tar.* -C root)
+          (cd exe && 7z x -y setup.exe > /dev/null || true)
+          {
+            echo "## Published packages ($RELEASE)"
+            echo '```'
+            for f in $(find deb/root -type f -size +1M) $(find exe -type f \( -name '*.exe' -o -name '*.dll' \) -size +1M ! -name setup.exe); do
+              if objdump -f "$f" > /dev/null 2>&1; then
+                dis=$(objdump -d --no-show-raw-insn "$f" 2> /dev/null || true)
+                total=$(printf '%s\n' "$dis" | grep -c '^ *[0-9a-f]*:' || true)
+                zmm=$(printf '%s\n' "$dis" | grep -c '%zmm' || true)
+                k=$(printf '%s\n' "$dis" | grep -cE '%k[1-7]' || true)
+                ymm=$(printf '%s\n' "$dis" | grep -c '%ymm' || true)
+                fma=$(printf '%s\n' "$dis" | grep -cE 'vfn?m(add|sub)[0-9]+[ps][sd]' || true)
+                echo "$f: $total instructions; AVX-512 registers $zmm, mask registers $k; 256-bit registers $ymm; fused multiply-adds $fma"
+              fi
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
