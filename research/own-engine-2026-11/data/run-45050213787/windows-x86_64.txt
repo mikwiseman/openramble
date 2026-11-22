@@ -1,0 +1,136 @@
+[36;1m    powershell -Command "Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors | Format-List"[0m
+Name                      : AMD EPYC 7763 64-Core Processor                
+NumberOfCores             : 2
+NumberOfLogicalProcessors : 4
+-- Adding CPU backend variant ggml-cpu: /arch:AVX2 GGML_AVX2;GGML_FMA;GGML_F16C
+100% tests passed out of 1
+frames 100, reps 7, best table: avx2
+Q4_K 1024 -> 4096 (enc.blocks.0.ff1.linear1.weight), 419 M multiply-adds
+  generic  prepare    0.22 ms, product   180.59 ms,     2.3 G multiply-adds/s
+  avx2     prepare    0.03 ms, product     6.58 ms,    63.7 G multiply-adds/s
+    against the reference:       0 of 409600 differ, max |diff| 0 (max |value| 98.9)
+  sse      prepare    0.04 ms, product    10.18 ms,    41.2 G multiply-adds/s
+    against the reference:       287185 of 409600 differ, max |diff| 2.36e-05 (max |value| 98.9)
+Q4_K 4096 -> 1024 (enc.blocks.0.ff1.linear2.weight), 419 M multiply-adds
+  generic  prepare    0.89 ms, product   185.35 ms,     2.3 G multiply-adds/s
+  avx2     prepare    0.17 ms, product     6.22 ms,    67.5 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 242)
+  sse      prepare    0.20 ms, product    10.11 ms,    41.5 G multiply-adds/s
+    against the reference:       81560 of 102400 differ, max |diff| 9.16e-05 (max |value| 242)
+Q4_K 1024 -> 1024 (enc.blocks.0.attn.linear_q.weight), 105 M multiply-adds
+  generic  prepare    0.21 ms, product    44.38 ms,     2.4 G multiply-adds/s
+  avx2     prepare    0.03 ms, product     1.62 ms,    64.8 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 28.7)
+  sse      prepare    0.04 ms, product     2.54 ms,    41.2 G multiply-adds/s
+    against the reference:       71417 of 102400 differ, max |diff| 5.25e-06 (max |value| 28.7)
+Q8_0 1024 -> 1024 (enc.blocks.0.attn.linear_out.weight), 105 M multiply-adds
+  generic  prepare    0.23 ms, product    72.90 ms,     1.4 G multiply-adds/s
+  avx2     prepare    0.03 ms, product     2.53 ms,    41.5 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 155)
+  sse      prepare    0.06 ms, product     5.16 ms,    20.3 G multiply-adds/s
+    against the reference:       68418 of 102400 differ, max |diff| 1.53e-05 (max |value| 155)
+F16  1024 -> 2048 (enc.blocks.0.conv.pointwise1.weight), 210 M multiply-adds
+  generic  prepare    0.08 ms, product   386.62 ms,     0.5 G multiply-adds/s
+  avx2     prepare    0.08 ms, product     5.45 ms,    38.5 G multiply-adds/s
+    against the reference:       0 of 204800 differ, max |diff| 0 (max |value| 86.4)
+  sse      prepare    0.08 ms, product    20.26 ms,    10.4 G multiply-adds/s
+    against the reference:       176258 of 204800 differ, max |diff| 2.29e-05 (max |value| 86.4)
+element-wise steps
+    against the reference:       0 of 4096 differ, max |diff| 0 (max |value| 2.15e+03)
+    against the reference:       275 of 4096 differ, max |diff| 6.1e-05 (max |value| 2.15e+03)
+text: identical
+tokens and times: DIFFERENT
+kernel tables: identical output
+sse kernels: identical text
+30b41b143a18db2d
+words: 170 and 170
+long clip text: identical
+ore 0.1.0, avx2, threads 1, load 39 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    386.5 |  387.3 |  1.9 |  356.0 |   29.4 | 28
+    4.0 |    739.3 |  743.9 |  3.8 |  679.4 |   56.1 | 78
+    8.0 |   1346.1 | 1353.3 |  7.6 | 1232.9 |  105.6 | 150
+   16.0 |   2635.7 | 2657.1 | 15.1 | 2445.8 |  174.8 | 267
+   30.0 |   5176.5 | 5197.6 | 28.4 | 4825.3 |  322.8 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 1, load 293 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    608.1 |  614.3 |  1.8 |  571.7 |   31.8 | 28
+    4.0 |   1149.7 | 1153.1 |  2.8 | 1080.1 |   63.3 | 78
+    8.0 |   2085.8 | 2091.4 |  5.4 | 1959.2 |  116.0 | 150
+   16.0 |   4075.6 | 4096.0 |  9.6 | 3879.1 |  199.6 | 267
+   30.0 |   7894.4 | 8047.1 | 17.8 | 7498.4 |  365.5 | 502
+ore 0.1.0, avx2, threads 2, load 38 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    277.3 |  278.5 |  2.6 |  251.2 |   23.5 | 28
+    4.0 |    470.4 |  516.4 |  4.0 |  424.4 |   42.0 | 78
+    8.0 |    987.3 |  999.3 |  7.5 |  891.8 |   88.1 | 150
+   16.0 |   1655.1 | 1716.8 | 15.3 | 1522.3 |  117.4 | 267
+   30.0 |   3073.8 | 3259.2 | 28.4 | 2804.0 |  241.4 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 2, load 314 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    473.8 |  486.6 |  1.9 |  447.0 |   22.3 | 28
+    4.0 |    885.9 |  899.7 |  4.0 |  833.4 |   45.1 | 78
+    8.0 |   1599.8 | 1609.6 |  7.0 | 1513.7 |   74.1 | 150
+   16.0 |   3182.0 | 3376.1 | 13.5 | 3001.7 |  156.3 | 267
+   30.0 |   4360.3 | 5281.6 | 18.0 | 4104.7 |  223.3 | 502
+ore 0.1.0, avx2, threads 4, load 38 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    199.3 |  213.9 |  1.9 |  190.4 |   21.6 | 28
+    4.0 |    372.9 |  391.3 |  3.8 |  330.7 |   38.5 | 78
+    8.0 |    693.0 |  694.5 |  7.4 |  615.8 |   69.8 | 150
+   16.0 |   1327.3 | 1333.2 | 15.2 | 1201.7 |  110.4 | 267
+   30.0 |   2545.5 | 2559.4 | 28.2 | 2326.8 |  204.4 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 4, load 291 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    296.0 |  325.1 |  1.7 |  275.0 |   16.6 | 28
+    4.0 |    584.2 |  584.6 |  3.0 |  545.8 |   31.9 | 78
+    8.0 |   1110.2 | 1116.8 |  5.2 | 1039.9 |   59.7 | 150
+   16.0 |   2070.6 | 2091.5 |  9.6 | 1966.8 |  106.1 | 267
+   30.0 |   3885.9 | 3906.1 | 17.6 | 3667.8 |  185.6 | 502
+ore 0.1.0, avx2, threads 1, load 38 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    8.0 |   1357.0 | 1369.1 |  7.7 | 1244.6 |  104.7 | 150
+   30.0 |   5178.0 | 5197.6 | 28.6 | 4824.3 |  325.1 | 502
+ore 0.1.0, avx2, threads 4, load 42 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    8.0 |    697.0 |  702.9 |  7.4 |  621.0 |   68.6 | 150
+   30.0 |   2559.3 | 2577.3 | 28.4 | 2325.6 |  205.4 | 502
+ore 0.1.0, sse, threads 1, load 38 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    8.0 |   2613.8 | 2627.9 |  8.0 | 2421.4 |  184.5 | 150
+   30.0 |  10484.8 | 10518.3 | 28.4 | 9880.7 |  575.6 | 502
+ore 0.1.0, sse, threads 4, load 38 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    8.0 |   1246.7 | 1247.5 |  7.7 | 1148.8 |   90.2 | 150
+   30.0 |   4769.0 | 4799.3 | 28.4 | 4455.4 |  285.2 | 502
+Q8_0 | text: identical
+Q8_0 | transcribe.cpp 0.4.1, backend CPU, threads 1, load 318 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    718.7 |  727.7 |  1.9 |  681.9 |   32.3 | 28
+Q8_0 |     8.0 |   2750.7 | 2751.2 |  5.5 | 2624.9 |  115.3 | 150
+Q8_0 |    30.0 |  10696.7 | 10698.5 | 22.7 | 10290.6 |  373.3 | 506
+Q8_0 | ore 0.1.0, avx2, threads 1, load 38 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    531.0 |  536.7 |  1.9 |  498.8 |   30.3 | 28
+Q8_0 |     8.0 |   1808.6 | 1822.4 |  7.7 | 1698.8 |  102.1 | 150
+Q8_0 |    30.0 |   6692.6 | 6728.8 | 28.6 | 6340.8 |  323.2 | 506
+Q8_0 | transcribe.cpp 0.4.1, backend CPU, threads 2, load 323 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    577.8 |  586.8 |  2.0 |  552.7 |   20.3 | 28
+Q8_0 |     8.0 |   1506.5 | 1512.3 |  5.4 | 1429.3 |   66.7 | 150
+Q8_0 |    30.0 |   6079.2 | 6153.1 | 17.7 | 5897.6 |  224.6 | 506
+Q8_0 | ore 0.1.0, avx2, threads 2, load 40 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    290.9 |  293.7 |  1.9 |  270.1 |   18.9 | 28
+Q8_0 |     8.0 |    988.0 | 1000.2 |  7.7 |  915.6 |   64.8 | 150
+Q8_0 |    30.0 |   3621.0 | 3633.6 | 28.4 | 3387.6 |  205.1 | 506
+Q8_0 | transcribe.cpp 0.4.1, backend CPU, threads 4, load 318 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    349.5 |  376.0 |  1.7 |  326.8 |   18.4 | 28
+Q8_0 |     8.0 |   1407.3 | 1421.6 |  5.2 | 1338.4 |   58.4 | 150
+Q8_0 |    30.0 |   5460.2 | 5483.4 | 17.8 | 5197.7 |  231.4 | 506
+Q8_0 | ore 0.1.0, avx2, threads 4, load 38 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    275.7 |  280.6 |  2.0 |  254.0 |   19.7 | 28
+Q8_0 |     8.0 |    950.1 |  965.0 |  7.4 |  874.4 |   68.2 | 150
+Q8_0 |    30.0 |   3414.2 | 3426.4 | 28.6 | 3177.3 |  208.2 | 506

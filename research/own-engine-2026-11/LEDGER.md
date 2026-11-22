@@ -263,7 +263,21 @@ Platinum 8573C an 8 s clip takes 1,303 ms with `avx512` and 1,605 ms with
 `avx2`, so the engine's own choice costs 10% there. The float kernel is the
 cause: 33 billion multiply-adds a second with `avx512` against 43 with
 `avx2` on that machine, where GCC on the same processor gives 46 and 45. The
-4-bit kernels are level there. Not fixed.
+4-bit kernels are level there.
+
+Change (commit `3c1b967`). AMD processors of family 19h with AVX-512, which
+is the generation of the EPYC 9V74, now get a table named `avx512+avx2`. It
+has the AVX-512 integer kernels and the AVX2 float kernel. Intel processors
+and the newer AMD generation keep the whole `avx512` set, because the
+512-bit float kernel wins there. The choice is made from the processor's
+vendor and family, not from a timing.
+
+Result (run 45050213787). No job landed on an AMD processor of that
+generation, so the gain there is not confirmed. On an Intel Xeon 6975P the
+new table gives the plain C table's bits in every comparison, and the float
+kernel does 60 billion multiply-adds a second in `avx512` and 50 in
+`avx512+avx2`, which is why Intel keeps `avx512`. All seven machines print
+the common checksum.
 
 Decision. Adopt. On the EPYC 9V45 the engine is level with a transcribe.cpp
 compiled for that exact processor: between 0.89 and 1.16 times its speed over
@@ -716,8 +730,9 @@ computer would see if the app gave transcribe.cpp the same threads.
   Swift adapter. Putting it there changes what ships and waits for Mik's
   yes. Two things the adapter uses have no counterpart yet: a call that
   recognizes several clips at once, and the detected language.
-- **The `avx512` set on Windows on an AMD Zen 4 processor** is 10% slower
-  than the `avx2` set, and the engine picks it (K7).
+- **The kernel choice on Windows on an AMD Zen 4 processor.** The `avx512`
+  set was 10% slower there than `avx2`. The change for it is in the code and
+  has not been measured on that processor (K7).
 - **Word errors with the Ultra Q8_0 file in the engine.** The four sample
   clips give identical text. The 1,422 FLEURS clips were run with Q4_K_M,
   which is the file S2 recommends.

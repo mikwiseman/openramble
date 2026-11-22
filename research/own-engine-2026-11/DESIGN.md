@@ -183,8 +183,10 @@ that case. On an EPYC 9V45 it brings the engine level with such a build, at
 older EPYC 9V74 the engine is probably still about 9% behind such a build,
 from two different runs (ledger K7). No package OpenRamble could publish is
 built that way, because it would not start on other processors. On Windows
-on that older AMD processor the `avx512` set is 10% slower than the `avx2`
-set, and the engine still picks it, which is not fixed yet.
+on that older AMD processor the `avx512` set was 10% slower than the `avx2`
+set. The engine now gives that processor generation the AVX2 float kernel
+with the AVX-512 integer kernels, and the gain has not been measured on such
+a processor yet.
 
 **Fast machines.** On the M4 Pro an 8 s clip takes the engine 203 ms on four
 threads and 133 ms on eight. Metal takes 80 ms. The engine is not as fast as
@@ -251,8 +253,8 @@ peak where the engine uses 118 MB).
    x86-64, Windows and Linux, with a self-test. Swift Package Manager builds
    it for both Mac architectures, and Rust's `cc` crate builds it on the Mac.
 4. The next measurements are four threads against one on a busy Windows or
-   Linux machine, and the choice between the `avx512` and `avx2` sets on
-   Windows on AMD. The test that kept threads off in October passes on the
+   Linux machine, and the new kernel choice on Windows on the older AMD
+   processor. The test that kept threads off in October passes on the
    Mac.
 5. The next step after them needs Mik's yes. It puts the engine behind
    `ramble-engine` for Windows and Linux and behind the Swift adapter for
