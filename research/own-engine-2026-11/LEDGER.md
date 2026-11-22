@@ -48,9 +48,12 @@ Read from `core/ramble-engine/Cargo.toml`, the fork's Rust build script and
 
 - Windows and Linux give recognition one thread (`ramble-engine`), because
   four threads lost to one under load in October (H10 in the model-upgrade
-  ledger).
+  ledger). The Intel Mac gives it four threads, in the Swift adapter and in
+  `ramble-engine`.
 - Windows and Linux ship the Q8_0 model (740 MB), because ggml ran the Q4_K_M
-  file (486 MB) 1.29 times slower on the CPU (H13).
+  file (486 MB) 1.29 times slower on the CPU (H13). That was measured on the
+  M4 Pro. S2 measures it on the hosted machines and finds the opposite on
+  x86.
 - The Intel slice of the Mac framework is built for a 2019 instruction floor
   with AVX2 and FMA switched off. Every Intel Mac that macOS 14 supports has
   both.
@@ -203,8 +206,8 @@ Decision. Adopt.
 ## K6. Kernels for x86 processors without AVX2
 
 The `sse` set uses SSSE3 and SSE4.1, which Intel has had since 2008 and AMD
-since 2011. It is the AVX2 kernel at half the width. These processors have no
-fused multiply-add, so a result can differ from the other sets in its last
+since 2011. It is the AVX2 kernel at half the width. Processors of that age
+have no fused multiply-add, so a result can differ from the other sets in its last
 bits. `kbench` therefore checks this set to a tolerance of one part in ten
 thousand, and the others bit for bit. On the sample clips it gives the same
 text as the other sets on every x86 machine (run 45044832938).
@@ -253,6 +256,14 @@ takes 1,227 ms. transcribe.cpp on that machine was the AVX2 build, at
 1,636 ms. No run has the `avx512` set and a transcribe.cpp compiled for the
 9V74 together. Against the earlier run's 1,017 ms the engine would still be
 about 9% slower on that processor.
+
+On Windows the set is not always a gain (run 45047905043, MSVC). On a Xeon
+Platinum 8573C an 8 s clip takes 1,303 ms with `avx512` and 1,605 ms with
+`avx2`. On an EPYC 9V74 it takes 1,246 ms with `avx512` and 1,126 ms with
+`avx2`, so the engine's own choice costs 10% there. The float kernel is the
+cause: 33 billion multiply-adds a second with `avx512` against 43 with
+`avx2` on that machine, where GCC on the same processor gives 46 and 45. The
+4-bit kernels are level there. Not fixed.
 
 Decision. Adopt. On the EPYC 9V45 the engine is level with a transcribe.cpp
 compiled for that exact processor: between 0.89 and 1.16 times its speed over
@@ -478,9 +489,10 @@ milliseconds, engine against transcribe.cpp at the same number of threads.
 Every machine has four logical processors. `tools/speed_table.py` prints
 every clip length from the files in `data/`.
 
-Both runtimes read the Q4_K_M file in every table here. That is not the file
-Windows and Linux ship. See "The model file" below before using the rows
-marked "as shipped".
+Both runtimes read the Q4_K_M file in every table of S1. Windows and Linux
+ship the Q8_0 file, so "as shipped" in S1 means the shipped build and not
+the shipped model file. S2 has the comparison with the Q8_0 file. The Intel
+Mac does ship Q4_K_M, so its rows compare what ships.
 
 ### Run 45046209178, the final code
 
@@ -570,26 +582,23 @@ where transcribe.cpp takes 2,088 ms on the EPYC 7763 (3.0 times), 830 against
 **The Intel Mac runner varies.** It is a shared machine. The same engine
 code took 1,983 ms and 2,435 ms for the 8 s clip on one thread in two jobs
 of one run, and a second pass inside the slower job took 2,016 ms. Its
-ratios are therefore ranges: 2.0 to 2.9 times as shipped for the 8 s clip
-over both runs, and 1.5 to 2.8 times for the 30 s clip.
+ratios are therefore ranges.
+
+**The Intel Mac against what it ships.** Intel Macs ship the as-shipped
+build with Q4_K_M on four threads, so the four-thread row is the comparison
+with what people have. Three runs give, engine against transcribe.cpp:
+
+| Run | 8 s clip, four threads | 30 s clip, four threads |
+|---|---|---|
+| 45034315337 | 707 against 2,073, 2.9 times | 2,937 against 6,599, 2.2 times |
+| 45046209178 | 892 against 1,935, 2.2 times | 3,329 against 6,611, 2.0 times |
+| 45047905043 | 1,080 against 2,306, 2.1 times | 3,710 against 7,134, 1.9 times |
 
 **The decoder is the engine's weak part on the Intel Mac.** On one thread it
 takes 274 ms of the 8 s clip where transcribe.cpp, which uses Apple's
 Accelerate there, takes 151 ms. On four threads it is 174 against 154 ms.
 
-### The model file
-
-Windows and Linux ship `parakeet-ultra-Q8_0.gguf` (740 MB), not the Q4_K_M
-file these tables used, because ggml runs Q4_K_M slower (M2). October
-measured that on the M4 Pro's CPU backend: 1,705 ms for Q4_K_M against
-1,305 ms for Q8_0, which is 1.3 times. If the same holds on x86, the
-runtime that Windows and Linux users have today is about 1.3 times faster
-than the transcribe.cpp column, and the engine's gain against it at equal
-threads is nearer 1.2 to 1.7 times than 1.5 to 2.1. Neither runtime has been
-timed with the Q8_0 file on a hosted machine yet, and the engine has not
-been run on that file at all.
-
-The Intel Mac does ship Q4_K_M, so its rows compare what ships.
+### The M4 Pro
 
 On the M4 Pro (two alternating rounds, load average 7 to 9, best of ten),
 engine against transcribe.cpp's CPU backend, in milliseconds:
@@ -605,16 +614,113 @@ app ships, takes 80 ms for the 8 s clip and 142 ms for 15.8 s. Metal is 2.5
 times faster than the engine on four threads, and 1.7 times faster than the
 engine on eight (133 ms), so the Mac app on Apple silicon keeps Metal.
 
+## S2. Against what Windows and Linux ship: the Q8_0 file
+
+Question. Windows and Linux ship `parakeet-ultra-Q8_0.gguf` on one thread,
+because October's H13 found that ggml runs Q4_K_M 1.3 times slower than Q8_0
+on the M4 Pro's processor. S1 used Q4_K_M in both runtimes. If H13 held on
+the hosted machines, the runtime people have today would be faster than
+S1's transcribe.cpp column and the engine's gain smaller.
+
+Method (run 45047905043, commit `5a85844`, the five Linux and Windows jobs).
+Each job downloads the Q8_0 file, checks its hash, compares the text of both
+runtimes on the four sample clips, and times both runtimes with it on 1, 2
+and 4 threads for clips of 2, 8 and 30 s, best of three. The Q4_K_M tables
+come from the same job. GitHub gave these processors: an EPYC 7763 to both
+Linux x86-64 jobs, an EPYC 9V74 to the Windows job with the default build,
+which chose AVX-512, and a Xeon Platinum 8573C to the Windows job with the
+AVX2 build.
+
+Result 1. The engine runs the Q8_0 file. Its text is identical to
+transcribe.cpp's on the four clips on all five machines.
+
+Result 2. H13 does not hold on these machines. transcribe.cpp runs Q8_0
+slower than Q4_K_M on every x86 machine and 5% faster on Linux arm64.
+
+| transcribe.cpp, 8 s clip, one thread, ms | Q8_0 | Q4_K_M |
+|---|---|---|
+| Linux x86-64, EPYC 7763, default build | 2,200 | 1,816 |
+| Linux x86-64, EPYC 7763, AVX2 build | 2,213 | 2,022 |
+| Windows, EPYC 9V74, default build | 2,066 | 1,753 |
+| Windows, Xeon 8573C, AVX2 build | 3,258 | 2,433 |
+| Linux arm64, Neoverse-N2 | 4,922 | 5,199 |
+
+So the runtime people have today is slower than S1's transcribe.cpp column
+on x86, and the engine's gain against it is larger than S1 shows.
+
+Result 3. At the same number of threads, transcribe.cpp with Q8_0 against
+the engine with each file, in milliseconds. The ratio is transcribe.cpp's
+time divided by the engine's.
+
+| 8 s clip | Threads | transcribe.cpp, Q8_0 | engine, Q4_K_M | engine, Q8_0 |
+|---|---|---|---|---|
+| Linux x86-64, EPYC 7763 | 1 | 2,200 | 1,424, 1.5 times | 1,670, 1.3 times |
+| | 2 | 1,129 | 769, 1.5 times | 860, 1.3 times |
+| | 4 | 1,137 | 717, 1.6 times | 848, 1.3 times |
+| Windows, EPYC 9V74 | 1 | 2,066 | 1,246, 1.7 times | 1,511, 1.4 times |
+| | 2 | 1,072 | 658, 1.6 times | 809, 1.3 times |
+| | 4 | 1,034 | 600, 1.7 times | 734, 1.4 times |
+| Windows, Xeon 8573C | 1 | 3,258 | 1,303, 2.5 times | 1,668, 2.0 times |
+| | 2 | 1,761 | 703, 2.5 times | 889, 2.0 times |
+| | 4 | 1,650 | 960, 1.7 times | 844, 2.0 times |
+| Linux arm64, Neoverse-N2 | 1 | 4,922 | 1,862, 2.6 times | 1,927, 2.6 times |
+| | 2 | 2,494 | 989, 2.5 times | 1,002, 2.5 times |
+| | 4 | 1,309 | 530, 2.5 times | 542, 2.4 times |
+
+| 30 s clip | Threads | transcribe.cpp, Q8_0 | engine, Q4_K_M | engine, Q8_0 |
+|---|---|---|---|---|
+| Linux x86-64, EPYC 7763 | 1 | 8,688 | 5,523, 1.6 times | 6,208, 1.4 times |
+| | 4 | 4,428 | 2,662, 1.7 times | 3,084, 1.4 times |
+| Windows, EPYC 9V74 | 1 | 8,243 | 4,674, 1.8 times | 5,558, 1.5 times |
+| | 4 | 4,100 | 2,187, 1.9 times | 2,630, 1.6 times |
+| Windows, Xeon 8573C | 1 | 12,722 | 5,176, 2.5 times | 6,358, 2.0 times |
+| | 4 | 6,218 | 3,484, 1.8 times | 3,132, 2.0 times |
+| Linux arm64, Neoverse-N2 | 1 | 17,533 | 7,235, 2.4 times | 7,093, 2.5 times |
+| | 4 | 4,503 | 2,009, 2.2 times | 1,967, 2.3 times |
+
+The Xeon has two cores with two threads each, and its four-thread cells are
+unsteady. The engine with Q4_K_M was slower there on four threads than on
+two. Over every cell of the run, 2 s clips included, the lowest ratio is
+1.18 (engine with Q8_0, EPYC 7763, 2 s clip, four threads).
+
+Result 4. Against what a person has today, which is transcribe.cpp with
+Q8_0 on one thread, the engine with Q4_K_M:
+
+| 8 s clip, ms | today | engine, two threads | engine, four threads |
+|---|---|---|---|
+| Linux x86-64, EPYC 7763 | 2,200 | 769, 2.9 times | 717, 3.1 times |
+| Windows, EPYC 9V74 | 2,066 | 658, 3.1 times | 600, 3.4 times |
+| Windows, Xeon 8573C | 3,258 | 703, 4.6 times | 960, 3.4 times |
+| Linux arm64, Neoverse-N2 | 4,922 | 989, 5.0 times | 530, 9.3 times |
+
+For the 30 s clip the same comparison gives 3.0 and 3.3 times on the EPYC
+7763, 3.4 and 3.8 times on the EPYC 9V74, 4.8 and 3.7 times on the Xeon, and
+4.5 and 8.7 times on Linux arm64.
+
+Result 5. In the engine, Q4_K_M is 10 to 20% faster than Q8_0 on x86 and
+within 4% of it on Linux arm64. The 8-bit product needs a correction for
+signed weights that the 4-bit product does not.
+
+Decision. The engine should be given the Q4_K_M file on every platform. It
+is the faster file in the engine and 254 MB smaller, it is the file the Mac
+already ships, and P1 measured its word errors. With either file the engine
+is faster than what ships on every machine and thread count measured.
+
+Limits. One run, three clip lengths, and one processor of each kind. The
+1.5 to 1.7 times on the AMD machines is the gain a person with a two-core
+computer would see if the app gave transcribe.cpp the same threads.
+
 ## Not done
 
 - **The engine is not in the app.** It is not behind `ramble-engine` or the
-  Swift adapter. That changes what ships and waits for Mik's yes. Two things
-  the adapter uses have no counterpart yet: a call that recognizes several
-  clips at once, and the detected language.
-- **The Q8_0 file that Windows and Linux ship** has not been timed in either
-  runtime on a hosted machine, and the engine has not been run on it (S1,
-  "The model file"). The v3 and Hebrew Q8_0 files were run, and they use the
-  same kernels.
+  Swift adapter. Putting it there changes what ships and waits for Mik's
+  yes. Two things the adapter uses have no counterpart yet: a call that
+  recognizes several clips at once, and the detected language.
+- **The `avx512` set on Windows on an AMD Zen 4 processor** is 10% slower
+  than the `avx2` set, and the engine picks it (K7).
+- **Word errors with the Ultra Q8_0 file in the engine.** The four sample
+  clips give identical text. The 1,422 FLEURS clips were run with Q4_K_M,
+  which is the file S2 recommends.
 - **Four threads on a busy Windows or Linux machine.** T1 has three rounds
   on the Mac.
 - **A fixed cost of 20 to 60 ms per recognition.** The engine decodes the

@@ -2,9 +2,9 @@
 
 Mik asked on 22 November 2026 for OpenRamble's own speech recognition library,
 written for our Parakeet models, that is much faster than transcribe.cpp on
-slow computers and no slower on fast ones. This note says what was measured,
-what was built and why, and what the numbers are. `LEDGER.md` has every
-experiment behind it, and the code is in `engine/`.
+slow computers and no slower on fast ones. The note covers what was measured,
+what was built and why, and the numbers. `LEDGER.md` has every experiment
+behind it, and the code is in `engine/`.
 
 ## What the measurements say
 
@@ -17,15 +17,16 @@ language does not matter, and a faster engine has to multiply faster.
 **A general tensor library multiplies in the wrong shape for this model.**
 ggml multiplies one weight row by one frame at a time. The Parakeet encoder
 always multiplies a weight matrix by every frame of the clip. A kernel that
-puts 16 frames in the lanes of a register does the same integer arithmetic,
-gives the same bits, and is 2.4 to 4.8 times faster than transcribe.cpp's
-effective rate on four of the five machines measured (ledger K2).
+puts 16 frames in the lanes of a register does the same integer arithmetic
+and gives the same bits. On the M4 Pro it does 113 to 134 billion
+multiply-adds a second where ggml's routine does 60 (ledger K1 and K2).
 
 **The shipped builds leave speed unused.** Windows and Linux give
 recognition one thread, because four threads lost to one under load in
-October. They also ship the larger 8-bit model file, because ggml runs the
-4-bit file 1.3 times slower on a processor. The Intel Mac build has AVX2
-switched off (ledger M2).
+October. They also ship the larger 8-bit model file, because ggml ran the
+4-bit file 1.3 times slower on the Mac's processor in October. On the hosted
+x86 machines ggml runs the 8-bit file 1.1 to 1.3 times slower than the 4-bit
+file (ledger S2). The Intel Mac build has AVX2 switched off (ledger M2).
 
 **The published Linux package cannot run on most computers.** It contains
 86,539 instructions that need AVX-512, because the runtime is compiled for
@@ -57,24 +58,25 @@ kernels.
 
 ### Decisions
 
-**Language: C.** The speed comes from a few hundred lines of processor
+**The language is C.** The speed comes from a few hundred lines of processor
 instructions, which read the same in C and in Rust, so the choice rests on
-other things. Both of our consumers compile C sources directly: Swift Package
-Manager builds them as a module, and Rust's `cc` crate builds them in five
-seconds, where the transcribe.cpp build takes most of half an hour on a
-hosted machine. The code this engine has to agree with is C and C++, so a
-difference can be traced line against line. Any other language can call a C
-library. Rust would have given memory safety in the file reader, which is
-400 lines here and checks every read against the end of the file.
+other things. Both of our consumers compile C sources directly. Swift Package
+Manager builds them as a module, and Rust's `cc` crate builds them on the
+Mac in five seconds. On the hosted machines the engine builds in 2 to 12
+seconds, where transcribe.cpp takes 1 to 4 minutes. The code this engine has
+to agree with is C and C++, so a difference can be traced line against line.
+Any other language can call a C library. Rust would have given memory safety
+in the file reader, which is 400 lines here and checks every read against
+the end of the file.
 
-**Weight format: our GGUF files, unchanged, memory-mapped.** No conversion
-step and no second model file. The 4-bit weights are read from the mapped
-file as the kernels go, without unpacking them first. Only the decoder's
-weights are expanded to single precision, because the decoder works on one
-vector at a time (71 MB).
+**The weights are our GGUF files, unchanged and memory-mapped.** There is no
+conversion step and no second model file. The 4-bit weights are read from
+the mapped file as the kernels go, without unpacking them first. Only the
+decoder's weights are expanded to single precision, because the decoder
+works on one vector at a time (71 MB).
 
-**Arithmetic: ggml's, kept exactly where it decides the answer.** Weights
-are multiplied as the 4-bit and 8-bit integers they are stored as.
+**The arithmetic is ggml's, kept exactly where it decides the answer.**
+Weights are multiplied as the 4-bit and 8-bit integers they are stored as.
 Activations are rounded to 8 bits the way ggml rounds them. The integer sums
 and the order of the float additions are ggml's, so a 4-bit product gives the
 same bits as transcribe.cpp on arm64. Attention, normalization and the
@@ -94,10 +96,10 @@ scheduled is never waited for. With 14 busy processes on the M4 Pro the
 engine's four threads were 1.4 to 2.4 times faster than its one in each of
 three rounds (ledger T1).
 
-**Not built: an accelerator path.** On Apple silicon the Metal runtime the
-Mac app ships is faster than this engine (see the table below), and it stays.
-The engine is for every computer that has no such path today: Windows, Linux
-and Intel Macs.
+**No accelerator path was built.** On Apple silicon the Metal runtime the
+Mac app ships is faster than this engine, and it stays. The engine is for
+the computers that have no such path today, which are Windows and Linux
+computers and Intel Macs.
 
 ## Reference machines and targets
 
@@ -111,10 +113,10 @@ for free, because `engine-bench.yml` runs both runtimes on them.
 | GitHub's Linux arm64 machine, 4 Neoverse-N2 cores | the Arm server `apps/cli` targets, and Windows on Arm |
 
 The hosted machines are servers, and their cores are faster than an old
-laptop's. A dual-core laptop from 2017 with AVX2 does roughly 0.6 to 0.8 of
-the Windows machine's work per core. No machine without AVX2 can be measured
-from here, so the `sse` kernels are timed on the same hosted processors with
-AVX2 switched off in software.
+laptop's. No old laptop was measured, so an old laptop takes longer than the
+times below by an amount that is not known. No machine without AVX2 can be
+measured from here, so the `sse` kernels are timed on the same hosted
+processors with AVX2 switched off in software.
 
 The target was a 9.3 s take, which is the median take in Mik's own use, in
 under one second after key-up on two threads of each reference machine, and
@@ -128,51 +130,61 @@ on its CPU backend and 1,470 on Metal. The engine's text differs from the
 CPU backend's on 130 clips, and transcribe.cpp's own Metal backend differs
 from it on 129, so the engine is as close to the shipped runtime as the
 shipped runtime's two backends are to each other (ledger P1). Taught words
-are found exactly as often as with the fork: 32 of 37 on the English test
-half, up from 23 without them, in both runtimes (ledger P2).
+are found exactly as often as with the fork. On the English test half both
+runtimes find 32 of 37, up from 23 without the list (ledger P2).
 
-**Speed on the reference machines.** Wall time in milliseconds for an 8 s
-clip, from the hosted runs (ledger S1). GitHub gave two different Windows
-processors, and both are shown.
+**Speed against what ships today.** Windows and Linux ship transcribe.cpp
+with the 8-bit model file on one thread. Intel Macs ship it with the 4-bit
+file on four threads. The table gives wall time in milliseconds for an 8 s
+clip, with the engine reading the 4-bit file (ledger S1 and S2).
 
-| Machine | transcribe.cpp, shipped build, 1 thread | engine, 1 thread | engine, 2 threads | engine, 4 threads |
+| Machine | What ships today | Engine, 1 thread | Engine, 2 threads | Engine, 4 threads |
 |---|---|---|---|---|
-| Windows, Xeon 8573C | 3,396 | 1,622 | 871 | 830 |
-| Windows, EPYC 7763 | 2,088 | 1,353 | 734 | 688 |
-| Intel Mac, i7-8700B | 4,867 | 2,435 | 1,008 | 892 |
-| Linux arm64, 4 cores | 5,376 | 1,953 | 1,001 | 545 |
+| Windows, Xeon 8573C | 3,258 | 1,303 | 703 | 960 |
+| Windows, EPYC 9V74 | 2,066 | 1,246 | 658 | 600 |
+| Linux x86-64, EPYC 7763 | 2,200 | 1,424 | 769 | 717 |
+| Linux arm64, Neoverse-N2 | 4,922 | 1,862 | 989 | 530 |
+| Intel Mac, i7-8700B, which ships four threads | 1,935 | 2,435 | 1,008 | 892 |
 
-At equal threads the engine is 2.6 to 2.8 times faster on Linux arm64, 2.0
-to 2.9 times on the Intel Mac as shipped, and 1.5 to 2.1 times on Windows,
-depending on the processor. The Intel Mac is a shared machine whose times
-differ by up to 40% between runs, so its row is one run of two. Against the one thread the app gives recognition
-on Windows and Linux, the engine on four threads is 3.0 to 4.1 times faster
-on Windows and 9.9 times on Linux arm64.
+On Windows and Linux the engine on two threads is 2.9 to 5.0 times faster
+than what ships, and on four threads 3.1 to 9.3 times. The hosted x86
+machines have two cores, so four threads add little there, and on the Xeon
+they were slower than two. On the Intel Mac the engine on four threads is
+1.9 to 2.9 times faster than what ships, over three runs on a shared machine
+whose times differ by up to 40% between runs.
 
-**A limit of that table.** Both runtimes read the 4-bit model file. Windows
-and Linux users have the 8-bit file today, which transcribe.cpp ran 1.3
-times faster on the Mac's processor in October. The comparison against that
-file on the hosted machines is not in this note yet (ledger S1, "The model
-file"). The Intel Mac row is not affected, because Intel Macs ship the 4-bit
-file.
+**How much of that is threads.** Part of the gain on Windows and Linux is
+the engine using threads that the app does not give transcribe.cpp. At the
+same number of threads, and with transcribe.cpp on the file it ships, the
+engine is 1.5 to 1.7 times faster on the two AMD processors and 2.5 times
+faster on the Intel Xeon and on Linux arm64. The engine's thread pool is
+built so that a busy machine does not make four threads slower than one,
+which three rounds on the Mac confirm (ledger T1).
 
-**Against the targets.** Twice transcribe.cpp's speed at equal threads is
-met on Linux arm64, on the Intel Mac as shipped for this clip, and on one of
-the two Windows processors. A 9.3 s take in under a second on two threads is
-met on the Windows EPYC 7763 (0.85 s) and missed on the Xeon (1.0 s), the
-Intel Mac (1.1 to 1.5 s) and Linux arm64 (1.2 s). On four threads every one
-of them takes 0.6 to 1.0 s, and the Intel Mac is the slowest.
+**Against the targets.** A 9.3 s take in under a second on two threads is
+met on every Windows and Linux x86 machine of the last run (0.76 to 0.89 s).
+It is missed on Linux arm64 (1.15 s on two threads, 0.6 s on four) and on
+the Intel Mac (1.1 to 1.5 s on two threads, 0.8 to 1.2 s on four). Twice
+transcribe.cpp's speed at equal threads is met on Linux arm64 and, on one
+and two threads, on the Intel Xeon. On the Intel Mac it holds for the 8 s
+clip in all three runs. It is not met on the AMD processors, where the
+engine is 1.5 to 1.7 times faster.
 
-**Where the gain is smaller.** A transcribe.cpp built with a fixed AVX2
-instruction set, which is the build OpenRamble could ship safely, is 1.3 to
-1.6 times slower than the engine on x86, not 2 times. One configuration was
-faster than the engine: transcribe.cpp compiled for the exact processor of a
-server with AVX-512. The `avx512` kernel set was written for that case. On
-an EPYC 9V45 it brings the engine level with such a build: 623 ms against
-613 ms on one thread, and 313 against 355 ms on four. On an older EPYC 9V74
-the engine is probably still about 9% behind such a build, from two different runs
-(ledger K7). No package OpenRamble could publish is built that way, because
-it would not start on other processors.
+**Which model file.** The engine runs both files and gives the same text as
+transcribe.cpp with each. It is 10 to 20% faster with the 4-bit file on x86,
+and that file is 254 MB smaller. So Windows and Linux would move to the file
+the Mac already ships (ledger S2).
+
+**Processors with AVX-512.** One configuration was faster than the
+engine's first x86 kernels, which was transcribe.cpp compiled for the exact
+processor of a server with AVX-512. The `avx512` kernel set was written for
+that case. On an EPYC 9V45 it brings the engine level with such a build, at
+623 ms against 613 ms on one thread and 313 against 355 ms on four. On an
+older EPYC 9V74 the engine is probably still about 9% behind such a build,
+from two different runs (ledger K7). No package OpenRamble could publish is
+built that way, because it would not start on other processors. On Windows
+on that older AMD processor the `avx512` set is 10% slower than the `avx2`
+set, and the engine still picks it, which is not fixed yet.
 
 **Fast machines.** On the M4 Pro an 8 s clip takes the engine 203 ms on four
 threads and 133 ms on eight. Metal takes 80 ms. The engine is not as fast as
@@ -193,36 +205,60 @@ Windows and Linux and on arm64 and x86-64 (ledger X1).
 
 ## The smaller change, and what it gets
 
-A patch to our fork could get part of the gain, and the numbers are these.
+A change to the shipped runtime and its settings gets part of the gain. The
+parts are:
 
-- **Threads.** transcribe.cpp with four threads is 3.3 times faster than with
-  one on the Intel Mac and 3.9 times on the Linux arm64 machine. October's
-  test found it 1.9 times slower than one thread when the machine is busy,
-  which is why it is off. Making it safe means changing ggml's thread pool.
+- **The model file.** Giving Windows and Linux the 4-bit file is a change to
+  one manifest. transcribe.cpp runs it 1.1 to 1.3 times faster than the 8-bit
+  file on x86 and 5% slower on Linux arm64 (ledger S2).
+- **Threads.** transcribe.cpp with four threads is 1.9 to 2.5 times faster
+  than with one on Windows and the Intel Mac, and 3.9 times on Linux arm64.
+  October's test found four threads 1.9 times slower than one when the
+  machine is busy, which is why they are off. In three rounds here that
+  happened once (ledger T1). Making threads safe means changing ggml's
+  thread pool.
 - **The Intel Mac build.** Building the Intel slice with AVX2 is one flag and
-  gives 1.5 times (472 to 321 ms per second of audio, ledger K2).
+  gave 1.3 to 2.0 times in three runs on a shared machine (ledger S1).
 - **The Windows and Linux builds.** A fixed instruction set (`GGML_NATIVE=OFF`
   with AVX2) is one flag and makes the packages run everywhere AVX2 exists.
   It does not make them faster.
 
-None of these changes the 4-bit product, which is where the engine's gain
-per thread comes from, and none of them reaches a processor without AVX2.
+The first two together, against the engine, for an 8 s clip in milliseconds
+(ledger S2):
+
+| Machine | What ships today | transcribe.cpp, 4-bit file, four threads | Engine, four threads |
+|---|---|---|---|
+| Windows, Xeon 8573C | 3,258 | 1,278, 2.5 times | 960, 3.4 times |
+| Windows, EPYC 9V74 | 2,066 | 909, 2.3 times | 600, 3.4 times |
+| Linux x86-64, EPYC 7763 | 2,200 | 986, 2.2 times | 717, 3.1 times |
+| Linux arm64, Neoverse-N2 | 4,922 | 1,375, 3.6 times | 530, 9.3 times |
+
+On the two-core x86 machines the smaller change reaches 2.2 to 2.5 times
+where the engine reaches 3.1 to 3.4 times. On Linux arm64 it reaches 3.6
+times where the engine reaches 9.3. The smaller change depends on four
+threads being made safe in ggml. It does not change the 4-bit product, which
+is where the engine's gain per thread comes from. It does not reach a
+processor without AVX2, and it still copies the model into memory (479 MB at
+peak where the engine uses 118 MB).
 
 ## Order of work
 
-1. Done: kernels, bit-identical to ggml's and across instruction sets.
-2. Done: the whole recognizer, word error rate on FLEURS equal to the
-   shipped runtime's, taught words and long audio included.
-3. Done: builds and runs on macOS arm64 and x86-64, Windows and Linux from
-   CMake, with a self-test. Swift Package Manager builds it for both Mac
-   architectures, and Rust's `cc` crate builds it on the Mac.
-4. Next: the comparison with the 8-bit file that Windows and Linux ship,
-   and four threads against one on a busy Windows or Linux machine. The test
-   that kept threads off in October passes on the Mac.
-5. Then, with Mik's yes: put the engine behind `ramble-engine` for Windows
-   and Linux and behind the Swift adapter for Intel Macs, with the real-model
-   test suites as the gate.
-6. Later, each behind its own measurement: 4-bit weights for the two 1x1
-   convolutions, kernels for Arm's 8-bit matrix extension, a cache of the
-   position projections, and recognizing closed stretches of a long take
-   while the person is still speaking.
+1. The kernels are done. They are bit-identical to ggml's and across
+   instruction sets.
+2. The whole recognizer is done. Its word error rate on FLEURS equals the
+   shipped runtime's, with taught words and long audio included.
+3. The builds are done. CMake builds and runs the engine on macOS arm64 and
+   x86-64, Windows and Linux, with a self-test. Swift Package Manager builds
+   it for both Mac architectures, and Rust's `cc` crate builds it on the Mac.
+4. The next measurements are four threads against one on a busy Windows or
+   Linux machine, and the choice between the `avx512` and `avx2` sets on
+   Windows on AMD. The test that kept threads off in October passes on the
+   Mac.
+5. The next step after them needs Mik's yes. It puts the engine behind
+   `ramble-engine` for Windows and Linux and behind the Swift adapter for
+   Intel Macs, with the real-model test suites as the gate, and it moves
+   Windows and Linux to the 4-bit file.
+6. Later items each need their own measurement. They are 4-bit weights for
+   the two 1x1 convolutions, kernels for Arm's 8-bit matrix extension, a
+   cache of the position projections, and recognizing closed stretches of a
+   long take while the person is still speaking.

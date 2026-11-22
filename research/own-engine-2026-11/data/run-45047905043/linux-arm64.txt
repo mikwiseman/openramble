@@ -1,0 +1,109 @@
+[36;1m    powershell -Command "Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors | Format-List"[0m
+CPU(s):                                  4
+Model name:                              Neoverse-N2
+Thread(s) per core:                      1
+Core(s) per socket:                      4
+100% tests passed, 0 tests failed out of 1
+ok: libore.a needs only memory, math, one mapped file, a clock and threads
+frames 100, reps 7, best table: neon
+Q4_K 1024 -> 4096 (enc.blocks.0.ff1.linear1.weight), 419 M multiply-adds
+  generic  prepare    0.27 ms, product    97.17 ms,     4.3 G multiply-adds/s
+  neon     prepare    0.05 ms, product     9.06 ms,    46.3 G multiply-adds/s
+    against the reference:       0 of 409600 differ, max |diff| 0 (max |value| 98.9)
+Q4_K 4096 -> 1024 (enc.blocks.0.ff1.linear2.weight), 419 M multiply-adds
+  generic  prepare    1.10 ms, product   111.93 ms,     3.7 G multiply-adds/s
+  neon     prepare    0.23 ms, product     8.95 ms,    46.8 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 242)
+Q4_K 1024 -> 1024 (enc.blocks.0.attn.linear_q.weight), 105 M multiply-adds
+  generic  prepare    0.28 ms, product    24.82 ms,     4.2 G multiply-adds/s
+  neon     prepare    0.05 ms, product     2.26 ms,    46.5 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 28.7)
+Q8_0 1024 -> 1024 (enc.blocks.0.attn.linear_out.weight), 105 M multiply-adds
+  generic  prepare    0.17 ms, product    33.88 ms,     3.1 G multiply-adds/s
+  neon     prepare    0.07 ms, product     2.35 ms,    44.5 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 155)
+F16  1024 -> 2048 (enc.blocks.0.conv.pointwise1.weight), 210 M multiply-adds
+  generic  prepare    0.06 ms, product   139.40 ms,     1.5 G multiply-adds/s
+  neon     prepare    0.06 ms, product    10.48 ms,    20.0 G multiply-adds/s
+    against the reference:       0 of 204800 differ, max |diff| 0 (max |value| 86.4)
+element-wise steps
+    against the reference:       0 of 4096 differ, max |diff| 0 (max |value| 2.15e+03)
+text: identical
+tokens and times: DIFFERENT
+kernel tables: identical output
+30b41b143a18db2d
+words: 170 and 170
+long clip text: identical
+ore 0.1.0, neon, threads 1, load 32 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    542.6 |  543.7 |  2.1 |  508.8 |   31.7 | 28
+    4.0 |   1018.5 | 1021.4 |  4.4 |  957.5 |   56.6 | 78
+    8.0 |   1862.1 | 1862.7 |  8.4 | 1758.2 |   96.1 | 150
+   16.0 |   3674.2 | 3679.9 | 16.9 | 3502.3 |  155.0 | 267
+   30.0 |   7235.3 | 7239.2 | 31.7 | 6927.0 |  280.6 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 1, load 232 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |   1252.7 | 1252.8 |  1.1 | 1219.0 |   31.4 | 28
+    4.0 |   2448.0 | 2448.8 |  1.8 | 2386.6 |   58.2 | 78
+    8.0 |   5199.2 | 5200.5 |  3.4 | 5092.2 |   99.2 | 150
+   16.0 |  11200.4 | 11201.9 |  6.4 | 11016.9 |  168.8 | 267
+   30.0 |  18161.5 | 18162.2 | 11.7 | 17834.6 |  299.4 | 502
+ore 0.1.0, neon, threads 2, load 33 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    286.4 |  286.4 |  2.1 |  266.5 |   17.7 | 28
+    4.0 |    534.2 |  534.4 |  4.2 |  496.2 |   34.0 | 78
+    8.0 |    989.3 |  990.1 |  8.5 |  920.3 |   60.6 | 150
+   16.0 |   1980.1 | 1984.0 | 16.9 | 1863.5 |  103.6 | 267
+   30.0 |   3922.2 | 3927.0 | 31.8 | 3706.3 |  184.1 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 2, load 233 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    632.7 |  632.8 |  1.0 |  612.3 |   18.4 | 28
+    4.0 |   1236.5 | 1237.0 |  1.7 | 1198.7 |   35.2 | 78
+    8.0 |   2626.2 | 2630.5 |  3.4 | 2553.7 |   64.1 | 150
+   16.0 |   5626.8 | 5627.4 |  6.4 | 5514.6 |   97.9 | 267
+   30.0 |   9155.9 | 9162.1 | 11.7 | 8955.0 |  174.6 | 502
+ore 0.1.0, neon, threads 4, load 32 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    156.4 |  158.6 |  2.2 |  143.6 |   10.7 | 28
+    4.0 |    288.5 |  290.1 |  4.3 |  264.8 |   19.4 | 78
+    8.0 |    529.8 |  531.4 |  8.5 |  486.9 |   34.4 | 150
+   16.0 |   1042.2 | 1044.4 | 17.5 |  965.8 |   58.9 | 267
+   30.0 |   2008.8 | 2012.0 | 31.7 | 1869.6 |  107.5 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 4, load 232 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    321.3 |  322.3 |  1.0 |  308.0 |   10.1 | 28
+    4.0 |    621.9 |  622.1 |  1.7 |  600.4 |   18.5 | 78
+    8.0 |   1375.1 | 1376.3 |  3.2 | 1334.8 |   32.9 | 150
+   16.0 |   2948.4 | 2962.6 |  6.3 | 2879.1 |   54.3 | 267
+   30.0 |   4660.0 | 4688.5 | 11.7 | 4552.2 |  110.0 | 502
+Q8_0 | text: identical
+Q8_0 | transcribe.cpp 0.4.1, backend CPU, threads 1, load 220 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |   1199.7 | 1201.1 |  1.0 | 1165.8 |   33.1 | 28
+Q8_0 |     8.0 |   4922.0 | 4922.9 |  3.4 | 4816.5 |   97.9 | 150
+Q8_0 |    30.0 |  17533.3 | 17534.9 | 11.8 | 17210.2 |  296.6 | 506
+Q8_0 | ore 0.1.0, neon, threads 1, load 29 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    596.9 |  598.0 |  2.1 |  563.7 |   32.1 | 28
+Q8_0 |     8.0 |   1926.9 | 1928.0 |  8.5 | 1825.0 |   93.4 | 150
+Q8_0 |    30.0 |   7092.6 | 7093.1 | 31.7 | 6779.1 |  281.7 | 506
+Q8_0 | transcribe.cpp 0.4.1, backend CPU, threads 2, load 222 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    606.8 |  607.9 |  1.0 |  587.2 |   17.3 | 28
+Q8_0 |     8.0 |   2493.8 | 2500.3 |  3.3 | 2428.9 |   57.1 | 150
+Q8_0 |    30.0 |   8874.2 | 8893.9 | 11.7 | 8649.1 |  198.9 | 506
+Q8_0 | ore 0.1.0, neon, threads 2, load 29 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    309.3 |  310.0 |  2.1 |  289.9 |   17.3 | 28
+Q8_0 |     8.0 |   1002.0 | 1002.1 |  8.5 |  937.1 |   56.4 | 150
+Q8_0 |    30.0 |   3673.3 | 3687.1 | 32.7 | 3468.0 |  172.7 | 506
+Q8_0 | transcribe.cpp 0.4.1, backend CPU, threads 4, load 221 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    308.8 |  313.7 |  1.0 |  296.5 |   10.1 | 28
+Q8_0 |     8.0 |   1308.7 | 1311.2 |  3.3 | 1266.6 |   34.0 | 150
+Q8_0 |    30.0 |   4503.1 | 4514.5 | 11.7 | 4369.4 |  108.1 | 506
+Q8_0 | ore 0.1.0, neon, threads 4, load 29 ms
+Q8_0 | seconds | wall min | median |  mel | encode | decode | chars
+Q8_0 |     2.0 |    167.4 |  167.6 |  2.1 |  155.0 |   10.5 | 28
+Q8_0 |     8.0 |    542.1 |  543.1 |  8.7 |  498.3 |   35.1 | 150
+Q8_0 |    30.0 |   1966.8 | 1967.2 | 32.7 | 1824.1 |  110.0 | 506
