@@ -1,15 +1,16 @@
 #!/bin/bash
 # Fails when the recognition runtime built for the Windows and Linux packages
-# would stop on a computer that has AVX2 but not AVX-512.
+# would only run on a computer like the one that built it.
 #
-# Two things are read from the build, not from the workflow that asked for it:
-# that CMake was told not to tune for the build machine, and that the compiled
+# Three things are read from the build, not from the workflow that asked for
+# them: that CMake was told not to tune for the build machine's processor, that
+# the runtime links no BLAS library of the build machine, and that the compiled
 # libraries name no AVX-512 register. The libraries are read before they are
 # linked because they still carry only the runtime's own code there. The
 # finished executable cannot be judged this way: the TLS library brings AVX-512
 # routines that it calls only after asking the processor, and those are fine.
 #
-# Usage: check-desktop-instruction-sets.sh [cargo target directory]
+# Usage: check-desktop-portability.sh [cargo target directory]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -22,6 +23,14 @@ grep -q '^GGML_NATIVE:[A-Z]*=OFF' "$OUT/build/CMakeCache.txt" || {
   echo "The runtime was tuned for this build machine's processor (GGML_NATIVE is not OFF)." >&2
   exit 1
 }
+
+# What the runtime tells its users to link, written by its own install step.
+MANIFEST=$(find "$OUT" -path "$OUT/build" -prune -o -type f -name transcribe-link.json -print | head -1)
+[[ -n "$MANIFEST" ]] || { echo "No transcribe-link.json under $OUT." >&2; exit 1; }
+if grep -qi 'blas' "$MANIFEST"; then
+  echo "The runtime links this build machine's BLAS library, which the packages do not carry." >&2
+  exit 1
+fi
 
 LIBRARIES=()
 while IFS= read -r library; do LIBRARIES+=("$library"); done < <(
@@ -47,4 +56,4 @@ done
 # Also the proof that the disassembler read the code at all, and that the
 # build did not fall to the slow baseline with AVX2 switched off.
 [[ "$AVX2" -gt 0 ]] || { echo "The runtime contains no AVX2 instructions." >&2; exit 1; }
-echo "The runtime uses AVX2 and no AVX-512."
+echo "The runtime uses AVX2, no AVX-512, and no BLAS library of this machine."
