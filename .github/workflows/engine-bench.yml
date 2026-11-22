@@ -41,6 +41,11 @@ jobs:
           - name: Linux arm64
             os: ubuntu-24.04-arm
             tcpp_args: ""
+          # The oldest Apple silicon a hosted runner has. The app uses Metal
+          # there; this shows what the processor alone does.
+          - name: Apple silicon (M1 runner)
+            os: macos-15
+            tcpp_args: "-DGGML_NATIVE=OFF"
           - name: Intel Mac (as shipped)
             os: macos-15-intel
             tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_BMI2=OFF"
@@ -96,6 +101,13 @@ jobs:
         run: |
           cmake -S engine -B engine/build -DCMAKE_BUILD_TYPE=Release -DORE_TCPP_PREFIX="$PWD/tcpp-prefix"
           cmake --build engine/build --config Release --parallel 4
+
+      # What the library asks of the system: nothing that reaches a network.
+      - name: Symbols
+        if: runner.os != 'Windows'
+        run: |
+          lib=$(find engine/build -name 'libore.a' | head -1)
+          engine/scripts/check-symbols.sh "$lib" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Kernels
         run: |
