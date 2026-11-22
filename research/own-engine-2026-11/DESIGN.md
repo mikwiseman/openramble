@@ -139,12 +139,13 @@ processors, and both are shown.
 |---|---|---|---|---|
 | Windows, Xeon 8573C | 3,396 | 1,622 | 871 | 830 |
 | Windows, EPYC 7763 | 2,088 | 1,353 | 734 | 688 |
-| Intel Mac, i7-8700B | 3,836 | 1,704 | 1,068 | 707 |
+| Intel Mac, i7-8700B | 4,867 | 2,435 | 1,008 | 892 |
 | Linux arm64, 4 cores | 5,376 | 1,953 | 1,001 | 545 |
 
-At equal threads the engine is 2.6 to 2.8 times faster on Linux arm64, 2.3
+At equal threads the engine is 2.6 to 2.8 times faster on Linux arm64, 2.0
 to 2.9 times on the Intel Mac as shipped, and 1.5 to 2.1 times on Windows,
-depending on the processor. Against the one thread the app gives recognition
+depending on the processor. The Intel Mac is a shared machine whose times
+differ by up to 40% between runs, so its row is one run of two. Against the one thread the app gives recognition
 on Windows and Linux, the engine on four threads is 3.0 to 4.1 times faster
 on Windows and 9.9 times on Linux arm64.
 
@@ -156,11 +157,11 @@ file"). The Intel Mac row is not affected, because Intel Macs ship the 4-bit
 file.
 
 **Against the targets.** Twice transcribe.cpp's speed at equal threads is
-met on Linux arm64, on the Intel Mac as shipped, and on one of the two
-Windows processors. A 9.3 s take in under a second on two threads is met on
-the Windows EPYC 7763 (0.85 s) and missed on the Xeon (1.0 s), the Intel Mac
-(1.2 to 1.5 s) and Linux arm64 (1.2 s). On four threads every one of them is
-under a second (0.6 to 1.0 s).
+met on Linux arm64, on the Intel Mac as shipped for this clip, and on one of
+the two Windows processors. A 9.3 s take in under a second on two threads is
+met on the Windows EPYC 7763 (0.85 s) and missed on the Xeon (1.0 s), the
+Intel Mac (1.1 to 1.5 s) and Linux arm64 (1.2 s). On four threads every one
+of them takes 0.6 to 1.0 s, and the Intel Mac is the slowest.
 
 **Where the gain is smaller.** A transcribe.cpp built with a fixed AVX2
 instruction set, which is the build OpenRamble could ship safely, is 1.3 to

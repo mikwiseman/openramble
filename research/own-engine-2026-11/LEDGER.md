@@ -490,6 +490,7 @@ One thread:
 |---|---|---|
 | Windows, EPYC 7763, as shipped (the build chose AVX2) | 1,353 against 2,088, 1.5 times | 5,153 against 7,845, 1.5 times |
 | Windows, EPYC 7763, built for AVX2 | 1,332 against 2,074, 1.6 times | 5,022 against 7,833, 1.6 times |
+| Intel Mac, i7-8700B, as shipped | 2,435 against 4,867, 2.0 times | 9,836 against 14,750, 1.5 times |
 | Intel Mac, i7-8700B, built for AVX2 | 1,983 against 2,495, 1.3 times | 7,020 against 9,696, 1.4 times |
 | Linux arm64, Neoverse-N2 | 1,953 against 5,376, 2.8 times | 7,457 against 18,441, 2.5 times |
 | Linux x86-64, EPYC 9V74, built for AVX2 | 1,107 against 1,636, 1.5 times | 4,158 against 6,188, 1.5 times |
@@ -502,6 +503,7 @@ Four threads:
 |---|---|---|
 | Windows, as shipped | 688 against 1,102, 1.6 times | 2,538 against 3,906, 1.5 times |
 | Windows, built for AVX2 | 688 against 1,102, 1.6 times | 2,523 against 3,862, 1.5 times |
+| Intel Mac, as shipped | 892 against 1,935, 2.2 times | 3,329 against 6,611, 2.0 times |
 | Intel Mac, built for AVX2 | 708 against 915, 1.3 times | 2,625 against 3,360, 1.3 times |
 | Linux arm64 | 545 against 1,392, 2.6 times | 2,188 against 4,778, 2.2 times |
 | Linux x86-64, built for AVX2 | 520 against 836, 1.6 times | 1,858 against 2,939, 1.6 times |
@@ -512,7 +514,8 @@ The `sse` set on the same machines with AVX2 switched off in software, 8 s
 clip on one and on four threads: 2,815 and 1,241 ms on the Windows EPYC
 7763, 3,294 and 1,111 ms on the Intel Mac, 2,407 and 1,082 ms on the EPYC
 9V74, 1,789 and 766 ms on the EPYC 9V45. The shipped transcribe.cpp builds
-need at least AVX, so these have no baseline.
+need at least AVX, so these have no baseline. In the Intel Mac job
+that built transcribe.cpp as shipped, the `sse` set took 3,091 and 1,225 ms.
 
 ### Run 45044832938, before the `avx512` set
 
@@ -564,8 +567,15 @@ where transcribe.cpp takes 2,088 ms on the EPYC 7763 (3.0 times), 830 against
 3,396 ms on the Xeon (4.1 times), and 545 against 5,376 ms on Linux arm64
 (9.9 times).
 
-**The Intel Mac runner varies.** It is a shared machine, and its times
-differ by 10 to 30% between runs.
+**The Intel Mac runner varies.** It is a shared machine. The same engine
+code took 1,983 ms and 2,435 ms for the 8 s clip on one thread in two jobs
+of one run, and a second pass inside the slower job took 2,016 ms. Its
+ratios are therefore ranges: 2.0 to 2.9 times as shipped for the 8 s clip
+over both runs, and 1.5 to 2.8 times for the 30 s clip.
+
+**The decoder is the engine's weak part on the Intel Mac.** On one thread it
+takes 274 ms of the 8 s clip where transcribe.cpp, which uses Apple's
+Accelerate there, takes 151 ms. On four threads it is 174 against 154 ms.
 
 ### The model file
 
