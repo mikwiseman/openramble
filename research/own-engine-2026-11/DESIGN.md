@@ -180,13 +180,14 @@ engine's first x86 kernels, which was transcribe.cpp compiled for the exact
 processor of a server with AVX-512. The `avx512` kernel set was written for
 that case. On an EPYC 9V45 it brings the engine level with such a build, at
 623 ms against 613 ms on one thread and 313 against 355 ms on four. On an
-older EPYC 9V74 the engine is probably still about 9% behind such a build,
-from two different runs (ledger K7). No package OpenRamble could publish is
-built that way, because it would not start on other processors. On Windows
-on that older AMD processor the `avx512` set was 10% slower than the `avx2`
-set. The engine now gives that processor generation the AVX2 float kernel
-with the AVX-512 integer kernels, and the gain has not been measured on such
-a processor yet.
+older EPYC 9V74 the engine is 9% slower than such a build on one thread for
+an 8 s clip (1,102 against 1,009 ms) and 3% faster on four threads (517
+against 533 ms) (ledger K7). No package OpenRamble could publish is built
+that way, because it would not start on other processors. On Windows on that
+older AMD processor the `avx512` set was 10% slower than the `avx2` set. The
+engine now gives that processor generation the AVX2 float kernel with the
+AVX-512 integer kernels. It picks that table on Linux, and the gain under
+Windows has not been measured yet.
 
 **Fast machines.** On the M4 Pro an 8 s clip takes the engine 203 ms on four
 threads and 133 ms on eight. Metal takes 80 ms. The engine is not as fast as

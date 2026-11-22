@@ -253,9 +253,9 @@ The same run on an EPYC 9V74, an older AMD design. The set gains less
 there: the Q4_K kernel does 77 to 90 billion multiply-adds a second where the
 `avx2` set does 70 to 74, and an 8 s clip takes 1,107 ms where the `avx2` set
 takes 1,227 ms. transcribe.cpp on that machine was the AVX2 build, at
-1,636 ms. No run has the `avx512` set and a transcribe.cpp compiled for the
-9V74 together. Against the earlier run's 1,017 ms the engine would still be
-about 9% slower on that processor.
+1,636 ms. That run had no transcribe.cpp compiled for the 9V74. Against
+the earlier run's 1,017 ms the engine would be about 9% slower on that
+processor, and a later run measures it (below).
 
 On Windows the set is not always a gain (run 45047905043, MSVC). On a Xeon
 Platinum 8573C an 8 s clip takes 1,303 ms with `avx512` and 1,605 ms with
@@ -272,12 +272,35 @@ and the newer AMD generation keep the whole `avx512` set, because the
 512-bit float kernel wins there. The choice is made from the processor's
 vendor and family, not from a timing.
 
-Result (run 45050213787). No job landed on an AMD processor of that
-generation, so the gain there is not confirmed. On an Intel Xeon 6975P the
-new table gives the plain C table's bits in every comparison, and the float
-kernel does 60 billion multiply-adds a second in `avx512` and 50 in
-`avx512+avx2`, which is why Intel keeps `avx512`. All seven machines print
-the common checksum.
+Result (run 45050213787, first attempt). No job landed on an AMD processor
+of that generation. On an Intel Xeon 6975P the new table gives the plain C
+table's bits in every comparison, and the float kernel does 60 billion
+multiply-adds a second in `avx512` and 50 in `avx512+avx2`, which is why
+Intel keeps `avx512`. All seven machines print the common checksum.
+
+Result (the same run, third attempt). The Linux job with transcribe.cpp
+compiled for its own processor landed on an EPYC 9V74. The engine chose
+`avx512+avx2` there, so the detection works, and the table gives the plain
+C table's bits. Under GCC the two AVX-512 tables are equally fast on that
+processor (1,102 and 1,099 ms for the 8 s clip), and both are 9% faster than
+`avx2` (1,210 ms). The job is also the first with the AVX-512 kernels and a
+transcribe.cpp compiled for the 9V74 together:
+
+| EPYC 9V74, ms | engine, `avx512+avx2` | transcribe.cpp for that processor |
+|---|---|---|
+| 8 s, one thread | 1,102 | 1,009 |
+| 8 s, two threads | 580 | 546 |
+| 8 s, four threads | 517 | 533 |
+| 30 s, one thread | 4,088 | 3,953 |
+| 30 s, two threads | 2,102 | 2,074 |
+| 30 s, four threads | 1,871 | 1,948 |
+
+The engine is 9% slower than such a build on one thread for the 8 s clip,
+3% slower for the 30 s clip, and 3 to 4% faster on four threads.
+
+Still not measured. Both Windows jobs of that attempt landed on an EPYC
+7763, which has no AVX-512. So the case the change was made for, MSVC on the
+9V74, has no measurement with the new table.
 
 Decision. Adopt. On the EPYC 9V45 the engine is level with a transcribe.cpp
 compiled for that exact processor: between 0.89 and 1.16 times its speed over
@@ -731,8 +754,9 @@ computer would see if the app gave transcribe.cpp the same threads.
   yes. Two things the adapter uses have no counterpart yet: a call that
   recognizes several clips at once, and the detected language.
 - **The kernel choice on Windows on an AMD Zen 4 processor.** The `avx512`
-  set was 10% slower there than `avx2`. The change for it is in the code and
-  has not been measured on that processor (K7).
+  set was 10% slower there than `avx2`. The change for it is in the code, and
+  the engine picks the new table on that processor under Linux. It has not
+  been timed under Windows (K7).
 - **Word errors with the Ultra Q8_0 file in the engine.** The four sample
   clips give identical text. The 1,422 FLEURS clips were run with Q4_K_M,
   which is the file S2 recommends.
