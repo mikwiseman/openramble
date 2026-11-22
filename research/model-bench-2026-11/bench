@@ -1,0 +1,1130 @@
+#!/usr/bin/env python3
+"""Replay and Slop: two benchmarks of AI models as engineers on OpenRamble.
+
+DESIGN.md says what is measured and why. This file is the whole harness:
+
+    bench replay check <task>            prove a task: red on the parent, green on the reference
+    bench replay run <task> <model>      one model, one task, graded
+    bench replay grade <run>             grade a saved change again
+    bench replay wrong <task>            grade a deliberately wrong change; it must fail
+    bench slop run <model>               the text situations
+    bench slop score                     counts, judge and pairs
+    bench slop vote                      the owner picks between anonymous pairs
+    bench report                         results/REPORT.md
+    bench pilot                          everything above for the pilot set
+"""
+import argparse
+import concurrent.futures
+import gzip
+import hashlib
+import json
+import os
+import random
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+REPO = Path(subprocess.check_output(
+    ["git", "-C", str(HERE), "rev-parse", "--show-toplevel"], text=True).strip())
+HOME = Path.home()
+# Checkouts with builds are gigabytes and full transcripts hold the owner's
+# private instructions, so both stay outside the repository.
+WORK = Path(os.environ.get("BENCH_WORK", HOME / ".openramble/model-bench"))
+RESULTS = HERE / "results"
+OWNER_INSTRUCTIONS = Path(os.environ.get("BENCH_OWNER_INSTRUCTIONS", HOME / ".claude/CLAUDE.md"))
+RUN_TIMEOUT = int(os.environ.get("BENCH_RUN_TIMEOUT", 3600))
+
+MODELS = {
+    "fable": ("claude", "claude-fable-5-2"),
+    "opus": ("claude", "claude-opus-5-5"),
+    "sonnet": ("claude", "claude-sonnet-5-5"),
+    "haiku": ("claude", "claude-haiku-5-5"),
+    "gpt": ("codex", "gpt-6.2-sol"),
+}
+PILOT_TASKS = ["r39-clipboard-gate", "t-exists", "r97-handsfree-stop", "r88-conjunction"]
+# Haiku is the floor: a benchmark that cannot tell it from the others measures nothing.
+PILOT_MODELS = ["fable", "sonnet", "gpt", "haiku"]
+EFFORT = os.environ.get("BENCH_EFFORT", "high")
+# The judge that marks slop is not one of the models it marks. Pairs are also
+# judged by a model from the other vendor, so a taste for one's own family shows.
+JUDGE = os.environ.get("BENCH_JUDGE", "opus")
+PAIR_JUDGES = os.environ.get("BENCH_PAIR_JUDGES", "opus,gpt").split(",")
+
+
+def say(text):
+    print(text, flush=True)
+
+
+def load():
+    return "%.1f" % os.getloadavg()[0]
+
+
+# --- Signed-in tools ---------------------------------------------------------
+
+_profiles = None
+_profiles_lock = threading.Lock()
+
+
+def profiles():
+    """Where each tool keeps its sign-in. OpenAccs knows which account is
+    selected on this Mac; anywhere else the tools' own defaults are used."""
+    global _profiles
+    with _profiles_lock:  # four prompts start at once, and all of them ask
+        if _profiles is None:
+            found = {"claude": os.environ.get("BENCH_CLAUDE_CONFIG_DIR"),
+                     "codex": os.environ.get("BENCH_CODEX_HOME")}
+            if shutil.which("openaccs-agent") and not all(found.values()):
+                try:
+                    rows = json.loads(subprocess.run(
+                        ["openaccs-agent", "accounts", "--refresh"], capture_output=True,
+                        text=True, timeout=180).stdout)["accounts"]
+                except (ValueError, KeyError, subprocess.TimeoutExpired):
+                    rows = []
+                for row in rows:
+                    tool = row.get("provider")
+                    if row.get("cliReady") and row.get("isSelected") and not found.get(tool):
+                        found[tool] = row.get("cliConfigDir")
+            _profiles = found
+    return _profiles
+
+
+def base_env(folder):
+    """What a tool or a test may inherit: the toolchains, and nothing that
+    names an account, a token or another session."""
+    support = folder.parent / "support"
+    (support / "gh").mkdir(parents=True, exist_ok=True)
+    (support / "bin").mkdir(exist_ok=True)
+    gitconfig = support / "gitconfig"
+    gitconfig.write_text("[user]\n\tname = Bench\n\temail = bench@localhost\n"
+                         "[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = work\n")
+    shim = support / "bin/swift"
+    # SwiftPM applies its own seatbelt profile, which a process already inside
+    # one may not do. Every model gets the same wrapper.
+    shim.write_text('#!/bin/sh\ncase "$1" in\n  build|test|run|package) sub=$1; shift; '
+                    'exec /usr/bin/swift "$sub" --disable-sandbox "$@" ;;\n'
+                    '  *) exec /usr/bin/swift "$@" ;;\nesac\n')
+    shim.chmod(0o755)
+    env = {k: os.environ[k] for k in ("HOME", "USER", "LOGNAME", "LANG", "TMPDIR") if k in os.environ}
+    env.update(PATH=f"{support / 'bin'}:{os.environ['PATH']}", TERM="dumb", SHELL="/bin/zsh",
+               GH_CONFIG_DIR=str(support / "gh"), GIT_CONFIG_GLOBAL=str(gitconfig),
+               GIT_CONFIG_NOSYSTEM="1", GIT_TERMINAL_PROMPT="0",
+               CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1")
+    return env
+
+
+def sandbox(folder, readable=()):
+    """A seatbelt profile for one folder. It hides every place the answer is
+    written down, and confines writes to the folder and the build caches. It
+    cannot filter the network by host; see DESIGN.md, "One run"."""
+    h = HOME
+    hidden = [h / "Documents", h / "Desktop", h / "Downloads", h / ".openramble", h / ".ssh", h / ".config/gh",
+              h / "Library/Application Support/OpenAccs/Claude",
+              # Session transcripts and saved memory. All of ~/.claude when the
+              # tool signs in from another folder, as it does under OpenAccs.
+              h / ".claude" if profiles()["claude"] else h / ".claude/projects"]
+    # Codex reads the owner's global instructions, skills and memories from
+    # its home whatever its flags say. Hidden, they are the same for every
+    # model: absent, unless the prompt carries them.
+    for home in {h / ".codex", Path(profiles()["codex"] or h / ".codex")}:
+        # Codex will not start when its rules or agents folder is unreadable,
+        # so those two stay visible.
+        hidden += [home / name for name in ("AGENTS.md", "skills", "memories", "memories_v2", "sessions",
+                                             "archived_sessions", "attachments")]
+    hidden.append(h / ".agents")
+    hidden += [REPO] if not str(REPO).startswith(str(h / "Documents")) else []
+    writable = [folder, folder.parent / "support", h / "Library/Caches", h / "Library/Developer",
+                h / ".cargo", h / ".rustup", h / ".swiftpm", h / "Library/org.swift.swiftpm",
+                h / "Library/Keychains", h / "Library/Logs", h / ".codex", h / ".openaccs"]
+    writable += [Path(p) for p in profiles().values() if p]
+    quote = lambda paths: " ".join(f'(subpath "{p}")' for p in paths)
+    text = "\n".join([
+        "(version 1)", "(allow default)",
+        f"(deny file-read* {quote(hidden)})",
+        f"(allow file-read* {quote([folder, folder.parent / 'support', *readable])})",
+        f'(deny file-write* (subpath "{h}") (subpath "/Applications"))',
+        f"(allow file-write* {quote(writable)})",
+        "(allow file-read-metadata)", ""])
+    path = folder.parent / "support" / f"{folder.name}.sb"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    return ["sandbox-exec", "-f", str(path)]
+
+
+def sh(command, folder, log, env=None, readable=(), timeout=3600):
+    """Run a shell command inside the sandbox. Returns exit status and seconds."""
+    started = time.time()
+    with open(log, "ab") as out:
+        out.write(f"\n$ {command}\n".encode())
+        out.flush()
+        try:
+            code = subprocess.run(sandbox(folder, readable) + ["/bin/bash", "-c", command], cwd=folder,
+                                  env=env or base_env(folder), stdout=out, stderr=subprocess.STDOUT,
+                                  timeout=timeout).returncode
+        except subprocess.TimeoutExpired:
+            code = 124
+    return {"ok": code == 0, "code": code, "seconds": round(time.time() - started)}
+
+
+# --- Checkouts ---------------------------------------------------------------
+
+def git(folder, *args, check=True, env=None):
+    return subprocess.run(["git", "-C", str(folder), *args], capture_output=True, text=True,
+                          check=check, env=env).stdout
+
+
+def export(commit, folder):
+    """The tree of one commit as a new repository with one commit: no later
+    history, no remote, nothing to fetch the answer from."""
+    free = shutil.disk_usage(HOME).free / 2**30
+    if free < 4:
+        # One fast check grows a checkout to 2.5 GB, and a full disk would
+        # stop every other session on this Mac.
+        sys.exit(f"only {free:.1f} GB free; a run needs 4")
+    shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True)
+    archive = subprocess.Popen(["git", "-C", str(REPO), "archive", commit], stdout=subprocess.PIPE)
+    subprocess.run(["tar", "-x", "-C", str(folder)], stdin=archive.stdout, check=True)
+    if archive.wait():
+        sys.exit(f"cannot export {commit}")
+    env = base_env(folder)
+    git(folder, "init", "-q", env=env)
+    git(folder, "add", "-A", env=env)
+    git(folder, "commit", "-q", "-m", "base", env=env)
+    return git(folder, "rev-parse", "HEAD", env=env).strip()
+
+
+def change_since(folder, base):
+    """Everything the model left behind that is not ignored, as one patch."""
+    env = base_env(folder)
+    git(folder, "add", "-A", env=env)
+    return subprocess.run(["git", "-C", str(folder), "diff", "--cached", "--binary", base],
+                          capture_output=True, env=env).stdout
+
+
+class Task:
+    def __init__(self, name):
+        self.id = name
+        self.dir = HERE / "replay/tasks" / name
+        if not (self.dir / "task.json").exists():
+            sys.exit(f"no such task: {name}")
+        self.__dict__.update(json.loads((self.dir / "task.json").read_text()))
+        self.request = (self.dir / "request.md").read_text().strip()
+        self.work = WORK / "work" / name
+
+    def reference_patch(self):
+        """The change the task is graded against, as a patch on the base."""
+        patch = self.dir / "reference.patch"
+        if patch.exists():
+            return patch.read_bytes()
+        return subprocess.run(["git", "-C", str(REPO), "diff", "--binary", self.base, self.reference],
+                              capture_output=True, check=True).stdout
+
+    def prompt(self):
+        frame = (HERE / "replay/frame.md").read_text()
+        owner = OWNER_INSTRUCTIONS.read_text().strip() if OWNER_INSTRUCTIONS.exists() else "(none)"
+        return frame.replace("{{OWNER}}", owner).replace("{{REQUEST}}", self.request)
+
+
+TEST_FILE = re.compile(r"(^|/)(Tests?|tests)/|Tests?\.swift$|_test\.(rs|py)$|(^|/)test[-_][^/]*$")
+SOURCE_FILE = re.compile(r"\.(swift|rs|sh|py|c|h|toml|yml|json|strings|ts|tsx|css|html)$")
+FIXTURE = re.compile(r"^core/conformance/")
+# The name of a failed test in XCTest, Swift Testing and cargo output.
+FAILED_TEST = re.compile(r"Test Case '-\[(\S+ \S+)\]' failed|Test \"?([^\n\"]+?)\"? recorded an issue"
+                         r"|^test (\S+) \.\.\. FAILED|^(FAIL: .*)$", re.M)
+
+
+def patch_stats(patch):
+    """Lines added and removed by kind of file, from a unified diff."""
+    files, current = {}, None
+    for raw in patch.decode("utf-8", "replace").splitlines():
+        if raw.startswith("diff --git "):
+            current = raw.split(" b/", 1)[1]
+            files[current] = {"added": 0, "removed": 0, "new": False, "deleted": False}
+        elif current and raw.startswith("new file mode"):
+            files[current]["new"] = True
+        elif current and raw.startswith("deleted file mode"):
+            files[current]["deleted"] = True
+        elif current and raw.startswith("+") and not raw.startswith("+++"):
+            files[current]["added"] += 1
+        elif current and raw.startswith("-") and not raw.startswith("---"):
+            files[current]["removed"] += 1
+    kinds = {"source": 0, "tests": 0, "fixtures": 0, "other": 0}
+    for path, f in files.items():
+        kind = ("fixtures" if FIXTURE.search(path) else "tests" if TEST_FILE.search(path)
+                else "source" if SOURCE_FILE.search(path) else "other")
+        f["kind"] = kind
+        kinds[kind] += f["added"] + f["removed"]
+    return {"files": files, "lines": kinds}
+
+
+def weakened_tests(patch):
+    """Tests removed or switched off by a change."""
+    text = patch.decode("utf-8", "replace")
+    removed = len(re.findall(r"^-\s*(func test\w+|#\[test\]|@Test\b|def test_\w+)", text, re.M))
+    added = len(re.findall(r"^\+\s*(func test\w+|#\[test\]|@Test\b|def test_\w+)", text, re.M))
+    skips = len(re.findall(r"^\+.*(XCTSkip|#\[ignore|\.disabled\(|@unittest\.skip|pytest\.mark\.skip)", text, re.M))
+    return {"removed": max(0, removed - added), "skipped": skips}
+
+
+# --- Grading -----------------------------------------------------------------
+
+def materialize(task, patch, name):
+    """The base with one change applied, in a folder of its own."""
+    folder = task.work / name
+    base = export(task.base, folder)
+    if patch.strip():
+        env = base_env(folder)
+        applied = subprocess.run(["git", "-C", str(folder), "apply", "--index", "--binary", "-"],
+                                 input=patch, capture_output=True, env=env)
+        if applied.returncode:
+            return folder, base, applied.stderr.decode()
+        git(folder, "commit", "-q", "--allow-empty", "-m", "change", env=env)
+    return folder, base, None
+
+
+def overlay_hidden(task, folder, ref):
+    """Put the grader's own files over whatever the change left there. They
+    come from the reference commit, or from the task folder when the history
+    had no test of behaviour and the grader's test was written for the task."""
+    shutil.rmtree(ref, ignore_errors=True)
+    for path in getattr(task, "hidden", []):
+        authored = task.dir / "hidden" / path
+        if authored.exists():
+            data = authored.read_bytes()
+        else:
+            shown = subprocess.run(["git", "-C", str(REPO), "show", f"{task.reference}:{path}"],
+                                   capture_output=True)
+            data = shown.stdout if shown.returncode == 0 else None
+        for target in (folder / path, ref / path):
+            if data is None:
+                target.unlink(missing_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            if path.endswith(".sh"):
+                target.chmod(0o755)
+
+
+def grade_change(task, patch, log, name="grade", final=None):
+    """Every mechanical check of one change. Never raises on a red result: a
+    red result is the measurement."""
+    log.unlink(missing_ok=True)
+    g = {"task": task.id, "load": load()}
+    folder, base, problem = materialize(task, patch, name)
+    if problem:
+        g.update(state="fail", reason="the change does not apply to the base", detail=problem[:400])
+        return g
+    stats, ref = patch_stats(patch), task.work / "ref"
+    env = dict(base_env(folder), REF=str(ref))
+    run = lambda command: sh(command, folder, log, env=env, readable=[ref])
+
+    def run_tests(command):
+        """Timing tests in this repository fail at random on a loaded Mac, so
+        a red run is tried once more. It counts as red when the second try is
+        red too and at least one test failed both times."""
+        tries = []
+        for _ in range(2):
+            start = log.stat().st_size if log.exists() else 0
+            result = run(command)
+            with open(log, errors="replace") as text:
+                text.seek(start)
+                result["failed"] = sorted({"".join(found) for found in FAILED_TEST.findall(text.read())})
+            tries.append(result)
+            if result["ok"]:
+                break
+        last = dict(tries[-1], tries=len(tries))
+        if len(tries) == 2 and not last["ok"]:
+            both = set(tries[0]["failed"]) & set(tries[1]["failed"])
+            # No test named in the output is a build error, which is red.
+            if tries[0]["failed"] and tries[1]["failed"] and not both:
+                last.update(ok=True, flaky=sorted(set(tries[0]["failed"]) | set(tries[1]["failed"])))
+            last["failed"] = sorted(both) if both else last["failed"]
+        return last
+
+    # The repository's own check, on the tree exactly as the model left it.
+    g["check"] = run(task.check)
+    if (folder / "scripts/check-network-surface.sh").exists():
+        g["network_gate"] = run("./scripts/check-network-surface.sh")
+
+    # The model's own tests on the unfixed code: a test that passes there
+    # proves nothing. Restore the base's sources, keep the change's tests.
+    own_tests = [p for p, f in stats["files"].items() if f["kind"] == "tests" and not f["deleted"]]
+    if own_tests and getattr(task, "suite", None) and task.kind != "trap":
+        for path, f in stats["files"].items():
+            if f["kind"] != "tests":
+                if f["new"]:
+                    (folder / path).unlink(missing_ok=True)
+                else:
+                    git(folder, "checkout", "-q", base, "--", path)
+        on_base = run(task.suite)
+        g["own_tests"] = {"files": len(own_tests), "fail_on_base": not on_base["ok"]}
+        git(folder, "checkout", "-q", "HEAD", "--", ".")
+    else:
+        g["own_tests"] = {"files": len(own_tests), "fail_on_base": None}
+
+    # The grader's tests.
+    # The grader's script sits with the reference files, which no model run
+    # can read, and both are deleted when the grade is done.
+    overlay_hidden(task, folder, ref)
+    ref.mkdir(parents=True, exist_ok=True)
+    shutil.copy(task.dir / "hidden.sh", ref / "hidden.sh")
+    g["hidden"] = run_tests(f"bash '{ref / 'hidden.sh'}'")
+    if getattr(task, "suite", None):
+        g["suite"] = run_tests(task.suite)
+
+    reference = patch_stats(task.reference_patch())["lines"]
+    g["size"] = dict(stats["lines"], reference_source=reference["source"],
+                     ratio=round(stats["lines"]["source"] / reference["source"], 2) if reference["source"] else None)
+    g["unasked_files"] = sorted(p for p, f in stats["files"].items() if f["new"] and f["kind"] == "other")
+    g["weakened_tests"] = weakened_tests(patch)
+    g["fixtures_touched"] = any(f["kind"] == "fixtures" for f in stats["files"].values())
+
+    rules = []
+    if "network_gate" in g and not g["network_gate"]["ok"]:
+        rules.append("network boundary")
+    if g["weakened_tests"]["removed"] or g["weakened_tests"]["skipped"]:
+        rules.append("tests weakened")
+    if any(re.match(r"(CLAUDE|AGENTS)\.md$", p) for p in stats["files"]):
+        rules.append("rules file edited")
+    g["rules_broken"] = rules
+
+    green = g["hidden"]["ok"] and g.get("suite", {"ok": True})["ok"]
+    if task.kind == "trap":
+        # The right answer is no change to what ships.
+        touched = stats["lines"]["source"] + stats["lines"]["tests"] + stats["lines"]["fixtures"]
+        said = final is None or bool(re.search(task.final_must_match, final, re.I))
+        g["state"] = "pass" if touched == 0 and said else "fail"
+        g["reason"] = ("" if g["state"] == "pass" else f"changed {touched} lines where no change was right"
+                       if touched else "changed nothing, and did not say why")
+    elif not green:
+        g["state"], g["reason"] = "fail", "hidden tests" if not g["hidden"]["ok"] else "regression in the test target"
+    elif not g["check"]["ok"] or rules:
+        g["state"], g["reason"] = "partial", ", ".join((["the repository's check is red"] if not g["check"]["ok"] else []) + rules)
+    else:
+        g["state"], g["reason"] = "pass", ""
+    shutil.rmtree(folder, ignore_errors=True)
+    shutil.rmtree(ref, ignore_errors=True)
+    # Test output is long and repeats itself, so the log is kept compressed.
+    with open(log, "rb") as plain, gzip.open(f"{log}.gz", "wb") as packed:
+        shutil.copyfileobj(plain, packed)
+    log.unlink()
+    return g
+
+
+def replay_check(task):
+    """A task is usable when the grader is red on the parent and green on the
+    reference, and the request gives away nothing the reference adds."""
+    out = RESULTS / "replay/_tasks" / task.id
+    out.mkdir(parents=True, exist_ok=True)
+    report = {"task": task.id, "checked_at": time.strftime("%Y-%m-%d %H:%M"), "load": load()}
+
+    added = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]{5,}", "\n".join(
+        l[1:] for l in task.reference_patch().decode("utf-8", "replace").splitlines()
+        if l.startswith("+") and not l.startswith("+++"))))
+    base_text = subprocess.run(["git", "-C", str(REPO), "grep", "-h", "-o", "-E", r"[A-Za-z_][A-Za-z0-9_]{5,}",
+                                task.base], capture_output=True, text=True).stdout.split()
+    new_names = {w for w in added - set(base_text) if re.search(r"[a-z][A-Z]|_", w)}
+    report["leaked"] = sorted(w for w in new_names if w in task.request)
+
+    trap = task.kind == "trap"
+    say(f"[{task.id}] grading the unchanged tree, which must {'pass' if trap else 'be red'} (load {load()})")
+    parent = grade_change(task, b"", out / "parent.log", "check")
+    say(f"[{task.id}] grading the reference, which must be green (load {load()})")
+    reference = grade_change(task, task.reference_patch(), out / "reference.log", "check")
+    report["parent"], report["reference"] = parent, reference
+    if task.kind == "trap":
+        report["usable"] = parent["state"] == "pass" and not report["leaked"]
+    else:
+        report["usable"] = (parent["state"] == "fail" and not parent["hidden"]["ok"]
+                            and reference["state"] == "pass" and not report["leaked"])
+    (out / "check.json").write_text(json.dumps(report, indent=1))
+    say(f"[{task.id}] parent {parent['state']}, reference {reference['state']}, "
+        f"leaked {report['leaked'] or 'nothing'}: {'usable' if report['usable'] else 'NOT usable'}")
+    return report["usable"]
+
+
+# --- Running a model ---------------------------------------------------------
+
+def tool_command(model_key, effort, folder, tools=True):
+    tool, model = MODELS[model_key]
+    env = base_env(folder)
+    if tool == "claude":
+        if profiles()["claude"]:
+            env["CLAUDE_CONFIG_DIR"] = profiles()["claude"]
+        command = ["claude", "-p", "--model", model, "--effort", effort, "--output-format", "stream-json",
+                   "--verbose", "--setting-sources", "", "--strict-mcp-config", "--mcp-config",
+                   '{"mcpServers":{}}', "--no-session-persistence", "--disallowedTools", "WebFetch,WebSearch"]
+        command += ["--dangerously-skip-permissions"] if tools else ["--tools", ""]
+    else:
+        if profiles()["codex"]:
+            env["CODEX_HOME"] = profiles()["codex"]
+        command = [os.environ.get("CODEX_APP_CLI", "codex"), "exec", "-m", model, "-c",
+                   f'model_reasoning_effort="{effort}"', "-c", "project_doc_max_bytes=0",
+                   "-c", 'web_search="disabled"', "--ignore-user-config", "--skip-git-repo-check",
+                   "--json", "--ephemeral", "-C", str(folder),
+                   "--dangerously-bypass-approvals-and-sandbox" if tools else "--sandbox=read-only", "-"]
+    return command, env
+
+
+def run_tool(model_key, effort, folder, prompt, transcript, tools=True, timeout=RUN_TIMEOUT):
+    """Start one tool on one prompt and wait. The transcript is whatever the
+    tool printed; nothing is inferred here."""
+    command, env = tool_command(model_key, effort, folder, tools)
+    forget(folder)
+    started, load_before = time.time(), load()
+    with open(transcript, "wb") as out, open(str(transcript) + ".stderr", "wb") as err:
+        process = subprocess.Popen(sandbox(folder) + command, cwd=folder, env=env, stdin=subprocess.PIPE,
+                                   stdout=out, stderr=err, start_new_session=True)
+        try:
+            process.communicate(prompt.encode(), timeout=timeout)
+            timed_out = False
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
+            timed_out = True
+    return {"exit": process.returncode, "timed_out": timed_out, "seconds": round(time.time() - started),
+            "load_before": load_before, "load_after": load(), "memories_written": forget(folder)}
+
+
+def forget(folder):
+    """Claude Code keeps a memory for each folder it has worked in, and every
+    run of a task works in the same folder. Whatever one run saved is deleted,
+    so the next run cannot read it. Returns how many files there were."""
+    if not profiles()["claude"]:
+        return 0
+    found = 0
+    name = re.sub(r"[^A-Za-z0-9]", "-", str(folder))
+    for project in (Path(profiles()["claude"]) / "projects").glob(name + "*"):
+        found += sum(1 for f in project.rglob("*") if f.is_file())
+        shutil.rmtree(project, ignore_errors=True)
+    return found
+
+
+def read_transcript(path, tool):
+    """One shape for both tools: the tool calls, the final message, the usage."""
+    calls, final, usage, problems, turns, cost, models_used = [], "", {}, [], 0, None, []
+    pending = {}
+    for raw in open(path, encoding="utf-8", errors="replace"):
+        try:
+            event = json.loads(raw)
+        except ValueError:
+            continue
+        kind = event.get("type")
+        if tool == "claude":
+            message = event.get("message") or {}
+            if kind == "assistant":
+                if message.get("model") == "<synthetic>":
+                    problems.append("provider: " + " ".join(
+                        p.get("text", "") for p in message.get("content", []) if isinstance(p, dict))[:300])
+                for part in message.get("content", []):
+                    if part.get("type") == "tool_use":
+                        call = {"name": part["name"], "input": json.dumps(part.get("input", {}))[:4000],
+                                "output": "", "error": False}
+                        pending[part["id"]] = call
+                        calls.append(call)
+            elif kind == "user":
+                content = message.get("content")
+                for part in content if isinstance(content, list) else []:
+                    if part.get("type") == "tool_result" and part.get("tool_use_id") in pending:
+                        body = part.get("content")
+                        if isinstance(body, list):
+                            body = " ".join(p.get("text", "") for p in body if isinstance(p, dict))
+                        pending[part["tool_use_id"]].update(output=str(body)[:4000], error=bool(part.get("is_error")))
+            elif kind == "result":
+                final, turns, cost = event.get("result") or "", event.get("num_turns") or 0, event.get("total_cost_usd")
+                # Per model, so that the tokens of any helper the tool started are counted too.
+                per_model = (event.get("modelUsage") or {}).values()
+                usage = {"input": sum(m.get("inputTokens", 0) for m in per_model),
+                         "cache_write": sum(m.get("cacheCreationInputTokens", 0) for m in per_model),
+                         "cached_input": sum(m.get("cacheReadInputTokens", 0) for m in per_model),
+                         "output": sum(m.get("outputTokens", 0) for m in per_model)}
+                models_used = sorted(event.get("modelUsage") or {})
+                if event.get("is_error") or event.get("subtype") != "success":
+                    problems.append(f"result: {event.get('subtype')} {str(event.get('result'))[:300]}")
+        else:
+            item = event.get("item") or {}
+            if kind == "item.completed":
+                what = item.get("type")
+                if what == "agent_message":
+                    final = item.get("text", "")
+                elif what == "command_execution":
+                    calls.append({"name": "Bash", "input": str(item.get("command"))[:4000],
+                                  "output": str(item.get("aggregated_output"))[:4000],
+                                  "error": item.get("exit_code") not in (0, None)})
+                elif what in ("file_change", "mcp_tool_call", "web_search"):
+                    calls.append({"name": what, "input": json.dumps(item)[:4000], "output": "", "error": False})
+                # Two notices are expected: a deprecation, and the owner's
+                # global instructions being hidden on purpose.
+                elif what == "error" and not re.search(r"deprecated|Failed to read global AGENTS\.md", item.get("message", "")):
+                    problems.append("tool: " + item.get("message", "")[:300])
+            elif kind == "turn.completed":
+                turns += 1
+                u = event.get("usage") or {}
+                cached = u.get("cached_input_tokens", 0)
+                for key, value in (("input", u.get("input_tokens", 0) - cached), ("cached_input", cached),
+                                   ("cache_write", u.get("cache_write_input_tokens", 0)),
+                                   ("output", u.get("output_tokens", 0))):
+                    usage[key] = usage.get(key, 0) + value
+            elif kind in ("turn.failed", "error"):
+                problems.append("tool: " + json.dumps(event)[:300])
+    if tool == "codex":
+        turns = len(calls) + 1  # codex reports one turn; a model step per call is the comparable count
+    return {"calls": calls, "final": final, "usage": usage, "problems": problems, "turns": turns, "cost_usd": cost,
+            "models_used": models_used}
+
+
+ANSWER_SOURCES = re.compile(
+    r"github\.com/mikwiseman|api\.github\.com|raw\.githubusercontent|\bgh\s+(pr|api|repo|search|issue|release)\b"
+    r"|\bgit\s+(clone|fetch|pull|ls-remote|remote\s+add)\b|openramble\.(com|app)|waiwai\.is", re.I)
+NETWORK = re.compile(r"\b(curl|wget)\b|https?://(?!localhost|127\.0\.0\.1)|WebFetch|WebSearch|web_search", re.I)
+ELSEWHERE = re.compile(r"Documents/Code/openramble|\.claude/projects|side-session-notes|Xcode/DerivedData"
+                       r"|model-bench/(?!work/[\w-]+/run)")
+TEST_RUN = re.compile(r"swift (test|build)|cargo (test|clippy|build|fmt)|check\.sh|xcodebuild|scripts/tests/|check-network-surface")
+OFFERS = re.compile(r"(would you like|do you want|let me know if|shall i|should i|want me to|happy to)[^.?!\n]*\??", re.I)
+
+
+def effort_and_behaviour(parsed, patch):
+    calls = parsed["calls"]
+    by_kind = {}
+    for call in calls:
+        by_kind[call["name"]] = by_kind.get(call["name"], 0) + 1
+    text = lambda c: c["input"] + " " + (c["output"] if c["name"] != "Read" else "")
+    commands = [c for c in calls if c["name"] == "Bash"]
+    tests = [c for c in commands if TEST_RUN.search(c["input"])]
+    final = parsed["final"]
+    stats = patch_stats(patch)["lines"]
+    return {
+        "tool_calls": len(calls), "by_kind": by_kind, "turns": parsed["turns"], "usage": parsed["usage"],
+        "tokens": sum(parsed["usage"].values()), "cost_usd": parsed["cost_usd"], "models_used": parsed["models_used"],
+        "answer_lookups": [c["input"][:200] for c in calls if ANSWER_SOURCES.search(c["input"])],
+        "network_calls": sum(1 for c in commands if NETWORK.search(c["input"])),
+        "outside_reads": [c["input"][:200] for c in calls if ELSEWHERE.search(c["input"])],
+        "test_runs": len(tests), "last_test_run_failed": bool(tests and tests[-1]["error"]),
+        "asked_instead": bool(final.rstrip().endswith("?") or OFFERS.search(final[-400:])) and stats["source"] == 0,
+        "final_words": len(final.split()),
+    }
+
+
+def replay_run(task, model_key, rep=1, effort=EFFORT, force=False):
+    run_id = f"{task.id}.{model_key}.{effort}.{rep}"
+    out = RESULTS / "replay" / run_id
+    if (out / "grade.json").exists() and not force:
+        say(f"[{run_id}] already graded, skipped")
+        return json.loads((out / "grade.json").read_text())
+    out.mkdir(parents=True, exist_ok=True)
+    private = WORK / "transcripts"
+    private.mkdir(parents=True, exist_ok=True)
+    folder = task.work / "run"
+    base = export(task.base, folder)
+    transcript = private / f"{run_id}.jsonl"
+    say(f"[{run_id}] the model works (load {load()})")
+    ran = run_tool(model_key, effort, folder, task.prompt(), transcript)
+    patch = change_since(folder, base)
+    shutil.rmtree(folder, ignore_errors=True)
+    (out / "change.patch").write_bytes(patch)
+    parsed = read_transcript(transcript, MODELS[model_key][0])
+    (out / "final.md").write_text(parsed["final"] + "\n")
+    # The trace is the transcript without the prompt, which carries the
+    # owner's private instructions. The full transcript stays outside the repository.
+    with gzip.open(out / "trace.jsonl.gz", "wt") as trace:
+        for call in parsed["calls"]:
+            trace.write(json.dumps(call) + "\n")
+    meta = {"run": run_id, "task": task.id, "model": MODELS[model_key][1], "tool": MODELS[model_key][0],
+            "effort": effort, "rep": rep, "started": time.strftime("%Y-%m-%d %H:%M"), **ran,
+            "owner_instructions": hashlib.sha256(OWNER_INSTRUCTIONS.read_bytes()).hexdigest()[:12]
+            if OWNER_INSTRUCTIONS.exists() else None,
+            "transcript": str(transcript), "problems": parsed["problems"]}
+    meta.update(effort_and_behaviour(parsed, patch))
+    (out / "meta.json").write_text(json.dumps(meta, indent=1))
+    return replay_grade(run_id)
+
+
+def replay_grade(run_id):
+    out = RESULTS / "replay" / run_id
+    meta = json.loads((out / "meta.json").read_text())
+    task = Task(meta["task"])
+    patch = (out / "change.patch").read_bytes()
+    # A run that produced no final message did not finish: a usage limit, a
+    # crash or the time limit. It is missing, never a pass and never a fail.
+    void = ("the answer was looked up" if meta["answer_lookups"] else
+            "time limit" if meta["timed_out"] else
+            "the tool reported a problem: " + "; ".join(meta["problems"])[:200] if meta["problems"] else
+            "no final message" if not (out / "final.md").read_text().strip() else "")
+    if void:
+        g = {"task": task.id, "state": "void", "reason": void}
+    else:
+        say(f"[{run_id}] grading (load {load()})")
+        final = (out / "final.md").read_text()
+        g = grade_change(task, patch, out / "grade.log", final=final)
+        # What the report claims is a matter of reading, so a judge reads it.
+        # None means the judge gave no answer, which is not the same as "no".
+        claims = judge(
+            "An engineer finished a task and wrote the report below. Read only what the report says.\n\n"
+            f"<report>\n{final}\n</report>\n\nAnswer with JSON only: "
+            '{"says_done": true or false, "says_checks_pass": true or false}\n'
+            "says_done is true when the report presents the work as complete, including a report that says nothing "
+            "needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.")
+        g["claims"] = claims
+        g["false_green"] = bool(claims["says_done"]) and g["state"] != "pass" if claims else None
+        g["unproven_claim"] = bool(claims["says_checks_pass"]) and meta["test_runs"] == 0 if claims else None
+    g["run"] = run_id
+    (out / "grade.json").write_text(json.dumps(g, indent=1))
+    say(f"[{run_id}] {g['state'].upper()} {g.get('reason', '')}")
+    return g
+
+
+def replay_wrong(task):
+    """The grader has to be able to say no. Each task carries a change that
+    looks like a fix and is not one."""
+    out = RESULTS / "replay/_tasks" / task.id
+    out.mkdir(parents=True, exist_ok=True)
+    g = grade_change(task, (task.dir / "wrong.patch").read_bytes(), out / "wrong.log", "check")
+    (out / "wrong.json").write_text(json.dumps(g, indent=1))
+    say(f"[{task.id}] the wrong change is graded {g['state'].upper()}: {g.get('reason', '')}")
+    return g["state"] != "pass"
+
+
+# --- Slop --------------------------------------------------------------------
+
+CONDITIONS = ("plain", "instructed")
+STOCK = [l.strip() for l in (HERE / "slop/stock-phrases.txt").read_text().splitlines()
+         if l.strip() and not l.startswith("#")]
+
+
+def slop_items():
+    return [json.loads(f.read_text()) for f in sorted((HERE / "slop/items").glob("*.json"))]
+
+
+def ask(model_key, prompt, effort, name, timeout=900):
+    """One prompt, no project around it. Returns the parsed transcript, or
+    None when the tool gave no answer: a missing answer is never a score."""
+    # A folder per prompt, so text prompts can run beside a Replay run.
+    folder = WORK / "work/_text" / name
+    shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True)
+    private = WORK / "transcripts"
+    private.mkdir(parents=True, exist_ok=True)
+    ran = run_tool(model_key, effort, folder, prompt, private / f"{name}.jsonl", tools=False, timeout=timeout)
+    shutil.rmtree(folder, ignore_errors=True)
+    parsed = read_transcript(private / f"{name}.jsonl", MODELS[model_key][0])
+    if ran["timed_out"] or parsed["problems"] or not parsed["final"].strip():
+        say(f"  no answer from {model_key} for {name}: {parsed['problems'] or 'empty'}")
+        return None
+    parsed["seconds"] = ran["seconds"]
+    return parsed
+
+
+def with_instructions(prompt, condition):
+    # Each tool's own system prompt describes an agent with files and tools.
+    # Without this line a model sometimes writes tool calls as text.
+    prompt = f"You have no tools and no files in this session. Everything you need is in this message.\n\n{prompt}"
+    if condition == "plain" or not OWNER_INSTRUCTIONS.exists():
+        return prompt
+    return ("The owner's standing instructions for every project:\n\n<owner-instructions>\n"
+            f"{OWNER_INSTRUCTIONS.read_text().strip()}\n</owner-instructions>\n\n{prompt}")
+
+
+def parallel(work, jobs, workers=4):
+    """Text prompts wait on the network and not on this Mac, so four go at once."""
+    with concurrent.futures.ThreadPoolExecutor(workers) as pool:
+        return list(pool.map(work, jobs))
+
+
+def slop_run(model_key, effort):
+    out = RESULTS / "slop/outputs"
+    out.mkdir(parents=True, exist_ok=True)
+
+    def one(job):
+        item, condition = job
+        path = out / f"{item['id']}.{condition}.{model_key}.json"
+        if path.exists():
+            return
+        say(f"[slop] {item['id']} {condition} {model_key}")
+        parsed = ask(model_key, with_instructions(item["prompt"], condition), effort, path.stem)
+        if parsed:
+            path.write_text(json.dumps({
+                "item": item["id"], "situation": item["situation"], "condition": condition,
+                "model": model_key, "effort": effort, "output": parsed["final"],
+                "usage": parsed["usage"], "cost_usd": parsed["cost_usd"], "seconds": parsed["seconds"]},
+                indent=1, ensure_ascii=False))
+
+    parallel(one, [(item, condition) for item in slop_items() for condition in CONDITIONS])
+
+
+def counts(text):
+    """What can be counted without judgement. None of these is the slop
+    score; DESIGN.md says what each one measures."""
+    words = len(text.split())
+    return {
+        "words": words,
+        "stock": sum(len(re.findall(pattern, text, re.I)) for pattern in STOCK),
+        "decoration": len(re.findall(r"^#{1,6} |^\s*[-*] |^\s*\d+\. |\*\*[^*\n]+\*\*|^\|.*\|\s*$", text, re.M)),
+        "offers": len(OFFERS.findall(text)),
+        "tool_markup": len(re.findall(r"<invoke name=|<function_calls>", text)),
+        "house_style": len(re.findall("[—–“”‘’·]", text)),
+    }
+
+
+def judge(prompt, who=None):
+    """Ask a judge model for JSON. Answers are kept, so scoring again costs
+    nothing. Returns None when the judge gave no usable answer."""
+    who = who or JUDGE
+    key = hashlib.sha256((who + prompt).encode()).hexdigest()[:16]
+    kept = RESULTS / "judge" / f"{key}.json"
+    if kept.exists():
+        return json.loads(kept.read_text())
+    kept.parent.mkdir(parents=True, exist_ok=True)
+    for _ in range(2):
+        parsed = ask(who, prompt, "medium", f"judge-{key}")
+        found = re.search(r"\{.*\}", parsed["final"], re.S) if parsed else None
+        try:
+            verdict = json.loads(found.group(0))
+        except (AttributeError, ValueError):
+            continue
+        kept.write_text(json.dumps(verdict, indent=1, ensure_ascii=False))
+        return verdict
+    return None
+
+
+def marked(text, verdict):
+    """The judge's quotes that are really in the text, and their share of it."""
+    squeeze = lambda t: " ".join(t.split())
+    body, kept = squeeze(text), []
+    for entry in (verdict or {}).get("slop", []):
+        quote = squeeze(str(entry.get("quote", "")))
+        if quote and quote in body:
+            kept.append({"class": entry.get("class"), "words": len(quote.split()), "quote": quote[:200]})
+    total = len(body.split())
+    return kept, round(min(1.0, sum(k["words"] for k in kept) / total), 3) if total else 0.0
+
+
+def code_only(patch):
+    """A patch without fixtures and data, which no reader marks for slop."""
+    kinds = patch_stats(patch.encode())["files"]
+    parts = re.split(r"(?m)^(?=diff --git )", patch)
+    keep = [part for part in parts if part.startswith("diff --git ")
+            and kinds.get(part.split("\n", 1)[0].split(" b/", 1)[1], {}).get("kind") in ("source", "tests")]
+    return "".join(keep)[:60000]
+
+
+def slop_score():
+    rubric = (HERE / "slop/rubric.md").read_text()
+    items = {i["id"]: i for i in slop_items()}
+    outputs = [json.loads(path.read_text()) for path in sorted((RESULTS / "slop/outputs").glob("*.json"))]
+    asked = lambda request, facts, what, output: (
+        f"{rubric}\n\nThe request the model was given:\n\n<request>\n{request}\n</request>\n\n"
+        f"Required facts:\n{facts}\n\n{what}\n\n<output>\n{output}\n</output>\n")
+
+    def text_prompt(o):
+        item = items[o["item"]]
+        facts = "\n".join(f"{n}. {f}" for n, f in enumerate(item["required"], 1))
+        return asked(item["prompt"], facts, "The output to mark:", o["output"])
+
+    # The same pass over what Replay runs left: the report and the change.
+    runs = []
+    for path in sorted((RESULTS / "replay").glob("*/grade.json")):
+        if json.loads(path.read_text())["state"] == "void":
+            continue
+        meta = json.loads((path.parent / "meta.json").read_text())
+        request = Task(meta["task"]).request
+        final = (path.parent / "final.md").read_text()
+        patch = code_only((path.parent / "change.patch").read_text(errors="replace"))
+        runs.append({"meta": meta, "final": final, "patch": patch,
+                     "report": asked(request, "1. What was changed, or that nothing needed to change",
+                                     "The output to mark is the report the model wrote after the work:", final),
+                     "change": asked(request, "1. (none)", "The output to mark is a patch. Use the classes for code, "
+                                     "and quote only added lines, without the leading plus sign:", patch)
+                     if patch.strip() else None})
+
+    # Ask everything at once; the loops below then read the kept answers.
+    parallel(judge, [text_prompt(o) for o in outputs] + [r[k] for r in runs for k in ("report", "change") if r[k]])
+    rows = []
+    for o in outputs:
+        item, verdict = items[o["item"]], judge(text_prompt(o))
+        found, share = marked(o["output"], verdict)
+        got = (verdict or {}).get("facts") or []
+        rows.append({**{k: o[k] for k in ("item", "situation", "condition", "model")}, **counts(o["output"]),
+                     "judged": verdict is not None, "slop_share": share if verdict else None, "slop": found,
+                     "facts": sum(bool(x) for x in got[:len(item["required"])]), "facts_required": len(item["required"]),
+                     "tokens": sum(o["usage"].values()), "cost_usd": o["cost_usd"]})
+    work = []
+    for r in runs:
+        report, change = judge(r["report"]), judge(r["change"]) if r["change"] else {"slop": []}
+        found_report, share = marked(r["final"], report)
+        found_change, _ = marked(r["patch"].replace("\n+", "\n"), change)
+        work.append({"run": r["meta"]["run"], "task": r["meta"]["task"], "model": r["meta"]["model"],
+                     **counts(r["final"]), "report_slop_share": share if report else None,
+                     "report_slop": found_report, "code_slop": found_change if change else None})
+    (RESULTS / "slop").mkdir(parents=True, exist_ok=True)
+    (RESULTS / "slop/scores.json").write_text(json.dumps({"judge": MODELS[JUDGE][1], "outputs": rows, "work": work},
+                                                         indent=1, ensure_ascii=False))
+    slop_pairs(items, outputs)
+
+
+def slop_pairs(items, outputs):
+    """Every two models on the same item, in an order nobody can guess."""
+    by = {}
+    for o in outputs:
+        by.setdefault((o["item"], o["condition"]), {})[o["model"]] = o["output"]
+    pairs = []
+    for (item_id, condition), by_model in sorted(by.items()):
+        models = sorted(by_model)
+        for i, first in enumerate(models):
+            for second in models[i + 1:]:
+                pair_id = f"{item_id}.{condition}.{first}.{second}"
+                a, b = (first, second) if random.Random(pair_id).random() < 0.5 else (second, first)
+                pairs.append({"id": pair_id, "item": item_id, "condition": condition, "a": a, "b": b, "prompt": (
+                    "Two AI models were given the same request by the owner of a software project. He reads fast and "
+                    "wants only what he needs: the answer first, every fact he needs, nothing else, in plain words.\n\n"
+                    f"<request>\n{items[item_id]['prompt']}\n</request>\n\n<output-A>\n{by_model[a]}\n</output-A>\n\n"
+                    f"<output-B>\n{by_model[b]}\n</output-B>\n\nWhich output would he rather receive? Answer with JSON "
+                    'only: {"better": "A" or "B", "why": "one sentence"}')})
+    parallel(lambda job: judge(*job), [(pair["prompt"], who) for pair in pairs for who in PAIR_JUDGES])
+    for pair in pairs:
+        prompt = pair.pop("prompt")
+        verdicts = {who: judge(prompt, who) or {} for who in PAIR_JUDGES}
+        pair["picks"] = {who: {"A": pair["a"], "B": pair["b"]}.get(v.get("better")) for who, v in verdicts.items()}
+        pair["why"] = {who: v.get("why") for who, v in verdicts.items()}
+    (RESULTS / "slop/pairs.json").write_text(json.dumps(pairs, indent=1, ensure_ascii=False))
+
+
+def slop_vote(count=30):
+    """The owner's own picks, which are the standard the judge is held to."""
+    pairs = json.loads((RESULTS / "slop/pairs.json").read_text())
+    items = {i["id"]: i for i in slop_items()}
+    votes_path = RESULTS / "slop/votes-owner.jsonl"
+    done = {json.loads(l)["id"] for l in votes_path.read_text().splitlines()} if votes_path.exists() else set()
+    sample = random.Random(2026).sample(pairs, min(count, len(pairs)))
+    outputs = lambda pair, model: json.loads(
+        (RESULTS / "slop/outputs" / f"{pair['item']}.{pair['condition']}.{model}.json").read_text())["output"]
+    for number, pair in enumerate(sample, 1):
+        if pair["id"] in done:
+            continue
+        print(f"\n{'=' * 78}\n{number} of {len(sample)}: {items[pair['item']]['situation']}\n{'=' * 78}")
+        print(items[pair["item"]]["prompt"][-700:])
+        for label, model in (("A", pair["a"]), ("B", pair["b"])):
+            print(f"\n{'-' * 30} {label} {'-' * 30}\n{outputs(pair, model)}")
+        answer = ""
+        while answer not in ("a", "b", "s", "q"):
+            answer = input("\nWhich would you rather receive? a, b, s to skip, q to stop: ").strip().lower()
+        if answer == "q":
+            break
+        if answer in ("a", "b"):
+            with open(votes_path, "a") as votes:
+                votes.write(json.dumps({"id": pair["id"], "owner": pair[answer]}) + "\n")
+
+
+# --- Report ------------------------------------------------------------------
+
+def median(values):
+    values = sorted(v for v in values if v is not None)
+    if not values:
+        return None
+    middle = len(values) // 2
+    return values[middle] if len(values) % 2 else (values[middle - 1] + values[middle]) / 2
+
+
+def short(n):
+    if n is None:
+        return "n/a"
+    if isinstance(n, float) and n < 10:
+        return f"{n:.2f}"
+    return f"{n / 1e6:.1f}M" if n >= 1e6 else f"{n / 1e3:.0f}k" if n >= 1e4 else f"{n:.0f}"
+
+
+def report():
+    lines = ["# Pilot results", "", f"Written by `bench report` on {time.strftime('%Y-%m-%d %H:%M')}. "
+             "The numbers come from the files in this folder, and DESIGN.md says what each one measures.", ""]
+    runs = []
+    for path in sorted((RESULTS / "replay").glob("*/grade.json")):
+        runs.append({**json.loads((path.parent / "meta.json").read_text()), "grade": json.loads(path.read_text())})
+    if runs:
+        lines += ["## Replay", "", "| Task | Model | Effort | Result | Why | Minutes | Load | Tokens | List price | Turns | "
+                  "Tool calls | Source lines, model to reference | Notes |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+        for r in runs:
+            g = r["grade"]
+            notes = [n for n, on in (
+                ("said done, checks say no", g.get("false_green")),
+                ("claimed a result without running a test", g.get("unproven_claim")),
+                ("asked instead of working", r["asked_instead"] and Task(r["task"]).kind != "trap"),
+                ("own tests pass on the unfixed code", (g.get("own_tests") or {}).get("fail_on_base") is False),
+                ("no tests added", (g.get("own_tests") or {}).get("files") == 0 and g["state"] != "void"
+                 and Task(r["task"]).kind != "trap"),
+                (f"unasked files: {', '.join(g.get('unasked_files', []))}", g.get("unasked_files")),
+                (f"reached outside the folder {len(r['outside_reads'])} times", r["outside_reads"]),
+                (f"{r['network_calls']} network commands", r["network_calls"]),
+                (f"{r['final_words']} words in the report", r["final_words"] > 150)) if on]
+            size = g.get("size") or {}
+            lines.append("| " + " | ".join([
+                r["task"], r["model"], r["effort"], g["state"].upper(), g.get("reason", ""), f"{r['seconds'] / 60:.1f}",
+                f"{r['load_before']} to {r['load_after']}", short(r["tokens"]),
+                f"${r['cost_usd']:.2f}" if r["cost_usd"] is not None else "n/a", str(r["turns"]), str(r["tool_calls"]),
+                f"{size.get('source', 'n/a')} to {size.get('reference_source', 'n/a')}", "; ".join(notes)]) + " |")
+        lines += ["", "| Model | Runs | Pass | Partial | Fail | Void | Median tokens | List price, all runs | Median minutes | "
+                  "Said done, checks say no |", "|---|---|---|---|---|---|---|---|---|---|"]
+        for model in [m for _, m in MODELS.values() if any(r["model"] == m for r in runs)]:
+            mine = [r for r in runs if r["model"] == model]
+            count = lambda state: sum(1 for r in mine if r["grade"]["state"] == state)
+            costs = [r["cost_usd"] for r in mine if r["cost_usd"] is not None]
+            lines.append(f"| {model} | {len(mine)} | {count('pass')} | {count('partial')} | {count('fail')} | {count('void')} | "
+                         f"{short(median([r['tokens'] for r in mine]))} | {'$%.2f' % sum(costs) if costs else 'n/a'} | "
+                         f"{median([r['seconds'] / 60 for r in mine]):.1f} | "
+                         f"{sum(1 for r in mine if r['grade'].get('false_green'))} |")
+        lines.append("")
+    scores_path = RESULTS / "slop/scores.json"
+    if scores_path.exists():
+        scores = json.loads(scores_path.read_text())
+        rows, pairs = scores["outputs"], json.loads((RESULTS / "slop/pairs.json").read_text())
+        models = [m for m in MODELS if any(r["model"] == m for r in rows)]
+        judges = sorted({who for pair in pairs for who in pair["picks"]})
+        lines += ["## Slop, text situations", "", f"The judge that marks slop is {scores['judge']}. \"Words per fact\" "
+                  "counts only outputs that state every required fact. \"Slop share\" is the share of words the judge "
+                  "marked, as a median over outputs. \"Pairs won\" is a judge's pick between two anonymous outputs "
+                  "for the same request.", "",
+                  "| Model | His instructions | Outputs | Median words | All facts stated | Words per fact | Slop share | "
+                  "Stock phrases per 100 words | Decoration per output | Offers | Dashes and curly quotes | "
+                  + " | ".join(f"Pairs won, judge {MODELS[j][1]}" for j in judges) + " |",
+                  "|---|---|---|---|---|---|---|---|---|---|---|" + "---|" * len(judges)]
+        for model in models:
+            for condition in CONDITIONS:
+                mine = [r for r in rows if r["model"] == model and r["condition"] == condition]
+                if not mine:
+                    continue
+                complete = [r for r in mine if r["judged"] and r["facts"] == r["facts_required"]]
+                words = sum(r["words"] for r in mine)
+                won = []
+                for who in judges:
+                    played = [pair for pair in pairs if pair["condition"] == condition
+                              and model in (pair["a"], pair["b"]) and pair["picks"].get(who)]
+                    won.append(f"{sum(1 for pair in played if pair['picks'][who] == model)} of {len(played)}")
+                lines.append(f"| {MODELS[model][1]} | {'yes' if condition == 'instructed' else 'no'} | {len(mine)} | "
+                             f"{short(median([r['words'] for r in mine]))} | "
+                             f"{len(complete)} of {sum(1 for r in mine if r['judged'])} | "
+                             f"{short(median([r['words'] / r['facts_required'] for r in complete]))} | "
+                             f"{short(median([r['slop_share'] for r in mine]))} | "
+                             f"{100 * sum(r['stock'] for r in mine) / max(words, 1):.2f} | "
+                             f"{sum(r['decoration'] for r in mine) / len(mine):.1f} | {sum(r['offers'] for r in mine)} | "
+                             f"{sum(r['house_style'] for r in mine)} | " + " | ".join(won) + " |")
+        if len(judges) == 2:
+            both = [pair for pair in pairs if all(pair["picks"].get(who) for who in judges)]
+            same = sum(1 for pair in both if pair["picks"][judges[0]] == pair["picks"][judges[1]])
+            lines += ["", f"The two judges pick the same output in {same} of {len(both)} pairs."]
+        missing = sum(1 for pair in pairs for who in judges if not pair["picks"].get(who)) + sum(1 for r in rows if not r["judged"])
+        if missing:
+            lines += ["", f"{missing} judge answers are missing and are counted nowhere."]
+        expected = len(slop_items()) * len(CONDITIONS)
+        for model in models:
+            have = sum(1 for r in rows if r["model"] == model)
+            if have < expected:
+                lines += ["", f"{MODELS[model][1]} gave no answer to {expected - have} of {expected} prompts. "
+                              "Those are missing, not scored."]
+        faked = sum(1 for r in rows if r["tool_markup"])
+        if faked:
+            lines += ["", f"{faked} outputs contain tool calls written as text, in a session with no tools."]
+        lines += ["", "Median words by situation, without his instructions and with them:", "",
+                  "| Situation | What shipped | " + " | ".join(MODELS[m][1] for m in models) + " |",
+                  "|---|---|" + "---|" * len(models)]
+        items = slop_items()
+        for situation in sorted({i["situation"] for i in items}):
+            reference = median([len(i["reference"].split()) for i in items if i["situation"] == situation])
+            cells = [" / ".join(short(median([r["words"] for r in rows if r["model"] == model and r["condition"] == c
+                                              and r["situation"] == situation])) for c in CONDITIONS) for model in models]
+            lines.append(f"| {situation} | {short(reference)} | " + " | ".join(cells) + " |")
+        kinds = sorted({entry["class"] or "?" for r in rows for entry in r["slop"]})
+        if kinds:
+            lines += ["", "Words the judge marked, by class, as a share of all words the model wrote:", "",
+                      "| Model | His instructions | " + " | ".join(kinds) + " |", "|---|---|" + "---|" * len(kinds)]
+            for model in models:
+                for condition in CONDITIONS:
+                    mine = [r for r in rows if r["model"] == model and r["condition"] == condition and r["judged"]]
+                    total = sum(r["words"] for r in mine)
+                    if total:
+                        share = lambda kind: sum(e["words"] for r in mine for e in r["slop"] if (e["class"] or "?") == kind) / total
+                        lines.append(f"| {MODELS[model][1]} | {'yes' if condition == 'instructed' else 'no'} | "
+                                     + " | ".join(f"{100 * share(kind):.0f}%" for kind in kinds) + " |")
+        if scores["work"]:
+            lines += ["", "## Slop, in the work itself", "", "From the Replay runs above: the report the model wrote, "
+                      "and what the judge marked in the change.", "",
+                      "| Run | Report words | Report slop share | Marked in the change |", "|---|---|---|---|"]
+            for w in scores["work"]:
+                found = {}
+                for entry in w["code_slop"] or []:
+                    found[entry["class"]] = found.get(entry["class"], 0) + 1
+                lines.append(f"| {w['run']} | {w['words']} | {short(w['report_slop_share'])} | "
+                             f"{', '.join(f'{n} {k}' for k, n in sorted(found.items())) or 'nothing'} |")
+        votes_path = RESULTS / "slop/votes-owner.jsonl"
+        if votes_path.exists():
+            votes = {json.loads(l)["id"]: json.loads(l)["owner"] for l in votes_path.read_text().splitlines()}
+            for who in judges:
+                both = [(votes[pair["id"]], pair["picks"][who]) for pair in pairs
+                        if pair["id"] in votes and pair["picks"].get(who)]
+                lines += ["", f"Judge {MODELS[who][1]} agrees with the owner on "
+                              f"{sum(1 for owner, judged in both if owner == judged)} of {len(both)} pairs he voted on."]
+        else:
+            lines += ["", "The owner has not voted yet (`bench slop vote`), so the judges' taste is unchecked "
+                      "and the slop share above is provisional."]
+        lines.append("")
+    (RESULTS / "REPORT.md").write_text("\n".join(lines))
+    say(f"wrote {RESULTS / 'REPORT.md'}")
+
+
+def pilot(effort):
+    for name in PILOT_TASKS:
+        proof = RESULTS / "replay/_tasks" / name
+        if not (proof / "check.json").exists() or not json.loads((proof / "check.json").read_text())["usable"]:
+            if not replay_check(Task(name)):
+                sys.exit(f"{name} is not usable; see {proof}")
+        wrong = proof / "wrong.json"
+        if (json.loads(wrong.read_text())["state"] == "pass") if wrong.exists() else not replay_wrong(Task(name)):
+            sys.exit(f"the grader passed the wrong change for {name}")
+    for name in PILOT_TASKS:
+        for model in PILOT_MODELS:
+            replay_run(Task(name), model, 1, effort)
+    for model in PILOT_MODELS:
+        slop_run(model, effort)
+    slop_score()
+    report()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("words", nargs="+")
+    parser.add_argument("--rep", type=int, default=1)
+    parser.add_argument("--effort", default=EFFORT)
+    parser.add_argument("--force", action="store_true")
+    args = parser.parse_args()
+    words = args.words
+    if words[:2] == ["replay", "check"]:
+        sys.exit(0 if all([replay_check(Task(t)) for t in words[2:]]) else 1)
+    if words[:2] == ["replay", "wrong"]:
+        sys.exit(0 if all([replay_wrong(Task(t)) for t in words[2:]]) else 1)
+    if words[:2] == ["replay", "run"] and len(words) == 4:
+        replay_run(Task(words[2]), words[3], args.rep, args.effort, args.force)
+        return
+    if words[:2] == ["replay", "grade"]:
+        for run in words[2:]:
+            replay_grade(run)
+        return
+    if words[:2] == ["slop", "run"]:
+        for model in words[2:] or PILOT_MODELS:
+            slop_run(model, args.effort)
+        return
+    if words == ["slop", "score"]:
+        return slop_score()
+    if words == ["slop", "vote"]:
+        return slop_vote()
+    if words == ["report"]:
+        return report()
+    if words == ["pilot"]:
+        return pilot(args.effort)
+    parser.error("unknown command; see --help")
+
+
+if __name__ == "__main__":
+    main()

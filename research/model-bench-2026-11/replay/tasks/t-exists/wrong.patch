@@ -1,0 +1,15 @@
+diff --git a/apps/macos/OpenRamble/UI/SettingsView.swift b/apps/macos/OpenRamble/UI/SettingsView.swift
+index 4aa9dc5..df55482 100644
+--- a/apps/macos/OpenRamble/UI/SettingsView.swift
++++ b/apps/macos/OpenRamble/UI/SettingsView.swift
+@@ -1017,6 +1017,10 @@ private struct AboutView: View {
+                 L10n.tr("Updates"),
+                 footer: L10n.tr("On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access.")
+             ) {
++                BlockRow(title: L10n.tr("Scheduled update check")) {
++                    Toggle("", isOn: $updater.automaticChecksEnabled)
++                        .labelsHidden()
++                }
+                 BlockRow(title: L10n.tr("Check for updates automatically")) {
+                     // Disabled together with the updater: a switch that
+                     // promises daily checks beside "updates are not working"

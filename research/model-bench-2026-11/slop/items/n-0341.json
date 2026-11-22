@@ -1,0 +1,10 @@
+{
+ "id": "n-0341",
+ "situation": "release notes",
+ "prompt": "Facts about release 0.34.1 of OpenRamble, a dictation app for the Mac:\n\n- One change. After macOS has moved the app out of memory, the first press of the dictation key started the microphone late.\n- The app now keeps the microphone set up between dictations without running it, so a press only has to start it.\n- Measured with memory full and every core busy: the microphone started in 87 ms instead of 136 ms at the median, and in at most 148 ms instead of 315 ms.\n- The microphone still does not run between dictations.\n\nWrite the release notes that users will read in the update window.",
+ "required": [
+  "After the Mac has moved the app out of memory, the microphone starts sooner",
+  "The microphone does not run between dictations"
+ ],
+ "reference": "# OpenRamble 0.34.1\n\n# The first word after a pause\n\n- After your Mac has moved OpenRamble out of memory, the microphone now starts sooner when you press the key. OpenRamble keeps it set up between dictations without running it, so a press only has to start it. With memory full and every core busy, it started in 87 ms instead of 136 ms, and in at most 148 ms instead of 315 ms.\n- The microphone still does not run between dictations.\n\nYour voice and text still never leave your Mac."
+}

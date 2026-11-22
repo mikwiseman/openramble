@@ -1,0 +1,27 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/DictationController.swift b/Packages/DictationCore/Sources/DictationCore/DictationController.swift
+index 87695d9..61cfcfe 100644
+--- a/Packages/DictationCore/Sources/DictationCore/DictationController.swift
++++ b/Packages/DictationCore/Sources/DictationCore/DictationController.swift
+@@ -699,6 +699,11 @@ public final class DictationController {
+ 
+     /// Stop in the mode without holding - by pressing the key a second time.
+     public func stopHandsFree() {
++        if state == .inserting, pressDuringInsertion != nil {
++            // The second press of a press that waits for the paste.
++            pressDuringInsertion?.released = true
++            return
++        }
+         guard isHandsFree else { return }
+ 
+         switch state {
+@@ -1742,7 +1747,9 @@ public final class DictationController {
+         await end(session, saying: notice)
+         if let press {
+             begin(handsFree: press.handsFree, isEnabled: press.isEnabled, isModelReady: press.isModelReady)
+-            if press.released { stop() }
++            if press.released {
++                if press.handsFree { stopHandsFree() } else { stop() }
++            }
+         }
+     }
+ 

@@ -1,0 +1,13 @@
+diff --git a/scripts/check-network-surface.sh b/scripts/check-network-surface.sh
+index f578dac..e9b7670 100755
+--- a/scripts/check-network-surface.sh
++++ b/scripts/check-network-surface.sh
+@@ -70,7 +70,7 @@ while IFS= read -r hit; do
+   # the gate crashed on a line that itself explains why you can’t write it like that -
+   # and a false positive here is more expensive than a pass: they start to bypass it, and
+   # one day they will bypass the present.
+-done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" 2>/dev/null \
++done < <(grep -rnE "${FORBIDDEN_PASTEBOARD:-__no_pattern__}" "${SHIPPING_PATHS[@]}" 2>/dev/null \
+   | grep -v '^Binary' \
+   | grep -vE ':[0-9]+: *//' \
+   || true)

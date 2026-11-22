@@ -1,0 +1,10 @@
+{
+ "kind": "replay",
+ "area": "release and scripts",
+ "source": "#39, the clipboard gate was reading an unset variable",
+ "base": "bd2bfa8292f2e8a9874c85c627da8811fa7afbea",
+ "reference": "08dce90dcd60f7d71d37f53396bf9f9f69b04f8e",
+ "hidden": ["bench-hidden/test-clipboard-gate.sh"],
+ "authored_tests": "The pull request has no test. The grader's test was written for this task: the gate must be green and silent on the tree as it is, red on a planted plain clearContents(), and green again once the line is removed.",
+ "check": "bash -n scripts/check-network-surface.sh && ./scripts/check-network-surface.sh"
+}
