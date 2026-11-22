@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(ore LANGUAGES C CXX)
+project(ore LANGUAGES C)
 
 # The engine is plain C with no dependencies. This file builds the static
 # library and its command-line tools; the Swift package and the Rust crate
@@ -69,6 +69,7 @@ add_test(NAME selftest COMMAND selftest ${CMAKE_CURRENT_BINARY_DIR}/selftest.ggu
 # TRANSCRIBE_INSTALL=ON); they are not part of the library.
 set(ORE_TCPP_PREFIX "" CACHE PATH "Install prefix of transcribe.cpp for the comparison tools")
 if(ORE_TCPP_PREFIX)
+    enable_language(CXX)  # transcribe.cpp is C++; the engine itself needs no C++ compiler
     function(ore_link_tcpp target)
         target_include_directories(${target} PRIVATE ${ORE_TCPP_PREFIX}/include)
         # The header marks its functions as DLL imports on Windows unless told
