@@ -13,11 +13,17 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 set(ORE_SOURCES
+    src/ore.c
     src/ore_cpu.c
+    src/ore_decoder.c
+    src/ore_encoder.c
     src/ore_gguf.c
     src/ore_kernels_generic.c
     src/ore_kernels_neon.c
-    src/ore_kernels_avx2.c)
+    src/ore_kernels_avx2.c
+    src/ore_mel.c
+    src/ore_model.c
+    src/ore_threads.c)
 
 add_library(ore STATIC ${ORE_SOURCES})
 target_include_directories(ore PUBLIC include)
@@ -29,7 +35,9 @@ if(MSVC)
 else()
     # No contraction: the code names its fused multiply-adds itself.
     target_compile_options(ore PRIVATE -Wall -Wextra -ffp-contract=off)
-    target_compile_definitions(ore PRIVATE _POSIX_C_SOURCE=200809L _DEFAULT_SOURCE)
+    if(NOT APPLE)
+        target_compile_definitions(ore PRIVATE _POSIX_C_SOURCE=200809L _DEFAULT_SOURCE)
+    endif()
 endif()
 find_package(Threads REQUIRED)
 target_link_libraries(ore PUBLIC Threads::Threads)
@@ -39,8 +47,11 @@ endif()
 
 add_executable(kbench tools/kbench.c)
 target_link_libraries(kbench PRIVATE ore)
-if(NOT MSVC)
+add_executable(ore-cli tools/ore_cli.c)
+target_link_libraries(ore-cli PRIVATE ore)
+if(UNIX AND NOT APPLE)
     target_compile_definitions(kbench PRIVATE _POSIX_C_SOURCE=200809L)
+    target_compile_definitions(ore-cli PRIVATE _POSIX_C_SOURCE=200809L)
 endif()
 
 # Comparison tools need an installed transcribe.cpp (cmake --install with
@@ -60,7 +71,7 @@ if(ORE_TCPP_PREFIX)
             target_link_libraries(${target} PRIVATE m ${CMAKE_DL_LIBS})
         endif()
         set_target_properties(${target} PROPERTIES LINKER_LANGUAGE CXX)
-        if(NOT MSVC)
+        if(UNIX AND NOT APPLE)
             target_compile_definitions(${target} PRIVATE _POSIX_C_SOURCE=200809L)
         endif()
     endfunction()

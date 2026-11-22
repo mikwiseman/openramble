@@ -66,6 +66,30 @@ typedef struct ore_kernels {
     // xp[(tb * n_in + k) * 16 + f]. `scratch` holds 4 * n_in floats.
     void (*gemm_f32)(const void * w, int w_is_f16, size_t wstride, int n_in, int r0, int r1, const float * xp,
                      int rows, float * y, size_t ystride, float * scratch);
+
+    // The element-wise steps. Sums run in 16 lanes (element i in lane i % 16)
+    // that are added pairwise at the end, so the result does not depend on
+    // the register width.
+
+    // y = gamma * (x - mean) / sqrt(var + eps) + beta over n values.
+    void (*layer_norm)(const float * x, float * y, int n, const float * gamma, const float * beta, float eps);
+    // x[i] = x[i] / (1 + exp(-x[i]))
+    void (*silu)(float * x, size_t n);
+    // out[i] = a[i] * (1 / (1 + exp(-b[i])))
+    void (*glu)(const float * a, const float * b, float * out, size_t n);
+    // s = softmax(s) over n values, in place.
+    void (*softmax)(float * s, int n);
+    // One frame of a depthwise convolution followed by the folded batch norm
+    // and SiLU: acc[c] = sum_j w[j * n + c] * taps[j][c] in order of j (a NULL
+    // tap is a frame outside the clip and counts as zero);
+    // out[c] = silu(acc[c] * scale[c] + bias[c]).
+    void (*dwconv_bn_silu)(const float * const * taps, const float * w, int k, int n, const float * scale,
+                           const float * bias, float * out);
+    // The same accumulation with only a bias: out[c] = acc[c] + bias[c].
+    void (*dwconv_bias)(const float * const * taps, const float * w, int k, int n, const float * bias, float * out);
+    // y[r] = sum_k w[r * cols + k] * x[k] for one vector, fused, in the 16
+    // lanes above.
+    void (*gemv_f32)(const float * w, int rows, int cols, const float * x, float * y);
 } ore_kernels;
 
 // xp[(tb * n + k) * 16 + f] = x[(tb * 16 + f) * xstride + k], zero past `rows`.

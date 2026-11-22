@@ -250,6 +250,92 @@ static void gemm_f32_generic(const void * w, int w_is_f16, size_t wstride, int n
     }
 }
 
+// ---- element-wise steps -------------------------------------------------------
+
+// Sixteen running sums, added pairwise: (l + l+8), then (l + l+4), (l + l+2),
+// and the last two.
+ORE_INLINE float sum16(const float * s) {
+    float t8[8], t4[4];
+    for (int i = 0; i < 8; ++i) t8[i] = s[i] + s[i + 8];
+    for (int i = 0; i < 4; ++i) t4[i] = t8[i] + t8[i + 4];
+    return (t4[0] + t4[2]) + (t4[1] + t4[3]);
+}
+
+static void layer_norm_generic(const float * x, float * y, int n, const float * gamma, const float * beta, float eps) {
+    float s[16] = { 0 };
+    for (int i = 0; i < n; ++i) s[i & 15] = s[i & 15] + x[i];
+    const float mean = sum16(s) / (float) n;
+    float       v[16] = { 0 };
+    for (int i = 0; i < n; ++i) {
+        const float d = x[i] - mean;
+        v[i & 15]     = fmaf(d, d, v[i & 15]);
+    }
+    const float var   = sum16(v) / (float) n;
+    const float scale = 1.0f / sqrtf(var + eps);
+    for (int i = 0; i < n; ++i) {
+        const float d = x[i] - mean;
+        const float t = (d * scale) * gamma[i];
+        y[i]          = t + beta[i];
+    }
+}
+
+static void silu_generic(float * x, size_t n) {
+    for (size_t i = 0; i < n; ++i) x[i] = x[i] / (1.0f + ore_expf(0.0f - x[i]));
+}
+
+static void glu_generic(const float * a, const float * b, float * out, size_t n) {
+    for (size_t i = 0; i < n; ++i) out[i] = a[i] * (1.0f / (1.0f + ore_expf(0.0f - b[i])));
+}
+
+static void softmax_generic(float * s, int n) {
+    float mx = s[0];
+    for (int i = 1; i < n; ++i) {
+        if (s[i] > mx) mx = s[i];
+    }
+    float acc[16] = { 0 };
+    for (int i = 0; i < n; ++i) {
+        s[i]        = ore_expf(s[i] - mx);
+        acc[i & 15] = acc[i & 15] + s[i];
+    }
+    const float inv = 1.0f / sum16(acc);
+    for (int i = 0; i < n; ++i) s[i] = s[i] * inv;
+}
+
+static void dwconv_bn_silu_generic(const float * const * taps, const float * w, int k, int n, const float * scale,
+                                   const float * bias, float * out) {
+    for (int c = 0; c < n; ++c) {
+        float acc = 0.0f;
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = fmaf(w[(size_t) j * n + c], taps[j][c], acc);
+        }
+        const float t = acc * scale[c];
+        const float u = t + bias[c];
+        out[c]        = u / (1.0f + ore_expf(0.0f - u));
+    }
+}
+
+static void dwconv_bias_generic(const float * const * taps, const float * w, int k, int n, const float * bias,
+                                float * out) {
+    for (int c = 0; c < n; ++c) {
+        float acc = 0.0f;
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = fmaf(w[(size_t) j * n + c], taps[j][c], acc);
+        }
+        out[c] = acc + bias[c];
+    }
+}
+
+static void gemv_f32_generic(const float * w, int rows, int cols, const float * x, float * y) {
+    for (int r = 0; r < rows; ++r) {
+        const float * wr    = w + (size_t) r * cols;
+        float         a[16] = { 0 };
+        for (int k = 0; k < cols; ++k) a[k & 15] = fmaf(wr[k], x[k], a[k & 15]);
+        y[r] = sum16(a);
+    }
+}
+
 const ore_kernels ore_kernels_generic = {
-    "generic", quantize_q8k_generic, quantize_q80_generic, gemm_q4k_generic, gemm_q80_generic, gemm_f32_generic,
+    "generic",          quantize_q8k_generic, quantize_q80_generic, gemm_q4k_generic, gemm_q80_generic,
+    gemm_f32_generic,   layer_norm_generic,   silu_generic,         glu_generic,      softmax_generic,
+    dwconv_bn_silu_generic, dwconv_bias_generic, gemv_f32_generic,
 };

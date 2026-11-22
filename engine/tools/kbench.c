@@ -190,6 +190,41 @@ int main(int argc, char ** argv) {
         ore_free(yref);
         ore_free(y);
     }
+    // The element-wise steps: every table must give the reference's bits.
+    {
+        enum { N = 1024, NS = 137 };
+        float * x  = (float *) ore_alloc(sizeof(float) * N * 12);
+        float * r  = (float *) ore_alloc(sizeof(float) * N * 4);
+        float * o  = (float *) ore_alloc(sizeof(float) * N * 4);
+        float * gm = x + N * 9, *bt = x + N * 10, *sc = x + N * 11;
+        rng_state  = 99;
+        for (int i = 0; i < N * 12; ++i) x[i] = rnd() * 3.0f;
+        x[5] = 200.0f;  // exp's overflow and underflow branches
+        x[6] = -200.0f;
+        x[7] = 100.0f;
+        const float * taps[9];
+        for (int j = 0; j < 9; ++j) taps[j] = (j == 0 || j == 8) ? NULL : x + (size_t) j * N;
+        printf("element-wise steps\n");
+        for (int ti = 0; ti < n_tables; ++ti) {
+            const ore_kernels * k   = tables[ti];
+            float *             out = ti == 0 ? r : o;
+            k->layer_norm(x, out, N, gm, bt, 1e-5f);
+            memcpy(out + N, x, sizeof(float) * N);
+            k->silu(out + N, N);
+            k->glu(x, x + N, out + 2 * N, N - 3);
+            memcpy(out + 3 * N, x + 2 * N, sizeof(float) * NS);
+            k->softmax(out + 3 * N, NS);
+            k->dwconv_bn_silu(taps, x, 9, N - 16, sc, bt, out + 3 * N + 160);
+            if (ti > 0) {
+                printf("  %s\n", k->name);
+                compare("against the reference:", r, o, (size_t) N * 4);
+                if (memcmp(r, o, sizeof(float) * N * 4) != 0) bad = 1;
+            }
+        }
+        ore_free(x);
+        ore_free(r);
+        ore_free(o);
+    }
     ore_gguf_close(g);
     if (bad) {
         printf("FAILED: a table disagrees with the reference\n");

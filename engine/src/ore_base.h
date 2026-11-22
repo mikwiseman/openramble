@@ -5,6 +5,7 @@
 #ifndef ORE_BASE_H
 #define ORE_BASE_H
 
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -121,6 +122,39 @@ ORE_INLINE uint16_t ore_rd16(const uint8_t * p) {
     uint16_t v;
     memcpy(&v, p, 2);
     return v;
+}
+
+// ---- exp ----------------------------------------------------------------------
+
+// Single-precision exp, the same operations in the same order as the vector
+// versions in the kernel files (after ggml's ggml_v_expf, which follows Arm's
+// optimized routines; both MIT), so a value gives the same bits whichever one
+// computes it.
+ORE_INLINE float ore_expf(float x) {
+    const float r = 0x1.8p23f;
+    const float z = fmaf(x, 0x1.715476p+0f, r);
+    const float n = z - r;
+    const float b = fmaf(-n, 0x1.7f7d1cp-20f, fmaf(-n, 0x1.62e4p-1f, x));
+    uint32_t    zb, one;
+    const float f1 = 1.0f;
+    memcpy(&zb, &z, 4);
+    memcpy(&one, &f1, 4);
+    const uint32_t e  = zb << 23;
+    const uint32_t kb = e + one;
+    float          k;
+    memcpy(&k, &kb, 4);
+    const float u = b * b;
+    const float j = fmaf(fmaf(fmaf(0x1.0e4020p-7f, b, 0x1.573e2ep-5f), u, fmaf(0x1.555e66p-3f, b, 0x1.fffdb6p-2f)), u,
+                         0x1.ffffecp-1f * b);
+    const float an = fabsf(n);
+    if (!(an > 126.0f)) return fmaf(j, k, k);
+    const uint32_t d   = (n <= 0.0f) ? 0x82000000u : 0u;
+    const uint32_t s1b = d + 0x7f000000u, s2b = e - d;
+    float          s1, s2;
+    memcpy(&s1, &s1b, 4);
+    memcpy(&s2, &s2b, 4);
+    if (an > 192.0f) return s1 * s1;
+    return fmaf(s2, j, s2) * s1;
 }
 
 // ---- GGUF tensor element types we read --------------------------------------

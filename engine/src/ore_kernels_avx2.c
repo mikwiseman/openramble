@@ -355,8 +355,213 @@ static void gemm_f32_avx2(const void * w, int w_is_f16, size_t wstride, int n_in
     }
 }
 
+// ---- element-wise steps -------------------------------------------------------
+
+// exp, eight at a time: ore_expf's operations (see ore_base.h).
+ORE_AVX2 ORE_INLINE __m256 vexp(__m256 x) {
+    const __m256  r = _mm256_set1_ps(0x1.8p23f);
+    const __m256  z = _mm256_fmadd_ps(x, _mm256_set1_ps(0x1.715476p+0f), r);
+    const __m256  n = _mm256_sub_ps(z, r);
+    const __m256  b = _mm256_fnmadd_ps(n, _mm256_set1_ps(0x1.7f7d1cp-20f),
+                                       _mm256_fnmadd_ps(n, _mm256_set1_ps(0x1.62e4p-1f), x));
+    const __m256i e = _mm256_slli_epi32(_mm256_castps_si256(z), 23);
+    const __m256  k = _mm256_castsi256_ps(_mm256_add_epi32(e, _mm256_castps_si256(_mm256_set1_ps(1))));
+    const __m256  an = _mm256_andnot_ps(_mm256_set1_ps(-0.f), n);
+    const __m256  c  = _mm256_cmp_ps(an, _mm256_set1_ps(126), _CMP_GT_OQ);
+    const __m256  u  = _mm256_mul_ps(b, b);
+    const __m256  j  = _mm256_fmadd_ps(
+        _mm256_fmadd_ps(_mm256_fmadd_ps(_mm256_set1_ps(0x1.0e4020p-7f), b, _mm256_set1_ps(0x1.573e2ep-5f)), u,
+                        _mm256_fmadd_ps(_mm256_set1_ps(0x1.555e66p-3f), b, _mm256_set1_ps(0x1.fffdb6p-2f))),
+        u, _mm256_mul_ps(_mm256_set1_ps(0x1.ffffecp-1f), b));
+    if (!_mm256_movemask_ps(c)) return _mm256_fmadd_ps(j, k, k);
+    const __m256i g  = _mm256_and_si256(_mm256_castps_si256(_mm256_cmp_ps(n, _mm256_setzero_ps(), _CMP_LE_OQ)),
+                                        _mm256_set1_epi32((int) 0x82000000u));
+    const __m256  s1 = _mm256_castsi256_ps(_mm256_add_epi32(g, _mm256_set1_epi32(0x7f000000)));
+    const __m256  s2 = _mm256_castsi256_ps(_mm256_sub_epi32(e, g));
+    const __m256  d  = _mm256_cmp_ps(an, _mm256_set1_ps(192), _CMP_GT_OQ);
+    return _mm256_blendv_ps(
+        _mm256_blendv_ps(_mm256_fmadd_ps(j, k, k), _mm256_mul_ps(_mm256_fmadd_ps(s2, j, s2), s1), c),
+        _mm256_mul_ps(s1, s1), d);
+}
+
+ORE_AVX2 ORE_INLINE __m256 vsilu(__m256 x) {
+    return _mm256_div_ps(x, _mm256_add_ps(_mm256_set1_ps(1.0f), vexp(_mm256_sub_ps(_mm256_setzero_ps(), x))));
+}
+
+// Lanes 0-7 and 8-15 -> the pairwise sum the reference defines.
+ORE_AVX2 ORE_INLINE float sum16v(__m256 a, __m256 b) {
+    const __m256 t8 = _mm256_add_ps(a, b);                                                  // l + l+8
+    const __m128 t4 = _mm_add_ps(_mm256_castps256_ps128(t8), _mm256_extractf128_ps(t8, 1));  // l + l+4
+    const __m128 t2 = _mm_add_ps(t4, _mm_movehl_ps(t4, t4));                                 // l + l+2
+    return _mm_cvtss_f32(_mm_add_ss(t2, _mm_shuffle_ps(t2, t2, 1)));
+}
+
+ORE_AVX2
+static void layer_norm_avx2(const float * x, float * y, int n, const float * gamma, const float * beta, float eps) {
+    __m256 s0 = _mm256_setzero_ps(), s1 = s0;
+    int    i = 0;
+    for (; i + 16 <= n; i += 16) {
+        s0 = _mm256_add_ps(s0, _mm256_loadu_ps(x + i));
+        s1 = _mm256_add_ps(s1, _mm256_loadu_ps(x + i + 8));
+    }
+    float tail[16] = { 0 };
+    for (int j = 0; i + j < n; ++j) tail[j] = x[i + j];
+    s0 = _mm256_add_ps(s0, _mm256_loadu_ps(tail));
+    s1 = _mm256_add_ps(s1, _mm256_loadu_ps(tail + 8));
+    const float  mean = sum16v(s0, s1) / (float) n;
+    const __m256 vm   = _mm256_set1_ps(mean);
+    __m256       v0 = _mm256_setzero_ps(), v1 = v0;
+    for (i = 0; i + 16 <= n; i += 16) {
+        const __m256 d0 = _mm256_sub_ps(_mm256_loadu_ps(x + i), vm);
+        const __m256 d1 = _mm256_sub_ps(_mm256_loadu_ps(x + i + 8), vm);
+        v0              = _mm256_fmadd_ps(d0, d0, v0);
+        v1              = _mm256_fmadd_ps(d1, d1, v1);
+    }
+    float vt[16] = { 0 };
+    for (int j = 0; i + j < n; ++j) vt[j] = x[i + j] - mean;
+    {
+        const __m256 d0 = _mm256_loadu_ps(vt), d1 = _mm256_loadu_ps(vt + 8);
+        v0              = _mm256_fmadd_ps(d0, d0, v0);
+        v1              = _mm256_fmadd_ps(d1, d1, v1);
+    }
+    const float  var   = sum16v(v0, v1) / (float) n;
+    const float  scale = 1.0f / sqrtf(var + eps);
+    const __m256 vs    = _mm256_set1_ps(scale);
+    for (i = 0; i + 8 <= n; i += 8) {
+        const __m256 d = _mm256_sub_ps(_mm256_loadu_ps(x + i), vm);
+        _mm256_storeu_ps(
+            y + i, _mm256_add_ps(_mm256_mul_ps(_mm256_mul_ps(d, vs), _mm256_loadu_ps(gamma + i)), _mm256_loadu_ps(beta + i)));
+    }
+    for (; i < n; ++i) {
+        const float d = x[i] - mean;
+        const float t = (d * scale) * gamma[i];
+        y[i]          = t + beta[i];
+    }
+}
+
+ORE_AVX2
+static void silu_avx2(float * x, size_t n) {
+    size_t i = 0;
+    for (; i + 8 <= n; i += 8) _mm256_storeu_ps(x + i, vsilu(_mm256_loadu_ps(x + i)));
+    for (; i < n; ++i) x[i] = x[i] / (1.0f + ore_expf(0.0f - x[i]));
+}
+
+ORE_AVX2
+static void glu_avx2(const float * a, const float * b, float * out, size_t n) {
+    size_t       i   = 0;
+    const __m256 one = _mm256_set1_ps(1.0f);
+    for (; i + 8 <= n; i += 8) {
+        const __m256 e = vexp(_mm256_sub_ps(_mm256_setzero_ps(), _mm256_loadu_ps(b + i)));
+        _mm256_storeu_ps(out + i, _mm256_mul_ps(_mm256_loadu_ps(a + i), _mm256_div_ps(one, _mm256_add_ps(one, e))));
+    }
+    for (; i < n; ++i) out[i] = a[i] * (1.0f / (1.0f + ore_expf(0.0f - b[i])));
+}
+
+ORE_AVX2
+static void softmax_avx2(float * s, int n) {
+    float mx = s[0];
+    int   i  = 0;
+    if (n >= 8) {
+        __m256 m = _mm256_loadu_ps(s);
+        for (i = 8; i + 8 <= n; i += 8) m = _mm256_max_ps(m, _mm256_loadu_ps(s + i));
+        mx = hmax256(m);
+    }
+    for (; i < n; ++i) {
+        if (s[i] > mx) mx = s[i];
+    }
+    const __m256 vmx = _mm256_set1_ps(mx);
+    __m256       a0 = _mm256_setzero_ps(), a1 = a0;
+    for (i = 0; i + 16 <= n; i += 16) {
+        const __m256 e0 = vexp(_mm256_sub_ps(_mm256_loadu_ps(s + i), vmx));
+        const __m256 e1 = vexp(_mm256_sub_ps(_mm256_loadu_ps(s + i + 8), vmx));
+        _mm256_storeu_ps(s + i, e0);
+        _mm256_storeu_ps(s + i + 8, e1);
+        a0 = _mm256_add_ps(a0, e0);
+        a1 = _mm256_add_ps(a1, e1);
+    }
+    float tail[16] = { 0 };
+    for (int j = 0; i + j < n; ++j) {
+        s[i + j] = ore_expf(s[i + j] - mx);
+        tail[j]  = s[i + j];
+    }
+    a0 = _mm256_add_ps(a0, _mm256_loadu_ps(tail));
+    a1 = _mm256_add_ps(a1, _mm256_loadu_ps(tail + 8));
+    const float  inv  = 1.0f / sum16v(a0, a1);
+    const __m256 vinv = _mm256_set1_ps(inv);
+    for (i = 0; i + 8 <= n; i += 8) _mm256_storeu_ps(s + i, _mm256_mul_ps(_mm256_loadu_ps(s + i), vinv));
+    for (; i < n; ++i) s[i] = s[i] * inv;
+}
+
+ORE_AVX2
+static void dwconv_bn_silu_avx2(const float * const * taps, const float * w, int k, int n, const float * scale,
+                                const float * bias, float * out) {
+    int c = 0;
+    for (; c + 8 <= n; c += 8) {
+        __m256 acc = _mm256_setzero_ps();
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = _mm256_fmadd_ps(_mm256_loadu_ps(w + (size_t) j * n + c), _mm256_loadu_ps(taps[j] + c), acc);
+        }
+        const __m256 u = _mm256_add_ps(_mm256_mul_ps(acc, _mm256_loadu_ps(scale + c)), _mm256_loadu_ps(bias + c));
+        _mm256_storeu_ps(out + c, vsilu(u));
+    }
+    for (; c < n; ++c) {
+        float acc = 0.0f;
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = fmaf(w[(size_t) j * n + c], taps[j][c], acc);
+        }
+        const float t = acc * scale[c];
+        const float u = t + bias[c];
+        out[c]        = u / (1.0f + ore_expf(0.0f - u));
+    }
+}
+
+ORE_AVX2
+static void dwconv_bias_avx2(const float * const * taps, const float * w, int k, int n, const float * bias,
+                             float * out) {
+    int c = 0;
+    for (; c + 8 <= n; c += 8) {
+        __m256 acc = _mm256_setzero_ps();
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = _mm256_fmadd_ps(_mm256_loadu_ps(w + (size_t) j * n + c), _mm256_loadu_ps(taps[j] + c), acc);
+        }
+        _mm256_storeu_ps(out + c, _mm256_add_ps(acc, _mm256_loadu_ps(bias + c)));
+    }
+    for (; c < n; ++c) {
+        float acc = 0.0f;
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = fmaf(w[(size_t) j * n + c], taps[j][c], acc);
+        }
+        out[c] = acc + bias[c];
+    }
+}
+
+ORE_AVX2
+static void gemv_f32_avx2(const float * w, int rows, int cols, const float * x, float * y) {
+    for (int r = 0; r < rows; ++r) {
+        const float * wr = w + (size_t) r * cols;
+        __m256        a0 = _mm256_setzero_ps(), a1 = a0;
+        int           k  = 0;
+        for (; k + 16 <= cols; k += 16) {
+            a0 = _mm256_fmadd_ps(_mm256_loadu_ps(wr + k), _mm256_loadu_ps(x + k), a0);
+            a1 = _mm256_fmadd_ps(_mm256_loadu_ps(wr + k + 8), _mm256_loadu_ps(x + k + 8), a1);
+        }
+        if (k < cols) {
+            float tw[16] = { 0 }, tx[16] = { 0 };
+            for (int j = 0; k + j < cols; ++j) {
+                tw[j] = wr[k + j];
+                tx[j] = x[k + j];
+            }
+            a0 = _mm256_fmadd_ps(_mm256_loadu_ps(tw), _mm256_loadu_ps(tx), a0);
+            a1 = _mm256_fmadd_ps(_mm256_loadu_ps(tw + 8), _mm256_loadu_ps(tx + 8), a1);
+        }
+        y[r] = sum16v(a0, a1);
+    }
+}
+
 const ore_kernels ore_kernels_avx2 = {
-    "avx2", quantize_q8k_avx2, quantize_q80_avx2, gemm_q4k_avx2, gemm_q80_avx2, gemm_f32_avx2,
+    "avx2",          quantize_q8k_avx2, quantize_q80_avx2, gemm_q4k_avx2, gemm_q80_avx2, gemm_f32_avx2,
+    layer_norm_avx2, silu_avx2,         glu_avx2,          softmax_avx2,  dwconv_bn_silu_avx2, dwconv_bias_avx2,
+    gemv_f32_avx2,
 };
 
 #endif  // ORE_X86

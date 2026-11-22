@@ -325,8 +325,225 @@ static void gemm_f32_neon(const void * w, int w_is_f16, size_t wstride, int n_in
     }
 }
 
+// ---- element-wise steps -------------------------------------------------------
+
+// exp, four at a time: ore_expf's operations (see ore_base.h).
+ORE_INLINE float32x4_t vexp(float32x4_t x) {
+    const float32x4_t r = vdupq_n_f32(0x1.8p23f);
+    const float32x4_t z = vfmaq_f32(r, x, vdupq_n_f32(0x1.715476p+0f));
+    const float32x4_t n = vsubq_f32(z, r);
+    const float32x4_t b =
+        vfmsq_f32(vfmsq_f32(x, n, vdupq_n_f32(0x1.62e4p-1f)), n, vdupq_n_f32(0x1.7f7d1cp-20f));
+    const uint32x4_t  e = vshlq_n_u32(vreinterpretq_u32_f32(z), 23);
+    const float32x4_t k = vreinterpretq_f32_u32(vaddq_u32(e, vreinterpretq_u32_f32(vdupq_n_f32(1))));
+    const uint32x4_t  c = vcagtq_f32(n, vdupq_n_f32(126));
+    const float32x4_t u = vmulq_f32(b, b);
+    const float32x4_t j = vfmaq_f32(vmulq_f32(vdupq_n_f32(0x1.ffffecp-1f), b),
+                                    vfmaq_f32(vfmaq_f32(vdupq_n_f32(0x1.fffdb6p-2f), vdupq_n_f32(0x1.555e66p-3f), b),
+                                              vfmaq_f32(vdupq_n_f32(0x1.573e2ep-5f), vdupq_n_f32(0x1.0e4020p-7f), b), u),
+                                    u);
+    if (!vmaxvq_u32(c)) return vfmaq_f32(k, j, k);
+    const uint32x4_t  d  = vandq_u32(vclezq_f32(n), vdupq_n_u32(0x82000000));
+    const float32x4_t s1 = vreinterpretq_f32_u32(vaddq_u32(d, vdupq_n_u32(0x7f000000)));
+    const float32x4_t s2 = vreinterpretq_f32_u32(vsubq_u32(e, d));
+    return vbslq_f32(vcagtq_f32(n, vdupq_n_f32(192)), vmulq_f32(s1, s1),
+                     vbslq_f32(c, vmulq_f32(vfmaq_f32(s2, s2, j), s1), vfmaq_f32(k, j, k)));
+}
+
+ORE_INLINE float32x4_t vsilu(float32x4_t x) {
+    return vdivq_f32(x, vaddq_f32(vdupq_n_f32(1.0f), vexp(vsubq_f32(vdupq_n_f32(0.0f), x))));
+}
+
+// Lanes 0-3, 4-7, 8-11, 12-15 -> the pairwise sum the reference defines.
+ORE_INLINE float sum16v(float32x4_t a, float32x4_t b, float32x4_t c, float32x4_t d) {
+    const float32x4_t t4 = vaddq_f32(vaddq_f32(a, c), vaddq_f32(b, d));  // (l + l+8) then (l + l+4)
+    const float32x2_t t2 = vadd_f32(vget_low_f32(t4), vget_high_f32(t4));
+    return vget_lane_f32(t2, 0) + vget_lane_f32(t2, 1);
+}
+
+static void layer_norm_neon(const float * x, float * y, int n, const float * gamma, const float * beta, float eps) {
+    float32x4_t s0 = vdupq_n_f32(0), s1 = s0, s2 = s0, s3 = s0;
+    int         i = 0;
+    for (; i + 16 <= n; i += 16) {
+        s0 = vaddq_f32(s0, vld1q_f32(x + i));
+        s1 = vaddq_f32(s1, vld1q_f32(x + i + 4));
+        s2 = vaddq_f32(s2, vld1q_f32(x + i + 8));
+        s3 = vaddq_f32(s3, vld1q_f32(x + i + 12));
+    }
+    float tail[16] = { 0 };
+    for (int j = 0; i + j < n; ++j) tail[j] = x[i + j];
+    s0 = vaddq_f32(s0, vld1q_f32(tail));
+    s1 = vaddq_f32(s1, vld1q_f32(tail + 4));
+    s2 = vaddq_f32(s2, vld1q_f32(tail + 8));
+    s3 = vaddq_f32(s3, vld1q_f32(tail + 12));
+    const float       mean = sum16v(s0, s1, s2, s3) / (float) n;
+    const float32x4_t vm   = vdupq_n_f32(mean);
+    float32x4_t       v0 = vdupq_n_f32(0), v1 = v0, v2 = v0, v3 = v0;
+    for (i = 0; i + 16 <= n; i += 16) {
+        const float32x4_t d0 = vsubq_f32(vld1q_f32(x + i), vm), d1 = vsubq_f32(vld1q_f32(x + i + 4), vm);
+        const float32x4_t d2 = vsubq_f32(vld1q_f32(x + i + 8), vm), d3 = vsubq_f32(vld1q_f32(x + i + 12), vm);
+        v0 = vfmaq_f32(v0, d0, d0);
+        v1 = vfmaq_f32(v1, d1, d1);
+        v2 = vfmaq_f32(v2, d2, d2);
+        v3 = vfmaq_f32(v3, d3, d3);
+    }
+    float vt[16] = { 0 };
+    for (int j = 0; i + j < n; ++j) {
+        const float d = x[i + j] - mean;
+        vt[j]         = d;
+    }
+    {
+        // d * d + 0 fused is d * d rounded once, which is what the lanes hold
+        const float32x4_t d0 = vld1q_f32(vt), d1 = vld1q_f32(vt + 4), d2 = vld1q_f32(vt + 8), d3 = vld1q_f32(vt + 12);
+        v0 = vfmaq_f32(v0, d0, d0);
+        v1 = vfmaq_f32(v1, d1, d1);
+        v2 = vfmaq_f32(v2, d2, d2);
+        v3 = vfmaq_f32(v3, d3, d3);
+    }
+    const float       var   = sum16v(v0, v1, v2, v3) / (float) n;
+    const float       scale = 1.0f / sqrtf(var + eps);
+    const float32x4_t vs    = vdupq_n_f32(scale);
+    for (i = 0; i + 4 <= n; i += 4) {
+        const float32x4_t d = vsubq_f32(vld1q_f32(x + i), vm);
+        vst1q_f32(y + i, vaddq_f32(vmulq_f32(vmulq_f32(d, vs), vld1q_f32(gamma + i)), vld1q_f32(beta + i)));
+    }
+    for (; i < n; ++i) {
+        const float d = x[i] - mean;
+        const float t = (d * scale) * gamma[i];
+        y[i]          = t + beta[i];
+    }
+}
+
+static void silu_neon(float * x, size_t n) {
+    size_t i = 0;
+    for (; i + 4 <= n; i += 4) vst1q_f32(x + i, vsilu(vld1q_f32(x + i)));
+    for (; i < n; ++i) x[i] = x[i] / (1.0f + ore_expf(0.0f - x[i]));
+}
+
+static void glu_neon(const float * a, const float * b, float * out, size_t n) {
+    size_t            i    = 0;
+    const float32x4_t one  = vdupq_n_f32(1.0f);
+    const float32x4_t zero = vdupq_n_f32(0.0f);
+    for (; i + 4 <= n; i += 4) {
+        const float32x4_t sig = vdivq_f32(one, vaddq_f32(one, vexp(vsubq_f32(zero, vld1q_f32(b + i)))));
+        vst1q_f32(out + i, vmulq_f32(vld1q_f32(a + i), sig));
+    }
+    for (; i < n; ++i) out[i] = a[i] * (1.0f / (1.0f + ore_expf(0.0f - b[i])));
+}
+
+static void softmax_neon(float * s, int n) {
+    float mx = s[0];
+    int   i  = 0;
+    if (n >= 4) {
+        float32x4_t m = vld1q_f32(s);
+        for (i = 4; i + 4 <= n; i += 4) m = vmaxq_f32(m, vld1q_f32(s + i));
+        mx = vmaxvq_f32(m);
+    }
+    for (; i < n; ++i) {
+        if (s[i] > mx) mx = s[i];
+    }
+    const float32x4_t vmx = vdupq_n_f32(mx);
+    float32x4_t       a0 = vdupq_n_f32(0), a1 = a0, a2 = a0, a3 = a0;
+    for (i = 0; i + 16 <= n; i += 16) {
+        const float32x4_t e0 = vexp(vsubq_f32(vld1q_f32(s + i), vmx));
+        const float32x4_t e1 = vexp(vsubq_f32(vld1q_f32(s + i + 4), vmx));
+        const float32x4_t e2 = vexp(vsubq_f32(vld1q_f32(s + i + 8), vmx));
+        const float32x4_t e3 = vexp(vsubq_f32(vld1q_f32(s + i + 12), vmx));
+        vst1q_f32(s + i, e0);
+        vst1q_f32(s + i + 4, e1);
+        vst1q_f32(s + i + 8, e2);
+        vst1q_f32(s + i + 12, e3);
+        a0 = vaddq_f32(a0, e0);
+        a1 = vaddq_f32(a1, e1);
+        a2 = vaddq_f32(a2, e2);
+        a3 = vaddq_f32(a3, e3);
+    }
+    float tail[16] = { 0 };
+    for (int j = 0; i + j < n; ++j) {
+        s[i + j] = ore_expf(s[i + j] - mx);
+        tail[j]  = s[i + j];
+    }
+    a0 = vaddq_f32(a0, vld1q_f32(tail));
+    a1 = vaddq_f32(a1, vld1q_f32(tail + 4));
+    a2 = vaddq_f32(a2, vld1q_f32(tail + 8));
+    a3 = vaddq_f32(a3, vld1q_f32(tail + 12));
+    const float       inv  = 1.0f / sum16v(a0, a1, a2, a3);
+    const float32x4_t vinv = vdupq_n_f32(inv);
+    for (i = 0; i + 4 <= n; i += 4) vst1q_f32(s + i, vmulq_f32(vld1q_f32(s + i), vinv));
+    for (; i < n; ++i) s[i] = s[i] * inv;
+}
+
+static void dwconv_bn_silu_neon(const float * const * taps, const float * w, int k, int n, const float * scale,
+                                const float * bias, float * out) {
+    int c = 0;
+    for (; c + 4 <= n; c += 4) {
+        float32x4_t acc = vdupq_n_f32(0.0f);
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = vfmaq_f32(acc, vld1q_f32(w + (size_t) j * n + c), vld1q_f32(taps[j] + c));
+        }
+        const float32x4_t u = vaddq_f32(vmulq_f32(acc, vld1q_f32(scale + c)), vld1q_f32(bias + c));
+        vst1q_f32(out + c, vsilu(u));
+    }
+    for (; c < n; ++c) {
+        float acc = 0.0f;
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = fmaf(w[(size_t) j * n + c], taps[j][c], acc);
+        }
+        const float t = acc * scale[c];
+        const float u = t + bias[c];
+        out[c]        = u / (1.0f + ore_expf(0.0f - u));
+    }
+}
+
+static void dwconv_bias_neon(const float * const * taps, const float * w, int k, int n, const float * bias,
+                             float * out) {
+    int c = 0;
+    for (; c + 4 <= n; c += 4) {
+        float32x4_t acc = vdupq_n_f32(0.0f);
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = vfmaq_f32(acc, vld1q_f32(w + (size_t) j * n + c), vld1q_f32(taps[j] + c));
+        }
+        vst1q_f32(out + c, vaddq_f32(acc, vld1q_f32(bias + c)));
+    }
+    for (; c < n; ++c) {
+        float acc = 0.0f;
+        for (int j = 0; j < k; ++j) {
+            if (taps[j]) acc = fmaf(w[(size_t) j * n + c], taps[j][c], acc);
+        }
+        out[c] = acc + bias[c];
+    }
+}
+
+static void gemv_f32_neon(const float * w, int rows, int cols, const float * x, float * y) {
+    for (int r = 0; r < rows; ++r) {
+        const float * wr = w + (size_t) r * cols;
+        float32x4_t   a0 = vdupq_n_f32(0), a1 = a0, a2 = a0, a3 = a0;
+        int           k  = 0;
+        for (; k + 16 <= cols; k += 16) {
+            a0 = vfmaq_f32(a0, vld1q_f32(wr + k), vld1q_f32(x + k));
+            a1 = vfmaq_f32(a1, vld1q_f32(wr + k + 4), vld1q_f32(x + k + 4));
+            a2 = vfmaq_f32(a2, vld1q_f32(wr + k + 8), vld1q_f32(x + k + 8));
+            a3 = vfmaq_f32(a3, vld1q_f32(wr + k + 12), vld1q_f32(x + k + 12));
+        }
+        if (k < cols) {
+            float tw[16] = { 0 }, tx[16] = { 0 };
+            for (int j = 0; k + j < cols; ++j) {
+                tw[j] = wr[k + j];
+                tx[j] = x[k + j];
+            }
+            a0 = vfmaq_f32(a0, vld1q_f32(tw), vld1q_f32(tx));
+            a1 = vfmaq_f32(a1, vld1q_f32(tw + 4), vld1q_f32(tx + 4));
+            a2 = vfmaq_f32(a2, vld1q_f32(tw + 8), vld1q_f32(tx + 8));
+            a3 = vfmaq_f32(a3, vld1q_f32(tw + 12), vld1q_f32(tx + 12));
+        }
+        y[r] = sum16v(a0, a1, a2, a3);
+    }
+}
+
 const ore_kernels ore_kernels_neon = {
-    "neon", quantize_q8k_neon, quantize_q80_neon, gemm_q4k_neon, gemm_q80_neon, gemm_f32_neon,
+    "neon",        quantize_q8k_neon, quantize_q80_neon, gemm_q4k_neon, gemm_q80_neon, gemm_f32_neon,
+    layer_norm_neon, silu_neon,       glu_neon,          softmax_neon,  dwconv_bn_silu_neon, dwconv_bias_neon,
+    gemv_f32_neon,
 };
 
 #endif  // ORE_ARM64

@@ -103,17 +103,45 @@ jobs:
           {
             echo "### Kernels, one thread"
             echo '```'
-            "$bin/kbench-ggml" model.gguf 100 7
+            "$bin/kbench" model.gguf 100 7
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: transcribe.cpp by clip length
+      # The same clips through both runtimes: the words must agree, and the
+      # engine's own answer must not depend on which kernel table computed it.
+      - name: Same words
+        run: |
+          bin=engine/build; [ -d engine/build/Release ] && bin=engine/build/Release
+          printf '%s\n' tcpp/samples/fleurs-en.wav tcpp/samples/fleurs-ru.wav tcpp/samples/fleurs-de.wav tcpp/samples/dots.wav > clips.txt
+          "$bin/ore-cli" dump model.gguf clips.txt 4 > ore.tsv
+          "$bin/tcpp-probe" dump model.gguf clips.txt 4 > tcpp.tsv
+          echo tcpp/samples/fleurs-ru.wav > one.txt
+          "$bin/ore-cli" dump model.gguf one.txt 4 > ore-best.tsv
+          ORE_KERNELS=generic "$bin/ore-cli" dump model.gguf one.txt 4 > ore-generic.tsv
+          {
+            echo "### Same words"
+            echo '```'
+            cut -f1,2 ore.tsv
+            echo "--- transcribe.cpp ---"
+            cut -f1,2 tcpp.tsv
+            if cmp -s <(cut -f1,2 ore.tsv) <(cut -f1,2 tcpp.tsv); then echo "text: identical"; else echo "text: DIFFERENT"; fi
+            if cmp -s <(cut -f1-3 ore.tsv) <(cut -f1-3 tcpp.tsv); then echo "tokens and times: identical"; else echo "tokens and times: DIFFERENT"; fi
+            if cmp -s ore-best.tsv ore-generic.tsv; then echo "kernel tables: identical output"; else echo "kernel tables: DIFFERENT output"; fi
+            echo "engine output checksum (compare across machines):"
+            if command -v sha256sum > /dev/null; then sha256sum ore.tsv | cut -c1-16; else shasum -a 256 ore.tsv | cut -c1-16; fi
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          cmp -s <(cut -f1,2 ore.tsv) <(cut -f1,2 tcpp.tsv)
+          cmp -s ore-best.tsv ore-generic.tsv
+
+      - name: Speed by clip length
         run: |
           bin=engine/build; [ -d engine/build/Release ] && bin=engine/build/Release
           {
-            echo "### transcribe.cpp, CPU backend"
+            echo "### Speed by clip length, CPU, milliseconds"
             echo '```'
             for threads in 1 2 4; do
+              "$bin/ore-cli" time model.gguf tcpp/samples/dots.wav "$threads" 3 2 4 8 16 30
               "$bin/tcpp-probe" time model.gguf tcpp/samples/dots.wav "$threads" 3 2 4 8 16 30
             done
             echo '```'
