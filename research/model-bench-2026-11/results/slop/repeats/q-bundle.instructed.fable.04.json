@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 4,
+ "output": "Yes, and before launch is the only cheap time to do it, but it breaks the invariant in the rules file: every existing install loses its Accessibility grant.\n\nmacOS ties permissions to the bundle ID, so each current user must re-grant Accessibility and Microphone, and a stale `is.waiwai.dictation` entry stays in their System Settings. Preferences stored under the old ID also reset unless we migrate them.\n\nWith only a handful of testers, I'd do it now and tell them to re-grant. With real users already, I'd keep the old ID, since users never see it.\n\nI can't see the repo here, so I haven't checked what else keys on the ID or tested a Sparkle update across the change.",
+ "cost_usd": 0.11246400000000001
+}

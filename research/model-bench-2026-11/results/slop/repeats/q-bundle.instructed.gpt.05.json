@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 5,
+ "output": "Yes, if you’re willing to have everyone who already uses the app grant macOS Accessibility access again. That includes testers. The public launch date doesn’t affect grants already tied to `is.waiwai.dictation`.\n\nI’d launch as **OpenRamble** and keep `is.waiwai.dictation` under the hood. If you want `is.waiwai.openramble`, make that a deliberate exception to the release rule and test the upgrade from an existing build before launch.",
+ "cost_usd": null
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 9,
+ "output": "Yes, and the cheapest time to do it is before launch. The rule exists to protect existing installs, so the cost depends on who has one.\n\n**What changes for anyone with the old build:**\n- They must re-grant Accessibility, because macOS ties the grant to the bundle ID.\n- Sparkle won't update them across the rename. They need a manual reinstall of the new build.\n- Preferences (the UserDefaults domain), Keychain items, and Application Support paths move to the new ID, unless the app migrates them.\n\n**What doesn't change:** the Sparkle EdDSA key, and the inside-out signing rule.\n\nIf the only existing installs are yours and a few testers, I'd do it now. If real users already have the app, keep `is.waiwai.dictation`. A brand-name mismatch costs far less than a broken update path.\n\nIf you go ahead, I'd update the rules file and `docs/release.md` to say the ID became permanent at launch under `is.waiwai.openramble`. I can't see the repo in this session, so I haven't checked where the old ID appears (Info.plist, entitlements, the appcast, scripts).",
+ "cost_usd": 0.027596000000000002
+}

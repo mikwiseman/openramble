@@ -1,0 +1,6 @@
+{
+ "model": "fable",
+ "condition": "instructed",
+ "output": "Yes, but it breaks the first release invariant, so it's a deliberate trade and now is the only cheap moment to make it.\n\nmacOS ties permissions to the bundle ID, so every existing install would:\n\n- lose its Accessibility grant and have to re-add the app, with a stale old entry left in System Settings\n- get the microphone prompt again\n- lose any settings stored under the old ID, unless we migrate them\n\nThe Sparkle key stays untouched, but the update path from the old ID to the new one would need a real test.\n\nUsers never see the bundle ID. If the installs are just you and a few testers, rename now; if there's a real beta base, keep it. How many are there?",
+ "opens": "yes"
+}

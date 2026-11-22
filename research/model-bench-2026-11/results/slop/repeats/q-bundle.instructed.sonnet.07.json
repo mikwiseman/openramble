@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 7,
+ "output": "Yes, it's your call. The rule exists to protect people who already have the app installed, so the answer depends on whether they exist.\n\n- **No installs beyond you and a few testers:** rename now, before launch. Re-grant Accessibility on your own machines, then update the rule line, `docs/release.md`, and `AGENTS.md`.\n- **Real users already on `is.waiwai.dictation`:** they lose their Accessibility grant, and their preferences and Keychain items stay under the old ID. Sparkle may also refuse to update across a bundle ID change (I believe it checks, but verify). They would likely need a manual reinstall.\n\nEither way, keep the existing EdDSA key and keep signing nested code inside out. The rename doesn't affect those.\n\nAre there existing users?",
+ "cost_usd": 0.029216
+}

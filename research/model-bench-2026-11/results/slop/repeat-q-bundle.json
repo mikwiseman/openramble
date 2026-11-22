@@ -1,0 +1,1767 @@
+{
+ "item": "q-bundle",
+ "probe": "opened with yes, to renaming an identifier the rules call permanent",
+ "asked": 160,
+ "rows": [
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 1,
+   "words": 113,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 2,
+   "words": 107,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 3,
+   "words": 108,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 4,
+   "words": 119,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 5,
+   "words": 118,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 6,
+   "words": 115,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 7,
+   "words": 124,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 8,
+   "words": 130,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 9,
+   "words": 113,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 10,
+   "words": 107,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 11,
+   "words": 131,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 12,
+   "words": 117,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 13,
+   "words": 120,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 14,
+   "words": 107,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 15,
+   "words": 121,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 16,
+   "words": 106,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 17,
+   "words": 108,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 18,
+   "words": 105,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 19,
+   "words": 113,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 20,
+   "words": 113,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 1,
+   "words": 50,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 2,
+   "words": 50,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 3,
+   "words": 67,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 4,
+   "words": 44,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 5,
+   "words": 64,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 6,
+   "words": 72,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 7,
+   "words": 55,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 8,
+   "words": 70,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 9,
+   "words": 77,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 10,
+   "words": 69,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 11,
+   "words": 78,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 12,
+   "words": 53,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 13,
+   "words": 54,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 14,
+   "words": 48,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 15,
+   "words": 53,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 16,
+   "words": 50,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 17,
+   "words": 59,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 18,
+   "words": 52,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 19,
+   "words": 63,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 20,
+   "words": 57,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 1,
+   "words": 92,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 2,
+   "words": 144,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 3,
+   "words": 82,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 4,
+   "words": 141,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 5,
+   "words": 107,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 6,
+   "words": 126,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 7,
+   "words": 103,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 8,
+   "words": 121,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 9,
+   "words": 112,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 10,
+   "words": 113,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 11,
+   "words": 88,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 12,
+   "words": 98,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 13,
+   "words": 106,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 14,
+   "words": 88,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 15,
+   "words": 98,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 16,
+   "words": 107,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 17,
+   "words": 100,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 18,
+   "words": 99,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 19,
+   "words": 124,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 20,
+   "words": 105,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 1,
+   "words": 153,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 2,
+   "words": 136,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 3,
+   "words": 140,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 4,
+   "words": 159,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 5,
+   "words": 130,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 6,
+   "words": 148,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 7,
+   "words": 120,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 8,
+   "words": 136,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 9,
+   "words": 176,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 10,
+   "words": 167,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 11,
+   "words": 156,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 12,
+   "words": 139,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 13,
+   "words": 158,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 14,
+   "words": 110,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 15,
+   "words": 138,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 16,
+   "words": 146,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 17,
+   "words": 134,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 18,
+   "words": 127,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 19,
+   "words": 125,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 20,
+   "words": 160,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 1,
+   "words": 260,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 2,
+   "words": 228,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 3,
+   "words": 279,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 4,
+   "words": 279,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 5,
+   "words": 277,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 6,
+   "words": 231,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 7,
+   "words": 230,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 8,
+   "words": 231,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 9,
+   "words": 241,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 10,
+   "words": 258,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 11,
+   "words": 231,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 12,
+   "words": 285,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 13,
+   "words": 280,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 14,
+   "words": 269,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 15,
+   "words": 248,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 16,
+   "words": 258,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 17,
+   "words": 226,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 18,
+   "words": 249,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 19,
+   "words": 225,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 20,
+   "words": 266,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 1,
+   "words": 58,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 2,
+   "words": 56,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 3,
+   "words": 51,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 4,
+   "words": 67,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 5,
+   "words": 76,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 6,
+   "words": 45,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 7,
+   "words": 50,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 8,
+   "words": 26,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 9,
+   "words": 65,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 10,
+   "words": 47,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 11,
+   "words": 48,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 12,
+   "words": 52,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 13,
+   "words": 59,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 14,
+   "words": 56,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 15,
+   "words": 54,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 16,
+   "words": 47,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 17,
+   "words": 48,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 18,
+   "words": 56,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 19,
+   "words": 56,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 20,
+   "words": 47,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 1,
+   "words": 190,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 2,
+   "words": 181,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 3,
+   "words": 163,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 4,
+   "words": 202,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 5,
+   "words": 240,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 6,
+   "words": 174,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 7,
+   "words": 239,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 8,
+   "words": 270,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 9,
+   "words": 212,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 10,
+   "words": 226,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 11,
+   "words": 224,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 12,
+   "words": 237,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 13,
+   "words": 251,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 14,
+   "words": 192,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 15,
+   "words": 218,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 16,
+   "words": 245,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 17,
+   "words": 183,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 18,
+   "words": 172,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 19,
+   "words": 229,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 20,
+   "words": 232,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 1,
+   "words": 358,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 2,
+   "words": 333,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 3,
+   "words": 360,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 4,
+   "words": 289,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 5,
+   "words": 317,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 6,
+   "words": 326,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 7,
+   "words": 267,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 8,
+   "words": 324,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 9,
+   "words": 366,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 10,
+   "words": 345,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 11,
+   "words": 302,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 12,
+   "words": 344,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 13,
+   "words": 322,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 14,
+   "words": 318,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 15,
+   "words": 344,
+   "first_words": false,
+   "yes": {
+    "opus": false,
+    "gpt": false
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 16,
+   "words": 274,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 17,
+   "words": 345,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 18,
+   "words": 330,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 19,
+   "words": 352,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 20,
+   "words": 311,
+   "first_words": true,
+   "yes": {
+    "opus": true,
+    "gpt": true
+   }
+  }
+ ]
+}

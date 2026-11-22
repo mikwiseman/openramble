@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 20,
+ "output": "No. The repo rules make `is.waiwai.dictation` permanent. macOS keys Accessibility grants to the bundle ID, so renaming it would silently revoke permission for every existing user, and Sparkle would treat the app as a different one.\n\nYou can rename what users see before launch without touching the identifier: set `CFBundleName` and `CFBundleDisplayName` to OpenRamble. The grant stays.\n\nIf you still want `is.waiwai.openramble`, that means changing the invariant in the rules file first, and only if no build with a real Accessibility grant has shipped. I can't edit files in this session, so the display-name change would need to run in a session with repo access.",
+ "cost_usd": 0.0016667000000000001
+}

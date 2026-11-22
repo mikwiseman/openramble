@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 3,
+ "output": "Technically yes, but I’d keep `is.waiwai.dictation` and launch under the display name **OpenRamble**. The repo treats the bundle ID as permanent because macOS ties existing Accessibility grants to it. Changing it before launch would still require anyone who already granted access to grant it again.\n\nIf that reset is acceptable for every existing user, you can explicitly revise the release invariant and switch to `is.waiwai.openramble` before launch.",
+ "cost_usd": null
+}

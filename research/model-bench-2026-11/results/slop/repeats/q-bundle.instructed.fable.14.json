@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 14,
+ "output": "Technically yes, but it breaks your own release invariant: the repo rules call `is.waiwai.dictation` permanent because existing Accessibility grants depend on it.\n\nA rename makes macOS treat the app as a new one. Every existing install would:\n\n- lose its Accessibility and Microphone grants and need to re-approve them\n- lose its settings, unless we migrate the old defaults domain\n\nMy recommendation is to keep it, since users never see the bundle ID. If the mismatch bothers you, do it now, because the cost grows with every install after launch.\n\nWho has it installed today? If it's only you and a few testers, the rename is cheap.",
+ "cost_usd": 0.11486400000000001
+}

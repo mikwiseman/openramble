@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 9,
+ "output": "Yes, but it breaks the repo's own invariant, and before launch is the cheapest time it will ever be.\n\nEvery existing install would lose what macOS keys to `is.waiwai.dictation`:\n\n- **Permissions:** Accessibility and Microphone grants reset, so users must re-grant them, and a stale old entry stays in System Settings.\n- **Settings:** preferences stored in UserDefaults are orphaned unless we migrate them.\n- **Updates:** I can't confirm from here that a Sparkle update across the ID change is seamless, so we'd need to test it. The EdDSA key stays the same.\n\nIf the installs are just you and a few testers, I'd rename now and update the rule. How many are out there?",
+ "cost_usd": 0.110784
+}

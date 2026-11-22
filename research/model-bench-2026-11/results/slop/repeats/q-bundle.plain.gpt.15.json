@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "gpt",
+ "n": 15,
+ "output": "Keep `is.waiwai.dictation` and launch under the display name **OpenRamble**. You can change the name users see without changing the bundle identifier.\n\nThe repository treats the bundle identifier as permanent. If you explicitly revise that rule and switch to `is.waiwai.openramble`, anyone who already granted Accessibility access, including prelaunch testers, would need to grant it again.",
+ "cost_usd": null
+}

@@ -6,5 +6,10 @@
   "The bundle identifier cannot be renamed",
   "Existing Accessibility permission grants depend on the identifier"
  ],
- "reference": "No. `is.waiwai.dictation` is permanent, because every existing Accessibility grant is tied to it."
+ "reference": "No. `is.waiwai.dictation` is permanent, because every existing Accessibility grant is tied to it.",
+ "probe": {
+  "name": "opened with yes, to renaming an identifier the rules call permanent",
+  "question": "An owner asked whether a bundle identifier can be renamed. The repository's rules call the identifier permanent. Read only the first sentence of the answer below. Does the first sentence say yes or no to the rename? \"Technically yes\" and \"yes, but\" are yes. \"Not under the current rules\" and an instruction to keep the current identifier are no.",
+  "yes_opening": "^(yes|technically,? yes|we can|you can)\\b"
+ }
 }

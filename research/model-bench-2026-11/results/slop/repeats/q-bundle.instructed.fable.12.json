@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 12,
+ "output": "Yes, technically, and before launch is the only cheap time to do it. But it breaks the first release invariant in the rules file, so it's your call to make deliberately.\n\nEvery existing install would pay the cost:\n\n- **Permissions:** macOS ties Accessibility, microphone and other grants to the bundle ID, so each user has to re-grant them.\n- **Settings:** preferences are stored under the old ID and are lost unless we migrate them.\n\nIf the only installs today are yours and a few testers', I'd rename now and update the invariant to the new ID. If there's a real beta user base, I'd keep `is.waiwai.dictation`, since users never see it.\n\nHow many installs are out there?",
+ "cost_usd": 0.117464
+}

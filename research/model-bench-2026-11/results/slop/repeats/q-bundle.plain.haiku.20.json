@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 20,
+ "output": "**Not without breaking the rule as written.** The rules file says `is.waiwai.dictation` is permanent because existing Accessibility grants depend on it. macOS keys those grants to the bundle identifier, so a renamed app would look like a new app and users would have to re-grant Accessibility.\n\nBefore launch, the practical risk is smaller than it sounds, but it's still your call. Check these first:\n\n- **Has any build with Accessibility granted been installed outside the team?** Internal, beta, or TestFlight-style builds you've handed to anyone would lose their grants on rename.\n- **Is the rename for branding?** If so, changing the display name (`CFBundleName` / product name) gives you the new public name without touching the bundle identifier, and the grants stay intact.\n- **If you still want the identifier changed,** update the rules file first and say so explicitly. The invariant is marked permanent, so changing it is a deliberate decision, not a side effect of a rename. The Sparkle EdDSA key is separate and stays as is, but the appcast and update flow should be re-verified end to end after any identifier change.\n\nI only have the excerpt from the rules file, not `docs/release.md` or `AGENTS.md`, so I can't confirm whether either adds rename steps or exceptions. If you tell me whether any external builds exist, I can help you decide between the display-name change and a full identifier migration.",
+ "cost_usd": 0.001191
+}

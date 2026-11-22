@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 4,
+ "output": "**Not as a plain rename.** The rules file makes `is.waiwai.dictation` permanent. Accessibility grants are tied to it, so renaming it would force existing users to re-grant permission. Sparkle also treats a different bundle ID as a different app, so current installs would not update into the renamed build.\n\nIf no one outside your own machines has installed it yet, the cost is smaller, but the invariant still says permanent, and your dev machine already has grants. I have no tools in this session, so I haven't checked the repo, only the rules you quoted.\n\nThe simplest option is to keep `is.waiwai.dictation` and change the display name to OpenRamble. That gets the new name without touching the invariant.\n\nIf you still want `is.waiwai.openramble`, the invariant has to be changed first, and that is your call. Tell me and I'll plan the change.",
+ "cost_usd": 0.0017867
+}

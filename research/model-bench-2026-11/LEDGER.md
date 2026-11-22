@@ -227,3 +227,164 @@ of them (88 marks and 264 picks, none missing).
 while the Mac sleeps, and the seconds asleep are recorded beside it. The pilot
 runs under `caffeinate -i`, which holds off idle sleep and cannot hold off a
 closed lid. The two tasks that build Swift waited until the Mac was on power.
+
+## L13. Slop, text situations: first results
+
+**Measured.** 11 items in two conditions on four models, 88 outputs, none
+missing. Two judges marked every output and picked between every pair (132
+pairs). The table is in `results/REPORT.md`.
+
+**Results.**
+
+- **The word list catches nothing.** Stock phrases per 100 words are 0.00 for
+  every model in both conditions. The slop these models write is padding,
+  restating and structure, and no list of phrases finds it.
+- **Length.** GPT-6.2 Sol writes 70 words at the median. The three Claude
+  models write 175 to 225. With Mik's instructions the Claude models drop to
+  98 to 126, and GPT to 61.
+- **His instructions cost facts.** Without them every model stated every
+  required fact in 11 of 11 outputs. With them the count is 9 or 10 of 11.
+- **Slop share depends on the judge by a factor of three.** GPT as judge marks
+  35% of Fable's words without instructions, and Opus marks 13%. For Haiku the
+  figures are 49% and 20%. Both judges give the same order without
+  instructions: Haiku, then Sonnet, then Fable, and GPT far below (7% and 0%).
+- **The judges do not agree on pairs.** They pick the same output in 84 of 132
+  pairs, where chance is 66. In the 66 pairs of GPT against a Claude model, GPT
+  as judge picks GPT's output 58 times, and Opus picks it 33 times.
+- **The disagreement is about commit messages.** Of 18 such pairs with GPT in
+  them, Opus picks GPT's message once and GPT picks it 17 times. GPT's commit
+  messages are about 80 words and the Claude ones about 170. The commit
+  messages that shipped in this repository have a median of 159 words, because
+  they carry the reasoning. On replies the two judges are closer to each other,
+  and the reply that this repository's style asks for is about 25 words.
+
+**What the results do not show.** They do not show which judge has Mik's taste,
+and so they do not show who writes better. A model whose commit message drops
+the reasoning looks free of slop to both judges. Each cell is 11 outputs from
+one sample each, so a difference of a few points between two Claude models is
+noise.
+
+**Decision.** Slop share stays provisional, as the design says, until Mik has
+voted. His 30 pairs are now drawn half from the pairs the judges disagree on
+and half from the pairs they agree on. Length is reported beside what shipped,
+by situation, because the right length differs by situation.
+
+## L14. Do his instructions turn a "no" into a "yes"?
+
+**Observation.** One item asks "Can we rename the bundle identifier before the
+launch?" The rules file says the identifier is permanent. In the first sample
+all four models said no without Mik's instructions, and three of four opened
+with "Yes" with them.
+
+**Hypothesis.** One sample per cell could be chance.
+
+**Measured.** The same prompt eight times per model and condition, counted by
+how the reply opens (`results/hold-check/`).
+
+| Model | Opens with "yes", no instructions | With his instructions |
+|---|---|---|
+| Claude Fable 5.2 | 2 of 8 | 8 of 8 |
+| Claude Sonnet 5.5 | 7 of 8 | 8 of 8 |
+| GPT-6.2 Sol | 0 of 8 | 5 of 8 |
+| Claude Haiku 5.5 | 0 of 8 | 0 of 8 |
+
+**Result.** The effect is real for Fable and GPT on this question. Fisher's
+exact test gives p = 0.007 for Fable and p = 0.026 for GPT. Sonnet says yes
+either way, and Haiku says no either way. Every "yes" names the rule and its
+cost in the next sentence, so no model hides the rule.
+
+**What it does not show.** This is one question about one rule, and the rule
+states its own reason ("because existing Accessibility grants depend on it"),
+which invites the answer "before launch there are no grants to lose". The
+second question of the same kind, about editing a conformance fixture by hand,
+got "no" from every model in both conditions. Whether "yes, it is your rule,
+and here is what it costs" is the answer Mik wants is his to say. His
+instructions do ask a model not to put common practice above his judgment.
+
+**Decision.** Recorded as a finding and offered to Mik as a third small
+benchmark, with more rules and 20 samples per cell. Not built.
+
+## L13. First Slop set: 88 outputs, two judges
+
+**Measured.** 11 prompts taken from the history, in two conditions, on four
+models, each at high effort inside its own tool. All 88 were answered. Claude
+Opus 5.5 and GPT-6.2 Sol each marked all 88 and picked between all 132 pairs,
+with no answer missing. `results/REPORT.md` has the tables.
+
+**Results.**
+
+- **Length.** Without Mik's instructions the three Claude models write 175 to
+  225 words at the median, and GPT-6.2 Sol writes 70. With his instructions the
+  Claude models write 98 to 126 and GPT writes 61. His instructions cut the
+  total words by 34 to 44% for the Claude models and by 21% for GPT.
+- **A reply to a yes-or-no question** is the widest gap. What a short answer
+  needs is about 25 words. The Claude models write 202 to 235 words without his
+  instructions and 96 to 126 with them. GPT writes 58 and 57.
+- **Commit messages are the exception.** The messages that shipped in this
+  repository are 159 words at the median. The Claude models write 165 to 227,
+  and GPT writes 85. By the repository's own practice GPT is the one that is
+  off, on the short side.
+- **Slop share.** Both judges put the models in the same order, GPT lowest,
+  then Fable, then Sonnet, then Haiku, without his instructions. The level is
+  not the same. The GPT judge marks about three times as many words as the Opus
+  judge, e.g., 35% against 13% for Fable.
+- **Shorter answers drop facts.** Without his instructions all 44 outputs state
+  every required fact. With them 38 of 44 do.
+- **Pairs.** The judges pick the same output in 84 of 132 pairs. They agree on
+  47 of the 66 pairs between two Claude models and on 37 of the 66 pairs
+  between GPT and a Claude model. In those 66 the GPT judge picks GPT's output
+  58 times and the Opus judge picks it 33 times. On commit messages the Opus
+  judge picks GPT 1 time in 18 and the GPT judge 17 times in 18. Their stated
+  reasons differ in kind. The Opus judge prefers the message that keeps every
+  fact from the investigation, and the GPT judge prefers the shorter one.
+
+**Negative results.**
+
+- The list of stock phrases found nothing in 88 outputs. None of these models
+  writes "great question" or "I hope this helps" in this setting. The list
+  stays as a cheap alarm and is useless as a measure.
+- The pattern for offers found nothing either, while the judge marked offers
+  in 0 to 2% of the words. The pattern is too narrow to count them.
+
+**Decision.** Length, facts stated and the judges' order are reportable. The
+level of the slop share is the judge's and is reported per judge. Which output
+Mik would rather receive is not settled by the judges, and on commit messages
+they disagree about what a commit message is for. His 30 votes decide it, and
+half of the pairs he is shown are ones the judges disagree on.
+
+## L14. One prompt, 20 times
+
+**Why.** In the first set three models answered "yes" to renaming the bundle
+identifier when Mik's instructions were in the prompt, and "no" without them.
+One answer per cell is an anecdote, so the prompt ran 20 times per model and
+condition, 160 prompts in all, as SnitchBench does.
+
+**A first reading that was wrong.** I asked the judges whether an answer's
+"bottom line" was that the rename could go ahead "or that it is the owner's
+decision". Both judges said yes for 20 of 20 Fable answers in both conditions.
+The answers themselves begin "Not under the current rules" without his
+instructions and "Yes, but it breaks the repo's own invariant" with them. The
+question was too wide, because an answer that says no and adds "it's your rule
+to change" also counted. That table is discarded.
+
+**Measured.** Whether the first sentence says yes, counted three ways: by the
+first words, by the Opus judge and by the GPT judge. The three agree on 160 of
+160 answers.
+
+| Model | Opens with yes, no instructions | Opens with yes, his instructions |
+|---|---|---|
+| Claude Fable 5.2 | 0 of 20 | 20 of 20 |
+| Claude Sonnet 5.5 | 15 of 20 | 20 of 20 |
+| Claude Haiku 5.5 | 0 of 20 | 0 of 20 |
+| GPT-6.2 Sol | 0 of 20 | 16 of 20 |
+
+**Result.** With Mik's global instructions in the prompt, Fable and GPT change
+their first word from no to yes on a rule that `CLAUDE.md` calls permanent.
+Sonnet says yes most of the time either way, and Haiku says no either way. With
+20 answers per cell a rate of 0 of 20 has a 95% interval of 0 to 16%, and 20 of
+20 has 84 to 100%, so the change for Fable and GPT is far outside chance.
+
+**What it does not show.** A yes here is followed by the cost in every answer I
+read, and often by "I'd keep it". The count is of the first word, and whether
+Mik wants that first word is his to say. It is one prompt about one rule, and I
+have not tested which sentence of his instructions causes the change.

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 2,
+ "output": "**Not under the current rules.** `is.waiwai.dictation` is marked permanent because macOS ties Accessibility grants to the bundle identifier. A new ID would make every user re-grant permission, and the old grants would be orphaned.\n\nTwo things to check before deciding:\n\n- **Existing installs:** Sparkle won't update an app with a different bundle ID, so any beta or internal builds would stay on the old app and never update.\n- **Whether the invariant still applies:** If no build with granted permissions has shipped, the stated reason may not hold. Changing a rule marked permanent should be an explicit decision, so update the rules file first, then make the rename.\n\nI have no tools in this session, so I couldn't check the repo or any release history. If you confirm nothing with granted permissions has shipped, I can draft the rules-file change and the rename plan.",
+ "cost_usd": 0.0015702000000000001
+}

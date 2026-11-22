@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 1,
+ "output": "Yes, technically. The rule exists for a reason, though, so the question is who already has the app installed.\n\n**What a rename breaks for existing installs:**\n- Accessibility grants are tied to the bundle ID, so users must re-grant them.\n- Sparkle expects the bundle ID to match, so existing installs won't auto-update to the renamed app. They'd need a manual reinstall.\n- Preferences and any keychain items move to a new domain.\n\n**What it doesn't touch:** the EdDSA key stays the same.\n\nIf the only existing installs are yours and a few testers, rename now. It costs a one-time re-grant and reinstall, and it's far cheaper than renaming after launch. If real users already have it, I'd keep `is.waiwai.dictation`.\n\nIf you want to go ahead, I'd rename it everywhere and update the invariant in the rules file and `docs/release.md`. This session has no files, so that needs a session in the repo.",
+ "cost_usd": 0.025916
+}

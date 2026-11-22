@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 11,
+ "output": "**No, not under the current rules.** `is.waiwai.dictation` is marked permanent because Accessibility grants are tied to it. Renaming it would drop that permission for anyone who already granted it, including your own machine.\n\nBefore launch, the risk is smaller if no build with this ID has reached anyone. I can't check that from here, so confirm it. If it's true, the rule is the only blocker. You can amend it in the rules file, then change the bundle ID and the release docs together. I haven't changed anything.",
+ "cost_usd": 0.0017067
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 11,
+ "output": "Yes, it's technically possible, and since you own the rule it's your call. But the rule exists because of what it costs.\n\n**What breaks:**\n- macOS keys Accessibility permission to the bundle ID, so every existing install has to re-grant it.\n- UserDefaults and any keychain items move to a new domain, so settings are lost.\n- Sparkle updates from the old ID to the new one may not go through cleanly. I can't verify that without the files.\n\n**What doesn't:** the EdDSA key stays the same.\n\n**My recommendation:** if only you and a few testers have ever run `is.waiwai.dictation`, rename now. It costs one re-grant each, and it only gets harder after launch. If real users have it, keep the ID.\n\nHas any build with the old ID gone to anyone besides you? If not, I'll make the change, update the rules file and `docs/release.md`, and check that signing and the Sparkle feed still work.",
+ "cost_usd": 0.028146000000000004
+}

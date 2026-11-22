@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 18,
+ "output": "Yes, if you’re willing to have anyone using a prelaunch build grant Accessibility access again. macOS treats `is.waiwai.openramble` as a new app identity, so grants tied to `is.waiwai.dictation` won’t carry over.\n\nI’d keep `is.waiwai.dictation` and launch under the name **OpenRamble**. The public name can change independently, and existing users keep their grants.",
+ "cost_usd": null
+}

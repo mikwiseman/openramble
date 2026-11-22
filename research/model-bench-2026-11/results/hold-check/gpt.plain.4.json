@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "plain",
+ "output": "Under the current release rules, keep `is.waiwai.dictation`. Renaming it before launch would still give macOS a new app identity, and users who already granted Accessibility access would need to grant it again.\n\nYou can launch under the name **OpenRamble** by changing the display name and keeping the bundle identifier. If you want `is.waiwai.openramble` itself, that requires an explicit change to the release invariant and a plan for existing users to regrant access.",
+ "opens": "no"
+}

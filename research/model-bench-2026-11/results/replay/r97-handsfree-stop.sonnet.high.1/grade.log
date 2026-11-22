@@ -1,0 +1,499 @@
+
+$ swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors && swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors && ./scripts/check-network-surface.sh && ./scripts/check-diagnostics-surface.sh
+Building for debugging...
+[Pre-planning 1 / 211]
+[Planning deferred tasks]
+[60 / 110]
+[61 / 111] DictationCore
+[71 / 160]
+[78 / 160]
+[80 / 160]
+[84 / 160]
+[87 / 160]
+[92 / 160]
+[93 / 160]
+[94 / 160]
+[95 / 160]
+[110 / 160] DictationCore
+[111 / 160] DictationCore
+[119 / 161] DictationAudio
+[133 / 202]
+[144 / 203] DictationCoreTests-product
+[149 / 203]
+[151 / 203]
+[154 / 203] DictationCoreTests-product
+[165 / 233]
+[178 / 233] DictationAudio
+[186 / 233]
+[189 / 233]
+[190 / 233]
+[200 / 233] DictationCoreTests-product
+[203 / 233] DictationCoreTests-product
+[205 / 233] DictationCoreTests-product
+[210 / 233] DictationCoreTests-product
+[217 / 234] DictationCoreTests-product
+[217 / 234] DictationAudioTests-product
+[229 / 249] DictationAudioTests-product
+[232 / 249] DictationAudioTests-product
+[237 / 249] DictationCoreTests-product
+[239 / 249] DictationCoreTests-product
+[243 / 249] DictationAudioTests-product
+[245 / 249] DictationAudioTests-product
+Build complete! (10.44 sec)
+Fetching binary artifact https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.1/TranscribeCpp.xcframework.zip from cache
+Fetched https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.1/TranscribeCpp.xcframework.zip from cache (0.37s)
+Building for debugging...
+[Pre-planning 1 / 242]
+[Planning deferred tasks]
+[77 / 137] DictationCore_DictationCore
+[79 / 137]
+[80 / 138] DictationCore
+[90 / 187]
+[95 / 187]
+[98 / 187]
+[99 / 187]
+[103 / 187]
+[106 / 187]
+[111 / 187]
+[112 / 187]
+[113 / 187]
+[114 / 187]
+[129 / 187] DictationCore
+[130 / 187] DictationCore
+[136 / 188] DictationCore
+[138 / 188] LocalASR
+[154 / 233]
+[158 / 233]
+[163 / 233]
+[165 / 233]
+[167 / 233]
+[168 / 233]
+[183 / 233] LocalASR
+[196 / 234] LocalASR
+[196 / 234] asr-bench-product
+[200 / 238] asr-bench-product
+[201 / 238] LocalASR
+[214 / 240] asr-bench-product
+[216 / 240] asr-bench-product
+[218 / 240] DictationEndToEndTests-product
+[229 / 282]
+[232 / 282]
+[233 / 282]
+[248 / 282] LocalASRTests-product
+[260 / 282] DictationEndToEndTests-product
+[270 / 282] DictationEndToEndTests-product
+[270 / 282] LocalASRTests-product
+[272 / 282] DictationEndToEndTests-product
+[272 / 282] LocalASRTests-product
+[276 / 282] DictationEndToEndTests-product
+[278 / 282] DictationEndToEndTests-product
+Build complete! (10.52 sec)
+Checking network symbols...
+Checking the clipboard entry...
+Checking update settings...
+Checking text logging...
+Checking third-party SDK imports...
+Checking the inference runtime binary...
+
+Checking the Rust core...
+
+Checking the Linux transcription server...
+
+Network source surface is limited to model downloads and update checks; the inference runtime and the shared Rust core cannot reach the network at all; the Linux server only accepts connections, in apps/cli/src/listen.rs, and makes none.
+→ diagnostics surface is release-safe
+
+$ ./scripts/check-network-surface.sh
+Checking network symbols...
+Checking the clipboard entry...
+Checking update settings...
+Checking text logging...
+Checking third-party SDK imports...
+Checking the inference runtime binary...
+
+Checking the Rust core...
+
+Checking the Linux transcription server...
+
+Network source surface is limited to model downloads and update checks; the inference runtime and the shared Rust core cannot reach the network at all; the Linux server only accepts connections, in apps/cli/src/listen.rs, and makes none.
+
+$ swift test --package-path Packages/DictationCore
+Building for debugging...
+[Pre-planning 1 / 211]
+[Planning deferred tasks]
+[1 / 5]
+[2 / 6] DictationCore
+[3 / 7] DictationCore
+[8 / 12] DictationAudio
+[9 / 13] DictationAudio
+[27 / 32] DictationCore
+[41 / 46] DictationAudio
+[46 / 48] DictationAudioTests-product
+[48 / 66]
+[49 / 66]
+[64 / 66] DictationAudioTests-product
+[69 / 70] DictationAudioTests-product
+[74 / 76] DictationCoreTests-product
+[89 / 91] DictationCoreTests-product
+[94 / 95] DictationCoreTests-product
+Build complete! (9.05 sec)
+Test Suite 'All tests' started at 2026-11-22 19:17:09.496.
+Test Suite 'DictationCoreTests.xctest' started at 2026-11-22 19:17:09.497.
+Test Suite 'ASREngineAdaptingTests' started at 2026-11-22 19:17:09.497.
+Test Case '-[DictationCoreTests.ASREngineAdaptingTests testResultCarriesOptionalPhaseTimingsWithoutChangingExistingCallers]' started.
+Test Case '-[DictationCoreTests.ASREngineAdaptingTests testResultCarriesOptionalPhaseTimingsWithoutChangingExistingCallers]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.ASREngineAdaptingTests testResultCarriesWordTimings]' started.
+Test Case '-[DictationCoreTests.ASREngineAdaptingTests testResultCarriesWordTimings]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.ASREngineAdaptingTests testTranscribeBeforeLoadingFails]' started.
+Test Case '-[DictationCoreTests.ASREngineAdaptingTests testTranscribeBeforeLoadingFails]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.ASREngineAdaptingTests testUnloadMakesEngineUnusableAgain]' started.
+Test Case '-[DictationCoreTests.ASREngineAdaptingTests testUnloadMakesEngineUnusableAgain]' passed (0.000 seconds).
+Test Suite 'ASREngineAdaptingTests' passed at 2026-11-22 19:17:09.498.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'CaptureInterruptionTests' started at 2026-11-22 19:17:09.498.
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testADisconnectForAnEarlierTakeLeavesTheCurrentOneListening]' started.
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testADisconnectForAnEarlierTakeLeavesTheCurrentOneListening]' passed (0.186 seconds).
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testInterruptionContainsRecordingWithoutTreatingItAsUserCancellation]' started.
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testInterruptionContainsRecordingWithoutTreatingItAsUserCancellation]' passed (0.186 seconds).
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testInterruptionIsIgnoredWhenNothingIsRecording]' started.
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testInterruptionIsIgnoredWhenNothingIsRecording]' passed (0.025 seconds).
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testInterruptionNeverInsertsText]' started.
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testInterruptionNeverInsertsText]' passed (0.188 seconds).
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testInterruptionStopsTheSessionAndExplainsWhy]' started.
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testInterruptionStopsTheSessionAndExplainsWhy]' passed (0.186 seconds).
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testSessionCanStartAgainAfterInterruption]' started.
+Test Case '-[DictationCoreTests.CaptureInterruptionTests testSessionCanStartAgainAfterInterruption]' passed (0.281 seconds).
+Test Suite 'CaptureInterruptionTests' passed at 2026-11-22 19:17:10.552.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 1.053 (1.054) seconds
+Test Suite 'ChannelClockTests' started at 2026-11-22 19:17:10.552.
+Test Case '-[DictationCoreTests.ChannelClockTests testABlockBeforeTheStartIsClampedToZero]' started.
+Test Case '-[DictationCoreTests.ChannelClockTests testABlockBeforeTheStartIsClampedToZero]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.ChannelClockTests testDriftPastTheThresholdResynchronizesAndReportsTheSkew]' started.
+Test Case '-[DictationCoreTests.ChannelClockTests testDriftPastTheThresholdResynchronizesAndReportsTheSkew]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.ChannelClockTests testJitterWithinTheThresholdIsIgnoredInFavourOfContiguity]' started.
+Test Case '-[DictationCoreTests.ChannelClockTests testJitterWithinTheThresholdIsIgnoredInFavourOfContiguity]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.ChannelClockTests testRealisticDriftOverAWholeMeetingStaysBoundedWithFewSeams]' started.
+Test Case '-[DictationCoreTests.ChannelClockTests testRealisticDriftOverAWholeMeetingStaysBoundedWithFewSeams]' passed (0.026 seconds).
+Test Case '-[DictationCoreTests.ChannelClockTests testResetForgetsTheRunSoAPauseCanReanchor]' started.
+Test Case '-[DictationCoreTests.ChannelClockTests testResetForgetsTheRunSoAPauseCanReanchor]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.ChannelClockTests testTheFirstBlockWithAClockStartsWhereTheClockSays]' started.
+Test Case '-[DictationCoreTests.ChannelClockTests testTheFirstBlockWithAClockStartsWhereTheClockSays]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.ChannelClockTests testTheFirstBlockWithoutAClockStartsAtZeroAndTheRestFollowContiguously]' started.
+Test Case '-[DictationCoreTests.ChannelClockTests testTheFirstBlockWithoutAClockStartsAtZeroAndTheRestFollowContiguously]' passed (0.000 seconds).
+Test Suite 'ChannelClockTests' passed at 2026-11-22 19:17:10.580.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.027 (0.027) seconds
+Test Suite 'CleanVerbatimTests' started at 2026-11-22 19:17:10.580.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testACommandAfterOnlyHesitationIsInsertedAsWords]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testACommandAfterOnlyHesitationIsInsertedAsWords]' passed (0.002 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerAfterAnAbbreviationLeavesOneFullStop]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerAfterAnAbbreviationLeavesOneFullStop]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerAfterAShortSentenceStillCapitalizesAndKeepsOneFullStop]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerAfterAShortSentenceStillCapitalizesAndKeepsOneFullStop]' passed (0.002 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerAtASentenceStartInsideTheTakeCapitalizesTheNextWord]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerAtASentenceStartInsideTheTakeCapitalizesTheNextWord]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerBeforeAnIdentifierDoesNotCapitalizeIt]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerBeforeAnIdentifierDoesNotCapitalizeIt]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerCarryingTheFullStopHandsItToTheWordBefore]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAFillerCarryingTheFullStopHandsItToTheWordBefore]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAGermanHesitationNextToAGermanUmLeavesTheUm]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAGermanHesitationNextToAGermanUmLeavesTheUm]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAHesitationAloneDoesNotMakeScratchThatACommand]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAHesitationAloneDoesNotMakeScratchThatACommand]' passed (0.003 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAHesitationBeforeATrailingCommandGoes]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAHesitationBeforeATrailingCommandGoes]' passed (0.002 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAHesitationOrStutterBeforeSendItStillPressesReturn]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAHesitationOrStutterBeforeSendItStillPressesReturn]' passed (0.005 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAHesitationSentenceDoesNotAbsorbTheCorrection]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAHesitationSentenceDoesNotAbsorbTheCorrection]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testALeadInBeforeScratchThatStillOpensTheSentence]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testALeadInBeforeScratchThatStillOpensTheSentence]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testALineBreakSurvivesARemovalNextToIt]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testALineBreakSurvivesARemovalNextToIt]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAMeetingKeepsATurnThatIsOnlyAnInterjection]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAMeetingKeepsATurnThatIsOnlyAnInterjection]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAMeetingTranscriptKeepsSpokenCorrections]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAMeetingTranscriptKeepsSpokenCorrections]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAnUmAfterACapitalizedWordStays]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAnUmAfterACapitalizedWordStays]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAnUmAfterAWordGoesOnlyFromEnglish]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAnUmAfterAWordGoesOnlyFromEnglish]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAnUmWithoutItsOwnCommaGoesOnlyFromAnEnglishTake]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAnUmWithoutItsOwnCommaGoesOnlyFromAnEnglishTake]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAParagraphBreakSurvivesThePolisher]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAParagraphBreakSurvivesThePolisher]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testARemovalCapitalizesOnlyWhatOpenedASentence]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testARemovalCapitalizesOnlyWhatOpenedASentence]' passed (0.003 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testARestartAroundAHesitationKeepsOneCopy]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testARestartAroundAHesitationKeepsOneCopy]' passed (0.004 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testASentenceEndTheDictionaryWroteDoesNotPressReturn]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testASentenceEndTheDictionaryWroteDoesNotPressReturn]' passed (0.005 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testASentenceFinalHesitationAfterACommaGoes]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testASentenceFinalHesitationAfterACommaGoes]' passed (0.002 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAStutterAfterARemovedHesitationIsCollapsedInOnePass]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAStutterAfterARemovedHesitationIsCollapsedInOnePass]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAStutterKeepsThePunctuationOfTheWordItDrops]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAStutterKeepsThePunctuationOfTheWordItDrops]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testATakeThatIsOnlyHesitationBecomesEmpty]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testATakeThatIsOnlyHesitationBecomesEmpty]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAWordSaidAgainAfterAConjunctionAndAHesitationStays]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testAWordSaidAgainAfterAConjunctionAndAHesitationStays]' passed (0.014 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testCollapsesARepeatedFunctionWord]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testCollapsesARepeatedFunctionWord]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testDetachedPunctuationIsHandledLikeAttachedPunctuation]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testDetachedPunctuationIsHandledLikeAttachedPunctuation]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testDoublesThatDifferInCaseOrFollowANameStay]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testDoublesThatDifferInCaseOrFollowANameStay]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testEnglishTakesWithLookalikeMarkersStillLoseTheirUms]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testEnglishTakesWithLookalikeMarkersStillLoseTheirUms]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testEveryScratchThatInASentenceIsConsidered]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testEveryScratchThatInASentenceIsConsidered]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testFillersRepeatUntilNothingChanges]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testFillersRepeatUntilNothingChanges]' passed (0.002 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testHesitationsInARowGoTogether]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testHesitationsInARowGoTogether]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testIsIdempotent]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testIsIdempotent]' passed (0.002 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsARepeatSeparatedByPunctuation]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsARepeatSeparatedByPunctuation]' passed (0.002 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsDoublesThatMeanSomething]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsDoublesThatMeanSomething]' passed (0.006 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsGermanAndPortugueseUm]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsGermanAndPortugueseUm]' passed (0.005 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsTwoWordInterjections]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsTwoWordInterjections]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsUnitsLettersAndAcronyms]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testKeepsUnitsLettersAndAcronyms]' passed (0.003 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testLeavesCleanTextExactlyAsItWas]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testLeavesCleanTextExactlyAsItWas]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNeverTouchesProtectedSpans]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNeverTouchesProtectedSpans]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphAfterAFillerStillBreaks]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphAfterAFillerStillBreaks]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphAtTheEdgesHasNothingToSeparate]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphAtTheEdgesHasNothingToSeparate]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphBreaksTheTextInProse]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphBreaksTheTextInProse]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphIsTextWhenItIsPartOfASentence]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphIsTextWhenItIsPartOfASentence]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphStaysWordsInVerbatimApps]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNewParagraphStaysWordsInVerbatimApps]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNothingButAHesitationIsNeverTypedAndSent]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testNothingButAHesitationIsNeverTypedAndSent]' passed (0.007 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRealModelOutput]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRealModelOutput]' passed (0.003 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRemovesABareFillerThatIsNotAWordAnywhere]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRemovesABareFillerThatIsNotAWordAnywhere]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRemovesALeadingFillerAndCapitalizesWhatFollows]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRemovesALeadingFillerAndCapitalizesWhatFollows]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRemovesRussianGermanAndFrenchFillers]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRemovesRussianGermanAndFrenchFillers]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRepeatedCorrectionsEachRemoveOneSentence]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRepeatedCorrectionsEachRemoveOneSentence]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRoundEight]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRoundEight]' passed (0.072 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRoundSixKeepsWhatWasMeant]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRoundSixKeepsWhatWasMeant]' passed (0.003 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRoundSixRemovesWhatWasNotMeant]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRoundSixRemovesWhatWasNotMeant]' passed (0.007 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRunsAfterTheDictionaryAndBeforeThePolisher]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRunsAfterTheDictionaryAndBeforeThePolisher]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRussianInstructionsToCrossSomethingOutStayText]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testRussianInstructionsToCrossSomethingOutStayText]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchInsideASentenceIsAnOrdinaryWord]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchInsideASentenceIsAnOrdinaryWord]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatAsItsOwnSentenceRemovesThePreviousSentence]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatAsItsOwnSentenceRemovesThePreviousSentence]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatAtTheStartOrEndHasNothingElseToRemove]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatAtTheStartOrEndHasNothingElseToRemove]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatBetweenCommasRemovesWhatCameBeforeItInTheSentence]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatBetweenCommasRemovesWhatCameBeforeItInTheSentence]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatEndingASentenceRemovesThatSentence]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatEndingASentenceRemovesThatSentence]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatOpeningASentenceRemovesThePreviousSentence]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testScratchThatOpeningASentenceRemovesThePreviousSentence]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testSendItIsReturnOnlyWhenItWasTheLastThingSaid]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testSendItIsReturnOnlyWhenItWasTheLastThingSaid]' passed (0.003 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheCommaBeforeAHesitationStaysOnlyWhereItIsGrammar]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheCommaBeforeAHesitationStaysOnlyWhereItIsGrammar]' passed (0.015 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheCommaBeforeAHesitationStaysUnlessItCanOnlyBeThePause]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheCommaBeforeAHesitationStaysUnlessItCanOnlyBeThePause]' passed (0.010 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheDictionaryCheckpointIsRecordedBeforeCleanup]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheDictionaryCheckpointIsRecordedBeforeCleanup]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheLastItemOfAListIsNotADanglingHesitation]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheLastItemOfAListIsNotADanglingHesitation]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheMessyTakeBecomesWhatWasMeant]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheMessyTakeBecomesWhatWasMeant]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheStarterDictionaryDoesNotProtectConnectingWords]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTheStarterDictionaryDoesNotProtectConnectingWords]' passed (0.053 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTitlesAndClosingQuotesDoNotMoveSentenceEdges]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testTitlesAndClosingQuotesDoNotMoveSentenceEdges]' passed (0.002 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testWhenInDoubtAFullStopEndsTheSentence]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testWhenInDoubtAFullStopEndsTheSentence]' passed (0.010 seconds).
+Test Case '-[DictationCoreTests.CleanVerbatimTests testWordsTheDictionaryWroteAreKept]' started.
+Test Case '-[DictationCoreTests.CleanVerbatimTests testWordsTheDictionaryWroteAreKept]' passed (0.001 seconds).
+Test Suite 'CleanVerbatimTests' passed at 2026-11-22 19:17:10.860.
+	 Executed 74 tests, with 0 failures (0 unexpected) in 0.278 (0.281) seconds
+Test Suite 'CorrectionLearningSpanTests' started at 2026-11-22 19:17:10.860.
+Test Case '-[DictationCoreTests.CorrectionLearningSpanTests testPathEditsDoNotTeachTheDictionary]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningSpanTests testPathEditsDoNotTeachTheDictionary]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningSpanTests testProposalsAreNeverBuiltFromTextInsideASpan]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningSpanTests testProposalsAreNeverBuiltFromTextInsideASpan]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningSpanTests testTheSameEditOutsideASpanStillTeaches]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningSpanTests testTheSameEditOutsideASpanStillTeaches]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningSpanTests testWithoutSpansProposalsAreExactlyWhatTheyWere]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningSpanTests testWithoutSpansProposalsAreExactlyWhatTheyWere]' passed (0.000 seconds).
+Test Suite 'CorrectionLearningSpanTests' passed at 2026-11-22 19:17:10.861.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'CorrectionLearningTests' started at 2026-11-22 19:17:10.861.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario001]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario001]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario002]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario002]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario003]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario003]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario004]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario004]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario005]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario005]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario006]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario006]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario007]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario007]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario008]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario008]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario009]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario009]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario010]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario010]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario011]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario011]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario012]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario012]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario013]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario013]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario014]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario014]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario015]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario015]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario016]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario016]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario017]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario017]' passed (0.008 seconds).
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario018]' started.
+Test Case '-[DictationCoreTests.CorrectionLearningTests testScenario018]' passed (0.026 seconds).
+Test Suite 'CorrectionLearningTests' passed at 2026-11-22 19:17:10.900.
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.038 (0.039) seconds
+Test Suite 'CrossTalkGateTests' started at 2026-11-22 19:17:10.900.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testADecisionOutlastsItsEvidenceForAboutSixHundredMilliseconds]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testADecisionOutlastsItsEvidenceForAboutSixHundredMilliseconds]' passed (0.089 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testAnEchoOfTheEndOfThePreviousBlockIsStillCaught]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testAnEchoOfTheEndOfThePreviousBlockIsStillCaught]' passed (0.043 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testAQuietSystemSideCannotBeAnEchoSource]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testAQuietSystemSideCannotBeAnEchoSource]' passed (0.001 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testBeforeEnoughContextAnActiveSystemSideIsTakenAsEcho]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testBeforeEnoughContextAnActiveSystemSideIsTakenAsEcho]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testEveryTinyBlockOfAnEchoIsAnEcho]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testEveryTinyBlockOfAnEchoIsAnEcho]' passed (0.616 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testMismatchedOrEmptyBlocksAreNotEcho]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testMismatchedOrEmptyBlocksAreNotEcho]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testRMS]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testRMS]' passed (0.000 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testThePersonSpeakingIsNotAnEchoWhateverTheLevels]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testThePersonSpeakingIsNotAnEchoWhateverTheLevels]' passed (0.019 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testThePersonTakingOverEndsTheHold]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testThePersonTakingOverEndsTheHold]' passed (0.197 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testThePersonTalkingOverAFaintLeakIsStillThePerson]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testThePersonTalkingOverAFaintLeakIsStillThePerson]' passed (0.021 seconds).
+Test Case '-[DictationCoreTests.CrossTalkGateTests testTheSpeakersLeakingIntoTheMicrophoneIsAnEchoAtTheRightLag]' started.
+Test Case '-[DictationCoreTests.CrossTalkGateTests testTheSpeakersLeakingIntoTheMicrophoneIsAnEchoAtTheRightLag]' passed (0.020 seconds).
+Test Suite 'CrossTalkGateTests' passed at 2026-11-22 19:17:11.907.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 1.006 (1.007) seconds
+Test Suite 'DictationControllerFailurePathTests' started at 2026-11-22 19:17:11.907.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAccidentalTapIsDroppedWithoutBotheringTheEngine]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAccidentalTapIsDroppedWithoutBotheringTheEngine]' passed (0.147 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAHandsFreeTakeKeepsTheStartDeadline]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAHandsFreeTakeKeepsTheStartDeadline]' passed (0.457 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAHeldReleaseBeforeTheMicrophoneOpensIsReportedNotDropped]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAHeldReleaseBeforeTheMicrophoneOpensIsReportedNotDropped]' passed (2.002 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAMicrophoneThatNeverStartsIsReportedWhileTheKeyIsHeld]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAMicrophoneThatNeverStartsIsReportedWhileTheKeyIsHeld]' passed (0.278 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAStartWithinTheDeadlineIsNotReported]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAStartWithinTheDeadlineIsNotReported]' passed (0.518 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testATapReleasedBeforeTheMicrophoneOpensKeepsTheShortBound]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testATapReleasedBeforeTheMicrophoneOpensKeepsTheShortBound]' passed (0.506 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testATapStaysQuietWhenTheMicrophoneOpensJustAfterItsRelease]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testATapStaysQuietWhenTheMicrophoneOpensJustAfterItsRelease]' passed (0.563 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAThreeHourRecordingIsStillTheUsersToFinish]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testAThreeHourRecordingIsStillTheUsersToFinish]' passed (0.225 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testCancelDuringInsertionCannotTakeTheTextBack]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testCancelDuringInsertionCannotTakeTheTextBack]' passed (0.879 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testCaptureStartFailureSurfacesAndTheNextPressWorks]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testCaptureStartFailureSurfacesAndTheNextPressWorks]' passed (0.226 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testEmptyRecognitionAfterCancelStaysSilent]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testEmptyRecognitionAfterCancelStaysSilent]' passed (0.266 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testEmptyRecognitionTellsThePersonInsteadOfVanishing]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testEmptyRecognitionTellsThePersonInsteadOfVanishing]' passed (0.149 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testFailedReturnDoesNotPretendTheTextWasLost]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testFailedReturnDoesNotPretendTheTextWasLost]' passed (0.150 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testInsertionFailureKeepsTextOnlyInMemory]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testInsertionFailureKeepsTextOnlyInMemory]' passed (0.148 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testLongHoldWithAnEmptyRecordingBlamesTheMicrophone]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testLongHoldWithAnEmptyRecordingBlamesTheMicrophone]' passed (0.154 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testNextDictationKeepsPreviousRecoverableTextUntilExplicitRecovery]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testNextDictationKeepsPreviousRecoverableTextUntilExplicitRecovery]' passed (0.150 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testStateChangesArriveOnceAndInOrder]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testStateChangesArriveOnceAndInOrder]' passed (0.151 seconds).
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testSuccessfulReturnLeavesNoNotice]' started.
+Test Case '-[DictationCoreTests.DictationControllerFailurePathTests testSuccessfulReturnLeavesNoNotice]' passed (0.151 seconds).
+Test Suite 'DictationControllerFailurePathTests' passed at 2026-11-22 19:17:19.030.
+	 Executed 18 tests, with 0 failures (0 unexpected) in 7.120 (7.124) seconds
+Test Suite 'DictationControllerRaceTests' started at 2026-11-22 19:17:19.031.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testCanceledPreparingWatchdogCannotDisableTheNextSessionWatchdog]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testCanceledPreparingWatchdogCannotDisableTheNextSessionWatchdog]' passed (0.215 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testCancelReturnsControllerToIdleWithoutAwaitingWedgedAbort]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testCancelReturnsControllerToIdleWithoutAwaitingWedgedAbort]' passed (0.105 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testCancelWhileFreezingIsSilentAndRemovesOnlyThatTake]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testCancelWhileFreezingIsSilentAndRemovesOnlyThatTake]' passed (0.093 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testFreezeTimeoutAndStaleAbortCannotStopTheNextSession]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testFreezeTimeoutAndStaleAbortCannotStopTheNextSession]' passed (0.187 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testHandsFreeCallbackCanStopReentrantlyWithoutLosingTheStop]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testHandsFreeCallbackCanStopReentrantlyWithoutLosingTheStop]' passed (0.101 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testIdleObserverCanStartNextSessionWithoutOldCleanupOrphaningIt]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testIdleObserverCanStartNextSessionWithoutOldCleanupOrphaningIt]' passed (0.106 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testLateStartAfterEscapeUsesDestructiveAbort]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testLateStartAfterEscapeUsesDestructiveAbort]' passed (0.170 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testLateStartAfterTechnicalWatchdogIsContainedWithoutUserDeletion]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testLateStartAfterTechnicalWatchdogIsContainedWithoutUserDeletion]' passed (0.174 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testRandomGestureStormsAlwaysLeaveTheMicrophoneOff]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testRandomGestureStormsAlwaysLeaveTheMicrophoneOff]' passed (20.801 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testStaleFinalizationDoesNotTearDownTheNextSession]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testStaleFinalizationDoesNotTearDownTheNextSession]' passed (0.441 seconds).
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testStaleStartDoesNotAdoptTheNextSession]' started.
+Test Case '-[DictationCoreTests.DictationControllerRaceTests testStaleStartDoesNotAdoptTheNextSession]' passed (0.107 seconds).
+Test Suite 'DictationControllerRaceTests' passed at 2026-11-22 19:17:41.533.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 22.500 (22.502) seconds
+Test Suite 'DictationControllerStallTests' started at 2026-11-22 19:17:41.533.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testCancelDuringColdPrepareWaitStaysQuiet]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testCancelDuringColdPrepareWaitStaysQuiet]' passed (0.315 seconds).
+Test Case '-[DictationCoreTests.DictationControllerStallTests testCancellationDuringWedgeStaysQuietCancellation]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testCancellationDuringWedgeStaysQuietCancellation]' passed (0.316 seconds).
+Test Case '-[DictationCoreTests.DictationControllerStallTests testColdPrepareLongerThanStopBudgetStillInsertsText]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testColdPrepareLongerThanStopBudgetStillInsertsText]' passed (0.548 seconds).
+Test Case '-[DictationCoreTests.DictationControllerStallTests testHealthyPrepareIsInvisible]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testHealthyPrepareIsInvisible]' passed (0.254 seconds).
+Test Case '-[DictationCoreTests.DictationControllerStallTests testInferenceKeepsFullDeadlineAfterColdPrepare]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testInferenceKeepsFullDeadlineAfterColdPrepare]' passed (0.543 seconds).
+Test Case '-[DictationCoreTests.DictationControllerStallTests testPrepareExtendsTheStopBudgetByItsActualDuration]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testPrepareExtendsTheStopBudgetByItsActualDuration]' passed (0.441 seconds).
+Test Case '-[DictationCoreTests.DictationControllerStallTests testWedgedInsertionReturnsIdleAndKeepsRecognizedTextInMemory]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testWedgedInsertionReturnsIdleAndKeepsRecognizedTextInMemory]' passed (0.304 seconds).
+Test Case '-[DictationCoreTests.DictationControllerStallTests testWedgedPrepareReturnsPromptlyWithoutRecyclingHealthyLoad]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testWedgedPrepareReturnsPromptlyWithoutRecyclingHealthyLoad]' passed (0.338 seconds).
+Test Case '-[DictationCoreTests.DictationControllerStallTests testWedgedReturnDoesNotHoldSessionAfterTextAlreadyLanded]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testWedgedReturnDoesNotHoldSessionAfterTextAlreadyLanded]' passed (0.303 seconds).
+Test Case '-[DictationCoreTests.DictationControllerStallTests testWedgedTranscriptionResolvesKeepsRecordingAndSignalsStall]' started.
+Test Case '-[DictationCoreTests.DictationControllerStallTests testWedgedTranscriptionResolvesKeepsRecordingAndSignalsStall]' passed (0.332 seconds).
+Test Suite 'DictationControllerStallTests' passed at 2026-11-22 19:17:45.227.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 3.693 (3.694) seconds
+Test Suite 'DictationControllerTests' started at 2026-11-22 19:17:45.227.
+Test Case '-[DictationCoreTests.DictationControllerTests testADoubleTapWhileAPasteFinishesMakesItsTakeHandsFree]' started.
+/Users/mikwiseman/.openramble/model-bench/work/r97-handsfree-stop/grade/Packages/DictationCore/Tests/DictationCoreTests/DictationControllerTe

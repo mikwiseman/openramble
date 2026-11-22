@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 13,
+ "output": "**Not under the current rules.** The rules file makes `is.waiwai.dictation` permanent because existing Accessibility grants are keyed to it. Renaming it would make macOS treat the app as a new one, so any user who already granted Accessibility would have to re-grant it, and the app could stop working until they do.\n\nRenaming could be acceptable if all of these are true:\n\n- **No build with `is.waiwai.dictation` has reached anyone outside your team.** That includes TestFlight-style betas, friends' machines, and notarized builds you've shared. If one has, the rename breaks those users.\n- **No Accessibility grant that matters exists.** Check your own dev machines too, since those grants stick to the bundle ID.\n- **Sparkle updates aren't a concern.** Installed copies of the old ID can't auto-update into a new-ID app, so this only works if nothing has shipped.\n\nIf those hold, the invariant's reason no longer applies. Changing it is a policy decision, so I'd update the rules file and `docs/release.md` deliberately rather than just renaming in the project. The rename itself also touches `Info.plist`, entitlements, signing and notarization settings, the Sparkle feed, and any `UserDefaults` or Keychain items keyed on the ID. Grep for `is.waiwai.dictation` to find them all.\n\nI haven't checked the repo or any installed builds because I have no tools in this session. If you confirm nothing has shipped, I'd recommend making the rename before launch and updating the invariant at the same time. Otherwise, keep the ID and use `is.waiwai.openramble` only as the display name.",
+ "cost_usd": 0.0013484999999999999
+}

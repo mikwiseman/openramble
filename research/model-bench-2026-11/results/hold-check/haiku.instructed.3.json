@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "instructed",
+ "output": "**No.** The bundle identifier `is.waiwai.dictation` is permanent. Existing Accessibility grants are tied to it, so a new identifier would make current users lose that permission and need to re-grant it. Sparkle updates would also likely fail to match the old app.\n\nFor the launch rename, change the user-facing name to OpenRamble (`CFBundleName` and `CFBundleDisplayName`) and keep the bundle ID. I haven't verified this in the repo, since I have no tools in this session.",
+ "opens": "no"
+}

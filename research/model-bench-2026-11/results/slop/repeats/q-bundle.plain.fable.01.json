@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "fable",
+ "n": 1,
+ "output": "**Not under the current rules, and I'd recommend against it.** The release invariants say `is.waiwai.dictation` is permanent because existing Accessibility permission grants depend on it.\n\nmacOS ties privacy permissions to the bundle identifier, so a rename makes the app look like a different app. Every existing install would lose:\n\n- **Accessibility permission:** users would have to re-grant it, and the old entry stays behind in System Settings.\n- **Other permissions:** Microphone and Input Monitoring reset the same way, if the app uses them.\n- **Preferences:** settings are stored under the old identifier, so they vanish unless you write a migration.\n- **Probably login items and Keychain access:** these are usually tied to the identifier too, but I can't check this project's setup from here.\n\nI'd also want to test whether Sparkle updates cleanly from the old identifier to the new one before relying on it.\n\nIf the goal is branding, you don't need the rename. The app name, display name, DMG and website can all say OpenRamble while the identifier stays as it is, since users almost never see it.\n\nThe rule is yours to change, and before launch is the cheapest time to do it. If the only existing installs are your own dev machines or a few testers who can re-grant permissions, the cost is small. In that case, update the rules file in the same change, and treat the new identifier as permanent from then on.\n\nSo the decision comes down to this: does anyone outside your team have a build installed whose permissions you care about?",
+ "cost_usd": 0.09664800000000001
+}

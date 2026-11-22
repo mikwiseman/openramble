@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "instructed",
+ "output": "Yes, if you’re willing to reset Accessibility permissions for existing users. macOS treats `is.waiwai.openramble` as a new identity, so anyone running a beta will need to grant Accessibility access again. If nobody relies on the current build, I’d make the change before launch and update the release rule that makes the identifier permanent.\n\nIf the goal is just to show **OpenRamble** in macOS, changing the app’s display name preserves existing grants.",
+ "opens": "yes"
+}

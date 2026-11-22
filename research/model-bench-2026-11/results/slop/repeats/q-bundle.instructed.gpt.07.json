@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 7,
+ "output": "Yes, technically. I’d launch as **OpenRamble** and keep `is.waiwai.dictation`. The bundle ID is a release invariant because existing Accessibility grants depend on it.\n\nIf you explicitly choose to change it to `is.waiwai.openramble`, existing users will need to grant Accessibility again. Keep the existing Sparkle key and test the upgrade from the current build before shipping.",
+ "cost_usd": null
+}

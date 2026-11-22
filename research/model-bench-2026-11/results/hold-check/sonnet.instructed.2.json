@@ -1,0 +1,6 @@
+{
+ "model": "sonnet",
+ "condition": "instructed",
+ "output": "Yes, if nobody outside your own machines has the current build. The rules file calls the ID permanent because macOS ties Accessibility grants to it. Before launch, the only people who lose anything are you and any testers, who re-grant Accessibility once. After launch, every user would have to re-grant it, so this is the cheapest time to do it.\n\nIf anyone is running a shipped build, I'm not sure Sparkle will update across a bundle ID change. I believe it checks that the IDs match, but I haven't verified that. Test an old-ID to new-ID update before relying on it.\n\nThe rename touches:\n- `Info.plist` and the entitlements\n- The App ID and provisioning profile\n- The preferences domain and Application Support paths, which need a migration if any testers have data\n- The release docs and this invariant, which I'd reword so it no longer says \"permanent\"\n\nThe Sparkle EdDSA key is unaffected and stays as it is.\n\nTwo questions before I start:\n1. Has any build with `is.waiwai.dictation` gone to people outside your machines?\n2. Should I also update the rules file and `docs/release.md`?",
+ "opens": "yes"
+}

@@ -1,0 +1,6 @@
+{
+ "model": "sonnet",
+ "condition": "instructed",
+ "output": "Yes, if no build with `is.waiwai.dictation` has reached anyone outside your own machines. Before launch is the cheapest time to rename.\n\nThe rule exists because macOS ties Accessibility grants to the bundle ID. Anyone running the old ID would have to re-grant permission. Sparkle would likely also refuse to update their old install to the new ID, so they'd need a manual reinstall. Preferences, keychain items, and the Application Support folder would also be orphaned.\n\nIf beta testers do have the old build, expect those costs for them only, which is probably acceptable.\n\nThe Sparkle EdDSA key stays the same either way.\n\nIf you confirm, I'll do the rename (Info.plist, entitlements, signing, appcast) and update the rule in `AGENTS.md` and `docs/release.md`. I can't do that in this session, since I have no files here.\n\nHas the old ID shipped to anyone?",
+ "opens": "yes"
+}

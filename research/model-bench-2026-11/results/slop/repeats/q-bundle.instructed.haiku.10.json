@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 10,
+ "output": "No. The repo treats `is.waiwai.dictation` as permanent because macOS ties Accessibility grants to the bundle identifier. A rename makes macOS treat OpenRamble as a new app, so anyone who already granted Accessibility would have to grant it again.\n\nI'd keep the identifier and change only what users see: the display name, product name, and app name in the bundle. That gives you the OpenRamble brand without touching the grants.\n\nIf you still want the identifier changed, the invariant in the rules file has to change first, and that's your call. I can't check whether any installs already hold grants from this sandbox, so tell me if the build has never left internal testers.",
+ "cost_usd": 0.0014557
+}

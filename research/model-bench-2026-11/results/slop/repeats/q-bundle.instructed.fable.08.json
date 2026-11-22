@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 8,
+ "output": "**Yes, and before launch is the only cheap time to do it, but it breaks every existing install.**\n\nmacOS ties permissions and settings to the bundle ID, so after the rename:\n\n- Accessibility and Microphone grants are gone, and dictation stops working until the user re-grants them.\n- Preferences reset, because they are stored under the old ID.\n- The Sparkle update from the old ID to the new one needs a test on a real install before shipping.\n\nIf the existing installs are only you and a few testers, do it now and update the invariant in the rules file. If real users already depend on it, keep the ID: users never see it, and the app can be called OpenRamble without changing it.\n\nHow many installs exist today?",
+ "cost_usd": 0.117344
+}

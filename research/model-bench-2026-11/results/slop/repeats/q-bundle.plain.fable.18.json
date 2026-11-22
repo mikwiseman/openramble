@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "fable",
+ "n": 18,
+ "output": "**Not under the current rules.** The repo's release invariants say `is.waiwai.dictation` is permanent because existing Accessibility permission grants depend on it. I recommend keeping it, though as the owner you can overrule that.\n\nIf you rename, macOS treats `is.waiwai.openramble` as a different app, so for anyone who already has a build installed:\n\n- **Accessibility grant is lost.** Permissions are keyed to the bundle identifier, so every existing user has to re-grant it, and the old entry lingers in System Settings. For a dictation app that means it silently stops working until they do.\n- **Other per-identifier state is orphaned.** Preferences stored under the old identifier, along with any other granted permissions such as microphone, would need migrating or re-prompting.\n- **Sparkle updates get messier.** An existing install updating to a build with a different identifier is not a clean in-place update, so it would need careful testing.\n\nThe bundle identifier is almost never visible to users. You can get the OpenRamble branding through the app name, display name, icon and DMG name without touching it.\n\nIf you still want the rename, before launch is the cheapest time to do it, since the only people affected are those with a build today. It would mean changing the invariant in the rules file and planning for existing installs to re-grant Accessibility.\n\nHow many people have a build installed right now? If it's just you and a few testers, the cost is small; if there's a real beta population, I'd leave it.",
+ "cost_usd": 0.080208
+}

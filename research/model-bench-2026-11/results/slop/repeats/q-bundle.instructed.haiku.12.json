@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 12,
+ "output": "**No, not while the rules stand.** `is.waiwai.dictation` is permanent because macOS ties Accessibility grants to the bundle ID. An app with the new ID looks like a new app, so every existing install would need Accessibility granted again.\n\nIf nobody has installed a build yet, that risk is mostly gone. The invariant still says permanent, though, so changing it is your call and needs an edit to the rules file first. I can't check from here whether any builds have gone out.\n\nIf you want the new name shown to people, change `CFBundleDisplayName` instead. That doesn't affect permissions.",
+ "cost_usd": 0.0016572000000000002
+}

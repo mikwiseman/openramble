@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 13,
+ "output": "Yes, it's technically possible, but it's the one change your rules file calls permanent, so it's your call.\n\n**What a rename costs:**\n- macOS treats it as a different app, so every existing install loses its Accessibility grant and has to be re-granted.\n- Sparkle may refuse to update an old install into the new identifier. I haven't verified this, so test it before relying on it.\n- UserDefaults, Application Support, and Keychain items are keyed to the old ID, so they'd need migrating or would be lost.\n\n**My recommendation:** if only you and a few testers have installed it, rename now. It's a one-time re-grant, and it only gets more expensive after launch. If a real user base exists, keep `is.waiwai.dictation`, since the name is invisible to users.\n\nIf you go ahead, the EdDSA key stays unchanged, and I'd update the rules file and `docs/release.md` in the same change.\n\nAre there existing installs beyond your own machines?",
+ "cost_usd": 0.027466000000000004
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 17,
+ "output": "Yes, technically, and before launch is the only cheap moment. But it breaks the first release invariant in the rules file, so it has to be your call.\n\nRenaming would cost every existing install:\n\n- **Permissions:** macOS treats it as a new app, so Accessibility and microphone grants must be given again.\n- **Settings:** preferences stored under `is.waiwai.dictation` are orphaned unless we migrate them.\n- **Updates:** the Sparkle update across the identifier change would need testing; I haven't verified it.\n\nUsers never see the bundle identifier. I'd rename only if existing installs are just you and a few testers. If you say go, I'll update the invariant too.",
+ "cost_usd": 0.11518400000000001
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 16,
+ "output": "**Yes, but it breaks your own release invariant, and I'd keep the current one.**\n\nmacOS ties Accessibility grants to the bundle ID. After a rename, every existing install loses its grant and has to re-approve. Microphone permission and preferences stored under `is.waiwai.dictation` would normally go the same way, though I can't check the repo from this session.\n\nUsers never see the bundle ID, so the gain is cosmetic and the cost is real.\n\nBefore launch is the only cheap moment, though. If existing installs are just you and a few testers, say the word and we rename it and update the invariant to the new ID.",
+ "cost_usd": 0.12362400000000001
+}

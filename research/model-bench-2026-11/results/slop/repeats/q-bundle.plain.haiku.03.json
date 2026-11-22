@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 3,
+ "output": "**No, not under the current rules.** The rules file says `is.waiwai.dictation` is permanent because existing Accessibility permission grants depend on it. Renaming it to `is.waiwai.openramble` would make macOS treat the app as a new app, so anyone who already granted Accessibility would have to grant it again. Sparkle updates from existing installs would also break, since they are tied to the app's identity.\n\nI can only see the excerpt you pasted, not `docs/release.md` or `AGENTS.md`, so I can't tell whether they add more detail.\n\nIf the app has never been distributed, not even to internal testers who granted Accessibility, the practical risk is small. But the invariant doesn't have an exception for that, and I can't verify from here that no builds went out. Changing it is a decision for you as the owner: you'd need to amend the invariant in the rules file first, then make the change. I'd suggest checking for any existing installs or tester builds before making that call.",
+ "cost_usd": 0.0011020000000000001
+}

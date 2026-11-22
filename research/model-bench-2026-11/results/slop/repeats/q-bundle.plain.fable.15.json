@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "fable",
+ "n": 15,
+ "output": "**Not under the current rules.** The rules file lists `is.waiwai.dictation` as a permanent release invariant because existing Accessibility permission grants depend on it. It's your rule to change, but here is what the rename would cost.\n\n**What breaks on existing installs**\n- **Accessibility grants:** macOS ties the grant to the bundle identifier, so the renamed app is a new app and every user has to re-grant it. The old entry stays behind in System Settings.\n- **Other permissions:** Microphone and Input Monitoring, if the app uses them, reset the same way.\n- **Preferences:** the `UserDefaults` domain follows the bundle ID, so settings reset unless you write a migration.\n- **Other ID-keyed state:** keychain items, login item registration and any Application Support paths built from the ID may be affected.\n- **Sparkle updates:** an update from the old ID to the new one changes the app's identity mid-update, so that path would need careful testing.\n\n**Recommendation:** keep the identifier and rename only what users see: the app name, `CFBundleName`/`CFBundleDisplayName`, the `.app` filename and the DMG. Users almost never see the bundle identifier, so this gets the OpenRamble branding at no migration cost.\n\n**The exception:** if the only installs today are your own dev machines and a few testers who can re-grant permissions, the cost is close to nothing. In that case, before launch is the last cheap moment to do it, and you'd also need to update the rules file and `docs/release.md`.\n\nDo real users already have builds installed?",
+ "cost_usd": 0.091008
+}

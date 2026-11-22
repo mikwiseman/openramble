@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 12,
+ "output": "Yes, if you explicitly revise the release rule and accept that anyone using a pre-release build will need to grant Accessibility permission again. macOS treats `is.waiwai.openramble` as a new app identity.\n\nIf the goal is to launch under the OpenRamble name, change the display name and keep `is.waiwai.dictation`. That preserves existing Accessibility grants.",
+ "cost_usd": null
+}

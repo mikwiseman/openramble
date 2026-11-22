@@ -1,0 +1,6 @@
+{
+ "model": "fable",
+ "condition": "instructed",
+ "output": "**We can, but I'd keep `is.waiwai.dictation`.**\nThe repo rules mark it permanent because macOS ties Accessibility grants to the bundle ID.\n\nA rename makes every existing install look like a new app:\n\n- **Permissions:** Accessibility is lost and must be re-granted, and a stale entry stays in System Settings. Microphone permission is most likely lost the same way.\n- **Settings:** preferences reset unless we migrate them, because defaults are stored under the bundle ID.\n\nUsers never see the bundle ID, so the rename buys nothing visible.\n\nIf you still want it, before launch is the cheapest moment, and the release invariant would need updating to match. How many installs exist today?",
+ "opens": "yes"
+}

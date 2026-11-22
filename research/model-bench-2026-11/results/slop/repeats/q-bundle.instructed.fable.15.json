@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 15,
+ "output": "**Yes, but it breaks the first release invariant, so it's your call.** Before launch is the only cheap moment to do it.\n\nWhat it costs every existing install:\n\n- **Permissions:** macOS ties Accessibility and Microphone grants to the bundle ID. The update would arrive as a \"new\" app, and dictation stops working until the user re-grants.\n- **Settings:** preferences are stored under the bundle ID, so they reset unless we migrate them.\n\nIf the existing installs are only you and a few testers, I'd rename now and update the rules file to make the new ID permanent. If a real beta base is updating through Sparkle, I'd keep it, since users never see the identifier.\n\nHow many installs are out there?",
+ "cost_usd": 0.111624
+}

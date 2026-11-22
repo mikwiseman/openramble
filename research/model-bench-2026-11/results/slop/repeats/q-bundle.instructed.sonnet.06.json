@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 6,
+ "output": "Yes, technically. The rule is there because of a cost, and it only matters if people already have the app installed.\n\n- **Existing installs:** macOS treats a new bundle ID as a different app. Every current user loses their Accessibility grant and has to re-grant it. Preferences stored under the old ID won't carry over either.\n- **Before launch with only your own test machines:** the cost is a few re-grants, and this is the cheapest moment to rename.\n- **Sparkle:** the EdDSA key stays, so don't generate a new one. I haven't verified how Sparkle behaves when an update changes the bundle ID, so test an old-to-new update before relying on it.\n\nMy recommendation is to rename now if no real users have installed the app. Is that the case? If so, I'll make the change and update the rule in the rules file, `docs/release.md`, and `AGENTS.md`.",
+ "cost_usd": 0.025916
+}

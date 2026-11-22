@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "instructed",
+ "output": "**No, not without breaking existing installs.** The release rules make the bundle ID permanent because macOS ties Accessibility permission to it. A rename would force every existing user to re-grant Accessibility, and Sparkle would not update the old app to the new ID. I can't check here whether anyone already has an install.\n\nThe simplest path is to keep `is.waiwai.dictation` and change the user-visible name to OpenRamble (display name and product name). Users see the new name, and the identity stays the same.\n\nIf you still want the rename, the invariant has to change first, and we'd need a re-grant notice and a migration plan. Which way do you want to go?",
+ "opens": "no"
+}

@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "instructed",
+ "output": "Yes, if you’re willing to change the release invariant and have everyone who already installed the app grant Accessibility access again. macOS treats `is.waiwai.openramble` as a new app identity.\n\nI’d keep `is.waiwai.dictation` and launch with **OpenRamble** as the visible app name. That preserves existing Accessibility grants.",
+ "opens": "yes"
+}

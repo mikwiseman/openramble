@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 20,
+ "output": "Yes, if you’re willing to reset Accessibility permissions for anyone already using a prelaunch build. macOS treats `is.waiwai.openramble` as a new app identity, so those users would need to grant access again.\n\nI’d launch as **OpenRamble** and keep `is.waiwai.dictation` as the internal bundle ID. If you want the new ID, revise the release invariant explicitly before shipping.",
+ "cost_usd": null
+}

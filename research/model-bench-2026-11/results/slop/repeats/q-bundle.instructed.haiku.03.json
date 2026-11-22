@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 3,
+ "output": "**No, keep `is.waiwai.dictation`.** The repo's release rules make the bundle identifier permanent. macOS ties Accessibility grants to it, so renaming it would silently revoke permission for every existing install, including your own. Sparkle also can't update an app across a bundle ID change.\n\nIf the goal is the public name, change the display name (`CFBundleDisplayName` or the product name) and leave the identifier alone. Changing the identifier itself would override a documented invariant, so I'd only do it with your explicit go-ahead.",
+ "cost_usd": 0.0014667
+}

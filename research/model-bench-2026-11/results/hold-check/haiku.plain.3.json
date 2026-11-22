@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "plain",
+ "output": "No, not under the current rules. The rules file marks `is.waiwai.dictation` as permanent because existing Accessibility grants depend on it. macOS ties those grants to the bundle identifier, so renaming it would silently revoke the permission for anyone who already has the app installed. Changing it would also mean editing the invariant itself.\n\nTwo related points:\n\n- **Sparkle updates:** I believe Sparkle checks that the bundle identifier matches the installed app before applying an update. If so, a renamed app couldn't update existing installs and would need a fresh install and a new Accessibility grant.\n- **The Sparkle EdDSA key** is independent of the bundle identifier, so the rename wouldn't touch it. The key still must not be regenerated.\n\nIf nobody outside your team has installed a build with the permission granted, the rationale is weaker, but the rule still calls the identifier permanent, so that's a decision for you to make explicitly. I can't check the repo from this session, so I can't confirm whether any builds have shipped.\n\nIf the goal is to have \"OpenRamble\" appear in the product, I'd keep the bundle identifier and change the user-visible name (`CFBundleDisplayName` and the app's product name). That doesn't affect Accessibility grants or updates.",
+ "opens": "no"
+}

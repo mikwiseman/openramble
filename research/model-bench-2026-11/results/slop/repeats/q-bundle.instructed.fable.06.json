@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 6,
+ "output": "Yes, technically, and before launch is the last cheap moment, but it breaks the first release invariant in your rules file.\n\nmacOS ties Accessibility grants to the bundle identifier, so every existing install would lose its permission and need to re-grant it. Settings stored under `is.waiwai.dictation` would also reset unless we migrate them. I can't see the repo in this session, so I haven't checked what else references the ID, including the Sparkle update path from old builds.\n\nUsers never see the bundle ID, so the gain is only internal consistency. I'd rename only if the existing installs are just you and a few testers; otherwise keep it.\n\nHow many installs are out there today?",
+ "cost_usd": 0.117144
+}

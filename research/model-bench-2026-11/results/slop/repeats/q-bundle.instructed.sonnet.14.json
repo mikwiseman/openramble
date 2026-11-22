@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 14,
+ "output": "Yes, and now is the cheapest time to do it. The rule exists because changing the ID makes macOS treat the app as new, so every existing user would have to re-grant Accessibility, and their saved preferences would reset. If only you and a few testers have installed it, that cost is a one-time re-grant on your own machines.\n\nThe Sparkle EdDSA key and the inside-out signing order don't change.\n\nWho besides you has a build installed? If it's nobody, say go and I'll make the change and update the \"permanent\" rule to name the new ID. If there are testers, tell me and we'll decide how to handle them.",
+ "cost_usd": 0.025086
+}

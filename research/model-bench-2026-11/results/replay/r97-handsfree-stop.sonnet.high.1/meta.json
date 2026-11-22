@@ -1,0 +1,43 @@
+{
+ "run": "r97-handsfree-stop.sonnet.high.1",
+ "task": "r97-handsfree-stop",
+ "model": "claude-sonnet-5-5",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 19:16",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 248,
+ "slept_seconds": 0,
+ "load_before": "4.2",
+ "load_after": "7.3",
+ "memories_written": 2,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r97-handsfree-stop.sonnet.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 24,
+ "by_kind": {
+  "Bash": 22,
+  "Edit": 2
+ },
+ "turns": 25,
+ "usage": {
+  "input": 48,
+  "cache_write": 64661,
+  "cached_input": 1255696,
+  "output": 13863
+ },
+ "tokens": 1334268,
+ "cost_usd": 0.5229396000000001,
+ "models_used": [
+  "claude-sonnet-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 5,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 260
+}

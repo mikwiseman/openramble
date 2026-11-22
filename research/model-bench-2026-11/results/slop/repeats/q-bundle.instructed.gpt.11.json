@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 11,
+ "output": "Yes, if you’re willing to reset Accessibility permissions for everyone already using the app, including internal testers. macOS treats `is.waiwai.openramble` as a new app identity, so existing users would need to grant access again. The repo currently makes `is.waiwai.dictation` permanent, so changing it would require explicitly revising that release rule. Keep the existing Sparkle key either way.\n\nIf the goal is to launch under the OpenRamble name, change the display name and keep `is.waiwai.dictation`. That preserves existing grants.",
+ "cost_usd": null
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 13,
+ "output": "Yes, it's technically possible, and before launch is the only cheap time to do it. But it breaks the first release invariant, and I'd keep `is.waiwai.dictation`.\n\n- **What it costs:** macOS ties permission grants to the bundle ID, so every existing install loses Accessibility and Microphone access and must re-grant them. Preferences also reset unless we migrate them.\n- **What it buys:** nothing users can see. The app name, icon and menus can all say OpenRamble with the old ID.\n\nIf existing installs are just you and a few testers and you want the clean ID, say so. The change would then include updating the rules file and testing a Sparkle update from the old build to the renamed one.",
+ "cost_usd": 0.123024
+}

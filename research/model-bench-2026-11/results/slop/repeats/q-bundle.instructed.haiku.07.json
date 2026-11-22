@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 7,
+ "output": "**No, not under the current rules.** `is.waiwai.dictation` is permanent because existing Accessibility grants are tied to it. Changing it would make every current user re-grant Accessibility, and it would likely break Sparkle updates for them.\n\nIf you want OpenRamble as the public name, change the display name (`CFBundleDisplayName` / product name) and keep the bundle ID. Users see the new name, and their permissions and updates keep working.\n\nIf you still want the new bundle ID, the rules file has to change first. Tell me and I'll draft that edit with a migration plan. I wouldn't touch the Sparkle key in either case.",
+ "cost_usd": 0.0014627
+}

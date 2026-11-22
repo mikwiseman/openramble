@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "gpt",
+ "n": 8,
+ "output": "No. The release rules make `is.waiwai.dictation` permanent. Changing it to `is.waiwai.openramble` before launch would still require anyone who already granted Accessibility access to grant it again.",
+ "cost_usd": null
+}

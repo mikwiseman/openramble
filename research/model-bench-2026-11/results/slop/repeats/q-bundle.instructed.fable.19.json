@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 19,
+ "output": "Yes, technically, and before launch is the cheapest time to do it, but it breaks the first release invariant in your rules file.\n\nmacOS ties privacy permissions to the bundle identifier, so every existing install would be treated as a new app. After updating, Accessibility (and likely Microphone) grants are gone and dictation stops working until the user re-grants them. Anything stored under the old identifier, such as preferences, would also need migrating.\n\nIf the only installs are yours and a few testers, I'd rename now, since it only gets harder after launch. If real users are already updating through Sparkle, I'd keep `is.waiwai.dictation`; users never see it.\n\nHow many installs exist today?",
+ "cost_usd": 0.114704
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 12,
+ "output": "Yes, but it's a deliberate break with the rules file, so it's your call.\n\nThe rule exists because macOS ties Accessibility grants to the bundle ID. Renaming has two effects on anyone running `is.waiwai.dictation`:\n- **Permissions:** they must re-grant Accessibility.\n- **Updates:** Sparkle expects the update's bundle ID to match the installed app, so they likely can't auto-update and would have to reinstall manually. I haven't verified this against your Sparkle version.\n\nThe EdDSA key is unaffected.\n\n**My recommendation:** if only your own machines have ever run a build, rename now. It's free before launch. If beta users exist, rename only if you accept the manual reinstall for them.\n\nWhich is it? If you go ahead, I'll change the ID, update the rule in the rules file, `docs/release.md`, and `AGENTS.md`, and clear the old permission entry on your Mac.",
+ "cost_usd": 0.026376000000000004
+}

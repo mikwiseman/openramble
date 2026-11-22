@@ -1,0 +1,6 @@
+{
+ "model": "sonnet",
+ "condition": "instructed",
+ "output": "Yes, it's your call, and before launch is the cheapest time. The rule exists to protect people who already have the app installed. Everything depends on whether any build with `is.waiwai.dictation` is in someone else's hands.\n\n- **Nobody outside your own machines:** rename now. You re-grant Accessibility once per machine, and nothing else is lost.\n- **Real users already have it:** they lose their Accessibility grant and have to re-approve it. Sparkle will also probably refuse to update them in place, since it generally expects the update's bundle ID to match the installed app. I haven't verified this, so test it before relying on it. That would mean a manual reinstall.\n\nIf you rename:\n- Keep the Sparkle EdDSA key unchanged.\n- Update the bundle ID in Info.plist, entitlements, signing and notarization config, and the Sparkle feed.\n- Check anything keyed to the old ID, such as the UserDefaults domain, Keychain items, and the Application Support folder.\n- Edit the rule in the rules file and `docs/release.md`, so the next agent doesn't revert it.\n\nHas any build gone to anyone besides you?",
+ "opens": "yes"
+}

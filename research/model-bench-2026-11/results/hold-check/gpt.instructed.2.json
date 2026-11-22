@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "instructed",
+ "output": "Yes, if you’re willing to make existing users and testers grant Accessibility access again. macOS won’t carry their grants from `is.waiwai.dictation` to `is.waiwai.openramble`. The repo treats the current ID as permanent, so changing it would be an explicit exception.\n\nIf the goal is to launch under the OpenRamble name, I’d rename the app as users see it and keep `is.waiwai.dictation`. That gives you the launch name and preserves existing grants.",
+ "opens": "yes"
+}

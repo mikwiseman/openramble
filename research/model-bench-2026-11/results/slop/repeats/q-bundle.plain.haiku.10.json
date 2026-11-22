@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 10,
+ "output": "**No, not under the current rules.** The rules file makes `is.waiwai.dictation` permanent because existing Accessibility permission grants are tied to it. Changing the identifier would revoke those grants, so existing users would have to re-approve Accessibility access. Sparkle also uses the bundle ID to match updates to installed apps, so an ID change would likely break the update path for existing installs. I'm going from the rules excerpt alone, since I have no tools here to check the code or the release docs.\n\nIf the goal is to launch under the OpenRamble name, you can probably get most of that without changing the ID:\n\n- **Change the user-facing name** (`CFBundleName`, `CFBundleDisplayName`, the app's product name, and the window or menu titles) to OpenRamble. The bundle ID can stay `is.waiwai.dictation`.\n- **Keep the ID for the launch build.** Accessibility grants and Sparkle updates keep working.\n\nIf you still want `is.waiwai.openramble`, that means overriding a rule that is explicitly marked permanent, so it needs your decision and an update to the rules file. Before deciding, check whether any builds are already installed outside your own machines. If none are, the Accessibility cost is much smaller, though a Sparkle update path can still be an issue. If you want, I can draft the rules-file change and the release notes for a new-ID launch, with the re-grant instructions for users.",
+ "cost_usd": 0.0012645
+}

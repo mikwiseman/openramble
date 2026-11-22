@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 11,
+ "output": "**No, not as a rename.** The rules file lists `is.waiwai.dictation` as permanent because existing Accessibility permission grants depend on it. macOS keys those grants to the bundle identifier, so a new identifier would look like a different app. Every installed copy would lose its Accessibility permission and prompt again, and that includes your own dev machines.\n\n\"Before launch\" doesn't change this, since the invariant is about the identifier itself and not about who has installed the app yet. Changing it would mean revising the rules file, which is a decision for you and not something I'd do in a session like this. I haven't changed anything.\n\nIf the goal is to get \"OpenRamble\" into the product name, you can get most of that without touching the identifier:\n\n- **Display name:** set `CFBundleDisplayName` and `CFBundleName` to `OpenRamble`. This controls what users see in Finder, the menu bar, and System Settings.\n- **Bundle name and product name:** these can also change, since they don't affect TCC grants.\n- **Keep `is.waiwai.dictation` as the `CFBundleIdentifier`.**\n\nIf you do want a new identifier, the cleanest path is to decide that before the first public release and document the migration: users would re-grant Accessibility once, and the release notes and `docs/release.md` would need to say so. I can draft that change for review if you want to go that way.",
+ "cost_usd": 0.00118
+}

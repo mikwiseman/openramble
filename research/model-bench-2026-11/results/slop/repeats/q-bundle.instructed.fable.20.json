@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 20,
+ "output": "**Yes, but it breaks the first release invariant, so it only makes sense if almost nobody has the app installed yet.**\n\nmacOS ties permissions to the bundle identifier, so on every existing install the rename would:\n\n- drop the Accessibility and Microphone grants, so users must re-grant both;\n- reset preferences, which live under the old identifier;\n- possibly trigger Keychain prompts.\n\nUsers never see the identifier, and the app can be called OpenRamble without changing it.\n\nIf the only installs are yours and a few testers, rename now; it only gets more expensive after launch. If there is a real beta base updating through Sparkle, keep `is.waiwai.dictation`.\n\nHow many installs exist today?",
+ "cost_usd": 0.115224
+}

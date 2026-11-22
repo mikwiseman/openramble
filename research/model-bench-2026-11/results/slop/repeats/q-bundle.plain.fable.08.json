@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "fable",
+ "n": 8,
+ "output": "**Not without breaking the first release invariant in the rules file.** It says `is.waiwai.dictation` is permanent because existing Accessibility permission grants depend on it.\n\nmacOS ties Accessibility grants to the bundle identifier, so after a rename:\n\n- **Permissions:** every existing install loses its Accessibility grant and has to re-approve the app, and a stale entry for the old identifier stays in System Settings. For a dictation app, that means it silently stops working after the update until the user fixes it.\n- **Settings:** preferences are stored under the bundle identifier, so existing settings would not carry over without migration code.\n- **Other state:** anything else keyed to the identifier, such as login item registration, would also reset.\n\n**Recommendation:** keep the identifier and rebrand only the user-visible parts: the app name (`CFBundleName` / `CFBundleDisplayName`), the `.app` filename, and the marketing copy. Users almost never see the bundle identifier, so the mismatch is cosmetic and internal.\n\nIt is your rule to overturn, though, and before launch is the cheapest time to do it. If the only existing installs are you and a few testers who can re-grant permissions, the cost is small now and only grows once you ship. If you go that way, update the invariant in the rules file in the same change.\n\nI can't see `docs/release.md` or `AGENTS.md` in this session, so check them for further reasons behind the rule.",
+ "cost_usd": 0.089368
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 5,
+ "output": "No. The rules file marks `is.waiwai.dictation` as permanent because existing Accessibility grants depend on it. A new bundle ID would drop that permission for everyone who has installed a build, and existing installs would also have trouble updating through Sparkle.\n\nFor the OpenRamble name at launch, change the display name and keep the bundle ID. Set `CFBundleDisplayName` (and the product name, if you want it) to OpenRamble.\n\nIf you still want a new bundle ID, that's a change to the release invariants, and you'd need to make it explicitly. I can't check the project files in this session, so I haven't confirmed where the name is set.",
+ "cost_usd": 0.0016882
+}

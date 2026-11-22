@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "plain",
+ "output": "No. The release rules make `is.waiwai.dictation` permanent because existing Accessibility grants depend on it. Changing the bundle identifier before launch would require affected users to grant Accessibility access again.\n\nYou can launch under the name **OpenRamble** while keeping `is.waiwai.dictation` as the bundle identifier.",
+ "opens": "no"
+}

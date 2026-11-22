@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 3,
+ "output": "Yes, if no build with `is.waiwai.dictation` has reached anyone outside your own Macs. Pre-launch is the cheapest moment to rename.\n\nThe rule exists because the ID anchors things for existing installs:\n- macOS treats `is.waiwai.openramble` as a new app, so every existing user would have to re-grant Accessibility.\n- Their preferences and keychain items would not carry over.\n- Sparkle may refuse to update across an ID change. I haven't verified this, so check it before relying on it.\n\nIf real users exist, I'd keep the old ID. If it's only you and a few testers, rename now and accept a one-time re-grant.\n\nThe EdDSA key is unaffected, and the rename doesn't touch the signing order. Afterwards, update the rule in the rules file and `docs/release.md` so they don't contradict the new ID.\n\nHas the old ID shipped to anyone?",
+ "cost_usd": 0.026656000000000003
+}
