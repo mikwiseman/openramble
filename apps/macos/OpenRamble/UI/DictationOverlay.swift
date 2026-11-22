@@ -865,7 +865,7 @@ struct OverlayView: View {
 
             if let note = waiting.note {
                 Text(note)
-                    .font(.system(size: 12))
+                    .font(.detail)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

@@ -91,7 +91,7 @@ struct RecordingDetail: View {
                     prompt: Text(RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
                 )
                 .textFieldStyle(.plain)
-                .font(.title2.weight(.semibold))
+                .font(.display(24))
                 .focused($titleIsFocused)
                 .onSubmit(commitRename)
                 .onExitCommand(perform: cancelRename)
@@ -99,7 +99,7 @@ struct RecordingDetail: View {
                 .task { titleIsFocused = true }
             } else {
                 Text(recording.title ?? RecordingsPlaceholder.defaultTitle(for: recording.startedAt))
-                    .font(.title2.weight(.semibold))
+                    .font(.display(24))
                     .lineLimit(2)
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2, perform: beginRenaming)
@@ -111,7 +111,7 @@ struct RecordingDetail: View {
                  ? RecordingTime.brief(recording.duration)
                  : recording.startedAt.formatted(Date.FormatStyle(date: .long, time: .shortened, locale: L10n.shared.language.locale))
                     + " · " + RecordingTime.brief(recording.duration))
-                .font(.system(size: GlassTokens.Label.footnote))
+                .font(.detail)
                 .foregroundStyle(.secondary)
         }
     }

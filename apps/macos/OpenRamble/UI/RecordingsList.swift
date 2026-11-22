@@ -69,7 +69,7 @@ struct RecordingsList: View {
                     }
                 } header: {
                     Text(day.title)
-                        .font(.caption.weight(.medium))
+                        .font(.small.weight(.medium))
                         .textCase(nil)
                         .padding(.top, GlassTokens.Space.inline)
                 }
@@ -139,13 +139,17 @@ struct DictationRow: View {
         HStack(alignment: .top, spacing: GlassTokens.Space.inline) {
             RowDisc(symbol: "text.quote")
             VStack(alignment: .leading, spacing: 3) {
+                // The person's own words, so the same serif they wear on the
+                // take block and on the page beside this list. A recording's
+                // name stays in the app's sans: one glance tells them apart.
                 Text(entry.text.isEmpty ? L10n.tr("Nothing recognized") : entry.text)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(entry.text.isEmpty ? .system(size: 13) : .words(14))
                     .foregroundStyle(entry.text.isEmpty ? .secondary : .primary)
+                    .lineSpacing(1)
                     .lineLimit(2)
                 HStack(spacing: GlassTokens.Space.tight) {
                     Text(time)
-                        .font(.system(size: 12))
+                        .font(.detail)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                     if entry.isKept {
@@ -223,19 +227,19 @@ struct RecordingRow: View {
                     }
                     Spacer(minLength: GlassTokens.Space.tight)
                     Text(RecordingTime.clock(recording.duration))
-                        .font(.system(size: 12))
+                        .font(.detail)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                         .fixedSize()
                 }
                 Text(importLine ?? startTime)
-                    .font(.system(size: 12))
+                    .font(.detail)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 if let warning {
                     Label(warning, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
+                        .font(.small)
                         .foregroundStyle(StatusColorRole.attention.color)
                         .lineLimit(2)
                 }
@@ -309,7 +313,7 @@ struct LiveLevelMeters: View {
     private func meter(_ title: String, samples: [Float], color: Color) -> some View {
         HStack(spacing: GlassTokens.Space.inline) {
             Text(title)
-                .font(.caption.weight(.medium))
+                .font(.small.weight(.medium))
                 .foregroundStyle(.secondary)
                 .fixedSize()
             RecordingWaveform(samples: samples, color: isPaused ? .secondary : color)

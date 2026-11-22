@@ -307,8 +307,10 @@ struct ModelStatus: Equatable {
             return ModelStatus(
                 title: L10n.tr("Model not installed"),
                 detail: hasMirror
-                    ? L10n.tr("%@ MB from the GitHub release mirror; the Hugging Face CDN if it's unavailable. After verification, recognition works without the network.", String(describing: downloadMegabytes))
-                    : L10n.tr("%@ MB from Hugging Face. After verification, recognition works without the network.", String(describing: downloadMegabytes)),
+                    // The button beside it names the size; the sentence says
+                    // what happens once and what is true ever after.
+                    ? L10n.tr("Downloaded once, from GitHub or Hugging Face. After that, recognition works without the network.")
+                    : L10n.tr("Downloaded once, from Hugging Face. After that, recognition works without the network."),
                 progress: nil,
                 progressLabel: nil,
                 actions: [.install],

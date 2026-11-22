@@ -69,7 +69,7 @@ struct ShortcutRecorder: View {
 
             if let problem {
                 Text(problem)
-                    .font(.caption)
+                    .font(.detail)
                     .foregroundStyle(StatusColorRole.attention.color)
                     .multilineTextAlignment(.trailing)
                     .fixedSize(horizontal: false, vertical: true)

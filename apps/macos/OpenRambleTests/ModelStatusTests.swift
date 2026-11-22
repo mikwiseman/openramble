@@ -31,7 +31,13 @@ final class ModelStatusTests: XCTestCase {
         XCTAssertEqual(status.title, "Model not installed")
         XCTAssertEqual(status.actions, [.install])
         // Both models with one button: 483 MB recognition + 103 MB prompt.
-        XCTAssertEqual(status.detail?.contains("586 MB"), true)
+        // The size is said once, on the button that spends it; the sentence
+        // beside it says where the download comes from and what is true after.
+        XCTAssertEqual(status.title(for: .install), "Download Model — 586 MB")
+        XCTAssertEqual(
+            status.detail,
+            "Downloaded once, from GitHub or Hugging Face. After that, recognition works without the network."
+        )
         XCTAssertNil(status.progress)
     }
 

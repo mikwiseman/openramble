@@ -17,32 +17,49 @@ struct ModelStatusView: View {
     @State private var announced: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            title
-
-            if let progress = status.progress {
-                ProgressView(value: progress)
-                    .accessibilityLabel(status.title)
-                    .accessibilityValue(status.progressLabel ?? "")
-                if let label = status.progressLabel {
-                    Text(label)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        // Already read as an indicator value - no need for a second time.
-                        .accessibilityHidden(true)
+        // The same row as a permission: the model and the permissions are
+        // one list, and a person reads down it once.
+        SetupRow(
+            glyph: glyph,
+            title: status.title,
+            detail: status.detail,
+            action: {
+                if let first = status.actions.first {
+                    button(for: first)
+                }
+            },
+            below: {
+                if let progress = status.progress {
+                    HStack(spacing: 10) {
+                        ProgressView(value: progress)
+                            .accessibilityLabel(status.title)
+                            .accessibilityValue(status.progressLabel ?? "")
+                        if let label = status.progressLabel {
+                            Text(label)
+                                .font(.small)
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                                .fixedSize()
+                                // Already read as the indicator's value.
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .padding(.top, 5)
+                }
+                // A second way out is rare — remove a model that also needs a
+                // keyboard, or one that needs a repair — and it is quieter
+                // than the first.
+                if status.actions.count > 1 {
+                    HStack(spacing: 8) {
+                        ForEach(status.actions.dropFirst(), id: \.self) { action in
+                            button(for: action)
+                        }
+                    }
+                    .controlSize(.small)
+                    .padding(.top, 6)
                 }
             }
-
-            if let detail = status.detail {
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            ForEach(status.actions, id: \.self) { action in
-                button(for: action)
-            }
-        }
+        )
         // Model installation is the only place where a person waits for minutes.
         // The blind person is left with a silent window without announcements: the indicator is not
         // sees, but nothing changes under focus.
@@ -53,19 +70,14 @@ struct ModelStatusView: View {
         }
     }
 
-    @ViewBuilder
-    private var title: some View {
+    /// Shape and word carry the state; the name stays in ink.
+    private var glyph: StateGlyph {
         switch status.tone {
-        case .success:
-            Label(status.title, systemImage: "checkmark.circle.fill")
-                .foregroundStyle(StatusColorRole.success.color)
-        case .failure:
-            // Attention, not destructive red: the model's failures are all
-            // recoverable with the button right below.
-            Label(status.title, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(StatusColorRole.attention.color)
-        case .neutral:
-            Text(status.title)
+        case .success: return .pasted
+        // Attention, not destructive red: the model's failures are all
+        // recoverable with the button beside them.
+        case .failure: return .attention
+        case .neutral: return status.progress == nil ? .silent : .working
         }
     }
 

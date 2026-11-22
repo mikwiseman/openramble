@@ -374,10 +374,28 @@ struct RecordingsPlaceholderView: View {
     let placeholder: RecordingsPlaceholder
 
     var body: some View {
-        ContentUnavailableView {
-            Label(placeholder.title, systemImage: placeholder.symbol)
-        } description: {
+        // The page's one headline, in the page's own serif, like the drop
+        // overlay beside it. The system's empty state is a bold gray label,
+        // and here it read as a page from another app.
+        VStack(spacing: GlassTokens.Space.inline) {
+            Image(systemName: placeholder.symbol)
+                .font(.system(size: 34, weight: .light))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+            Text(placeholder.title)
+                .font(.display(26))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
             Text(placeholder.detail)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: 440)
         }
+        .padding(GlassTokens.Space.page)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
     }
 }

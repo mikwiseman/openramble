@@ -30,6 +30,15 @@ extension Font {
     static func display(_ size: CGFloat) -> Font {
         .system(size: size, weight: .regular, design: .serif)
     }
+
+    /// The sentence under a name, and every gray line that is read as a
+    /// sentence. Never smaller: the system's caption is 10 points on a Mac,
+    /// and gray text at 10 points is a strain.
+    static let detail = Font.system(size: 12)
+
+    /// The smallest type the app sets, for a time or a count beside
+    /// something larger. Never a sentence.
+    static let small = Font.system(size: 11)
 }
 
 // MARK: - Glass
@@ -535,7 +544,7 @@ struct BlockSection<Content: View, Accessory: View>: View {
             if let footer {
                 Divider()
                 Text(footer)
-                    .font(.system(size: 12))
+                    .font(.detail)
                     .foregroundStyle(.secondary)
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -580,7 +589,7 @@ struct BlockRow<Control: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail {
                     Text(detail)
-                        .font(.system(size: 12))
+                        .font(.detail)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -597,6 +606,74 @@ struct BlockRow<Control: View>: View {
         }
         .padding(.vertical, 8)
         .frame(minHeight: GlassTokens.Block.row)
+    }
+}
+
+/// One line of a setup list: its state, what it is, and the one thing to do
+/// about it.
+///
+/// The speech model and the permissions are one list — "one download, two
+/// permissions" — so they are one row: the state's glyph, the name with a
+/// sentence under it, and the action on the column's edge. Done, the glyph
+/// is a green check and the action is gone. The name stays in ink whatever
+/// the state: shape and word carry it, color only confirms.
+struct SetupRow<Action: View, Below: View>: View {
+    let glyph: StateGlyph
+    let title: String
+    var detail: String?
+    /// What VoiceOver says for the name and its sentence, when the state has
+    /// words of its own: a check mark tells the ear nothing.
+    var spoken: (label: String, value: String)?
+    @ViewBuilder var action: () -> Action
+    /// Under the words, at their width: a progress bar, a second way out.
+    @ViewBuilder var below: () -> Below
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            StateGlyphView(glyph: glyph, size: 15)
+                // The glyph has no baseline of its own; it sits on the name's.
+                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
+
+            VStack(alignment: .leading, spacing: 0) {
+                words
+                below()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            action()
+                .fixedSize()
+                // A button is taller than a line: it centers on the name.
+                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 14)
+        .frame(minHeight: GlassTokens.Block.row)
+    }
+}
+
+extension SetupRow {
+    @ViewBuilder
+    private var words: some View {
+        let text = VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .fixedSize(horizontal: false, vertical: true)
+            if let detail {
+                Text(detail)
+                    .font(.detail)
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(1.5)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        if let spoken {
+            text
+                .accessibilityLabel(spoken.label)
+                .accessibilityValue(spoken.value)
+        } else {
+            text
+        }
     }
 }
 

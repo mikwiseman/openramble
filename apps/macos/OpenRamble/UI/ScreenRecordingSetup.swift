@@ -247,9 +247,9 @@ struct ScreenRecordingSetup: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(issue.title)
-                        .font(.caption.weight(.semibold))
+                        .font(.detail.weight(.semibold))
                     Text(permissionMessage(for: issue))
-                        .font(.caption2)
+                        .font(.detail)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -314,7 +314,7 @@ private struct CaptureOptionRow: View {
                 Text(title)
                     .font(.body)
                 Text(subtitle)
-                    .font(.caption)
+                    .font(.detail)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
