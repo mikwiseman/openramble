@@ -1,15 +1,15 @@
 {
  "task": "r97-handsfree-stop",
- "load": "7.3",
+ "load": "108.8",
  "check": {
   "ok": true,
   "code": 0,
-  "seconds": 25
+  "seconds": 104
  },
  "network_gate": {
   "ok": true,
   "code": 0,
-  "seconds": 1
+  "seconds": 8
  },
  "own_tests": {
   "files": 1,
@@ -18,24 +18,16 @@
  "hidden": {
   "ok": true,
   "code": 0,
-  "seconds": 45,
+  "seconds": 98,
   "failed": [],
   "tries": 1
  },
  "suite": {
   "ok": true,
   "code": 0,
-  "seconds": 85,
+  "seconds": 133,
   "failed": [],
   "tries": 1
- },
- "size": {
-  "source": 50,
-  "tests": 80,
-  "fixtures": 0,
-  "other": 0,
-  "reference_source": 25,
-  "ratio": 2.0
  },
  "unasked_files": [],
  "weakened_tests": {
@@ -44,8 +36,11 @@
  },
  "fixtures_touched": false,
  "rules_broken": [],
- "state": "pass",
- "reason": "",
+ "not_built": [
+  "apps/macos/OpenRamble/AppState.swift"
+ ],
+ "state": "partial",
+ "reason": "changed code that no check built",
  "claims": {
   "says_done": true,
   "says_checks_pass": true

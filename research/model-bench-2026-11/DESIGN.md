@@ -129,6 +129,10 @@ one is void.
 
 A void run measured nothing. It is run again and never counted.
 
+This repository's timing tests fail at random on a loaded Mac. The harness
+waits until the load average is under 20 before it starts a model, before it
+runs tests, and above all before the second try of a red test run.
+
 ### What a run records
 
 - Tokens, split into fresh input, cached input and output.

@@ -1,13 +1,13 @@
 # Pilot results
 
-Written by `bench report` on 2026-11-22 20:44. One run per model and task, so read each line as "this happened once". `index.html` is the same as a page.
+Written by `bench report` on 2026-11-22 21:01. One run per model and task, so read each line as "this happened once". `index.html` is the same as a page.
 
 | Model | Passed | Code, × what shipped | Words, × what was needed | The same without his instructions |
 |---|---|---|---|---|
 | Fable 5.2 in Claude Code | 3 of 3 | 5.6× | 2.0× | 2.7× |
-| Sonnet 5.5 in Claude Code | 3 of 3 | 3.5× | 2.1× | 2.9× |
+| Sonnet 5.5 in Claude Code | 2 of 3 | 3.5× | 2.1× | 2.9× |
 | Haiku 5.5 in Claude Code | 2 of 3 | 1.8× | 1.6× | 2.9× |
-| GPT-6.2 Sol in Codex | 2 of 2 | 2.5× | 1.0× | 1.2× |
+| GPT-6.2 Sol in Codex | 2 of 3 | 3.3× | 1.0× | 1.2× |
 
 "Code" is the lines of code a model added, against the lines the real change added, tests left out. "Words" is the words a model wrote, against what shipped or, for a question, the short right answer. Both are geometric means.
 
@@ -42,9 +42,9 @@ What shipped: 18 lines of code.
 | Model | Result | Lines of code | Lines of tests | Minutes | Load | Tokens | List price | Noticed |
 |---|---|---|---|---|---|---|---|---|
 | Fable 5.2 | pass | 47 | 53 | 15.3 | 7.6 | 3.76M | $5.65 | looked outside its folder |
-| Sonnet 5.5 | pass | 40 | 68 | 4.1 | 4.2 | 1.33M | $0.52 |  |
+| Sonnet 5.5 | partial: changed code that no check built | 40 | 68 | 4.1 | 4.2 | 1.33M | $0.52 |  |
 | Haiku 5.5 | fail: hidden tests | 48 | 53 | 14.4 | 7.4 | 4.82M | $0.39 |  |
-| GPT-6.2 Sol | void | | | | | | | the answer was looked up |
+| GPT-6.2 Sol | partial: changed code that no check built | 77 | 113 | 7.9 | 4.0 | 2.64M | n/a |  |
 
 ### Clean Verbatim ate real words (`r88-conjunction`)
 

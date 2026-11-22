@@ -1,6 +1,52 @@
 {
  "task": "r97-handsfree-stop",
- "state": "void",
- "reason": "the answer was looked up",
+ "load": "14.6",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 101
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 2
+ },
+ "own_tests": {
+  "files": 2,
+  "fail_on_base": true
+ },
+ "hidden": {
+  "ok": true,
+  "code": 0,
+  "seconds": 82,
+  "failed": [],
+  "tries": 1
+ },
+ "suite": {
+  "ok": true,
+  "code": 0,
+  "seconds": 123,
+  "failed": [],
+  "tries": 1
+ },
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "not_built": [
+  "apps/macos/OpenRamble/AppState.swift",
+  "apps/macos/OpenRambleTests/AppStateTests.swift"
+ ],
+ "state": "partial",
+ "reason": "changed code that no check built",
+ "claims": {
+  "says_done": true,
+  "says_checks_pass": true
+ },
+ "false_green": false,
+ "unproven_claim": false,
  "run": "r97-handsfree-stop.gpt.high.1"
 }

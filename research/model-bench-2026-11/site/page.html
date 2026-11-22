@@ -210,7 +210,7 @@ const showTask = () => {
         const r = t.runs[m.key];
         if (!r) return column("", m.name, "–", [h("b", { text: "not run yet" })], null);
         if (r.state === "void") return column("", m.name, "–", [h("b", { text: "no result" })], null);
-        const mark = h("span", { class: r.state === "pass" ? "pass" : "fail", text: r.state === "pass" ? " ✓" : " ✗" });
+        const mark = h("span", { class: r.state === "pass" ? "pass" : "fail", text: { pass: " ✓", partial: " ?" }[r.state] || " ✗" });
         const figure = t.shipped.source ? times(r.source / t.shipped.source) : String(r.source);
         return column("", [m.name, mark], figure, [
           h("b", { text: t.shipped.source ? `${r.source} lines` : (r.source === 1 ? "line of code" : "lines of code") }),
