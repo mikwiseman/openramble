@@ -1,0 +1,16 @@
+{
+ "item": "c-gate",
+ "situation": "commit message",
+ "condition": "plain",
+ "model": "gpt",
+ "effort": "high",
+ "output": "Restore the release preflight’s clipboard pattern\n\nRemoving the retired ASR worker’s scan also removed `FORBIDDEN_PASTEBOARD`. The remaining clipboard check reported an unbound variable, found no matches, and let the gate exit successfully.\n\nDefine the pattern beside the clipboard check so it catches `clearContents()` and `declareTypes(` calls that can expose dictation through Universal Clipboard.\n\nVerified that the gate exits 1 with a planted `clearContents()` call and 0 after removing it.",
+ "usage": {
+  "input": 14213,
+  "cached_input": 0,
+  "cache_write": 0,
+  "output": 103
+ },
+ "cost_usd": null,
+ "seconds": 7
+}

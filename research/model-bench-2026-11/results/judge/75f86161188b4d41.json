@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B states every fact from the notes accurately and in plain order, including the CI failure, the rename, and the 20 ms test result, while A says stop() is 'ignored' for a hands-free press (it actually falls through to the normal stop policy) and adds a trailing note that contradicts its own final paragraph."
+}

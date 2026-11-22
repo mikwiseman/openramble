@@ -1,0 +1,16 @@
+{
+ "item": "i-paste-failed",
+ "situation": "interface copy",
+ "condition": "instructed",
+ "model": "haiku",
+ "effort": "high",
+ "output": "Your words are saved. Paste them manually.",
+ "usage": {
+  "input": 2,
+  "cache_write": 5181,
+  "cached_input": 0,
+  "output": 16
+ },
+ "cost_usd": 0.0010444,
+ "seconds": 2
+}

@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B states the cause, the fix (including that a hands-free release is now ignored), the CI seed and the scope accurately in plain words, while A is shorter but drops facts like the seed-45 failure and the change to release handling, and its compressed phrasing is harder to follow."
+}

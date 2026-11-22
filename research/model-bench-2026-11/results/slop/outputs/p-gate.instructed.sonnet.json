@@ -1,0 +1,16 @@
+{
+ "item": "p-gate",
+ "situation": "pull request description",
+ "condition": "instructed",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "**Title:** Restore the missing `FORBIDDEN_PASTEBOARD` definition in the network-surface gate\n\n**Problem**\n\nThe release preflight printed `FORBIDDEN_PASTEBOARD: unbound variable` in the middle of the network gate, and the gate still exited zero. The clipboard check was reading an unset variable, so it matched nothing and passed without checking anything.\n\n**Cause**\n\nThe pattern's definition sat next to the retired ASR worker's control-plane scan. It was deleted along with that scan, while the clipboard check that uses it stayed.\n\n**Change**\n\n`scripts/check-network-surface.sh` defines `FORBIDDEN_PASTEBOARD='clearContents\\(\\)|declareTypes\\('` again, just above the clipboard check. A comment explains why the pattern exists: a plain `clearContents()` or `declareTypes()` puts dictation on Universal Clipboard, where it reaches every device on the Apple ID. The comment also records how the definition got lost.\n\n**Verification**\n\n- With a `clearContents()` planted in a shipping path, the script exits 1.\n- With it removed, the script exits 0.\n\n**Not changed**\n\nThe script still has no `set -u`, so another deleted definition would fail the same way: an error message and a zero exit. I left it out of this PR to keep the fix small. If you want it, it is a one-line follow-up.",
+ "usage": {
+  "input": 2,
+  "cache_write": 2967,
+  "cached_input": 1868,
+  "output": 567
+ },
+ "cost_usd": 0.0177288,
+ "seconds": 5
+}

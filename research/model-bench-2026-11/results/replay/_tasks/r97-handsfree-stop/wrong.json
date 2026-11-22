@@ -1,0 +1,50 @@
+{
+ "task": "r97-handsfree-stop",
+ "load": "18.6",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 35
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 2
+ },
+ "own_tests": {
+  "files": 0,
+  "fail_on_base": null
+ },
+ "hidden": {
+  "ok": false,
+  "code": 1,
+  "seconds": 50
+ },
+ "suite": {
+  "ok": false,
+  "code": 1,
+  "seconds": 85
+ },
+ "suite_first_try": {
+  "ok": false,
+  "code": 1,
+  "seconds": 86
+ },
+ "size": {
+  "source": 9,
+  "tests": 0,
+  "fixtures": 0,
+  "other": 0,
+  "reference_source": 25,
+  "ratio": 0.36
+ },
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "state": "fail",
+ "reason": "hidden tests"
+}

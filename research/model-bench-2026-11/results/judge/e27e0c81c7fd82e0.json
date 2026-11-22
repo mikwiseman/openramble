@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A gives the commit message with every fact from the notes in plain words, while B drops the SDKROOT finding, adds an unsupported claim about artifact size, and tacks on an unrequested note about not committing."
+}

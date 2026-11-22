@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "It answers immediately, gives the required steps, and covers both intentional and accidental Swift changes without assuming why the test failed."
+}

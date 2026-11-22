@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A tells the person what failed (the paste didn't happen) and that their words are safe to paste later, while B omits the failure itself, leaving the user unsure why they need to paste manually."
+}

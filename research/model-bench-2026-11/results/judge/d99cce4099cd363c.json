@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A's commit message is tighter and covers every needed fact without repetition, and it keeps the silent-failure caveat out of the commit as a separate suggestion; B is wordier and claims the moved definition \"can't be removed again\"."
+}

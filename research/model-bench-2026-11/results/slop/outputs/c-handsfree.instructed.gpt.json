@@ -1,0 +1,16 @@
+{
+ "item": "c-handsfree",
+ "situation": "commit message",
+ "condition": "instructed",
+ "model": "gpt",
+ "effort": "high",
+ "output": "```text\nReplay queued hands-free stops after paste\n\nA second press during paste finalization was dropped, so the queued\nhands-free take could start with no stop pending. That left the mic on\nand prevented the next dictation from inserting text.\n\nReplay the second press as a hands-free stop. Hold-to-talk still\nreplays the key release. The app starts hands-free only from idle.\n\nHold the storm test inserter open for 20 ms after the text lands.\nFailures dropped from 14 of 200 seeds to 0 of 200.\n```",
+ "usage": {
+  "input": 4319,
+  "cached_input": 11648,
+  "cache_write": 0,
+  "output": 232
+ },
+ "cost_usd": null,
+ "seconds": 10
+}

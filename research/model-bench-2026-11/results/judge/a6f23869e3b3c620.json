@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B answers directly and gives the correct workflow, including that the generator reads corpus-text.json, while A incorrectly says it rewrites that file."
+}

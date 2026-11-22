@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "A hold's release still replays through\nstop().",
+   "class": "padding"
+  }
+ ]
+}

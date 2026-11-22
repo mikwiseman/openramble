@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B states the regression with certainty and a concrete step-by-step sequence, explains why the old path was safe (decideStop returns .ignore), and adds the missing hands-free guard on the new branch, while A hedges on its own main finding and is vaguer about the mechanism."
+}

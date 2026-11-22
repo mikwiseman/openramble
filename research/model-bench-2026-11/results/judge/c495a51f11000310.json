@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B keeps the facts a future reader needs, especially why the deployment target can't be limited to the two cross targets and that /usr/bin/strip works, while A drops these to stay short."
+}

@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "It gives him a ready-to-use commit message with the CI failure, the fix, the shipping-app scope, and the test results, without extra advice."
+}

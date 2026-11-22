@@ -1,0 +1,16 @@
+{
+ "item": "r-handsfree",
+ "situation": "review",
+ "condition": "instructed",
+ "model": "fable",
+ "effort": "high",
+ "output": "**Don't merge: this makes every hands-free press during a paste end its own take immediately.**\n\n`stop()` runs on every key release and sets `released = true` on the queued press, hands-free or not. With this change, the replay sees `released` and calls `stopHandsFree()`. So press, release, paste finishes: the take starts and stops at once, with no second press. Today that release is harmless because the replay calls `stop()`, which presumably ignores hands-free.\n\nThe cause is one flag carrying two meanings: key release and second press. Give the second press its own flag:\n\n```swift\n// stop()\nif state == .inserting, let press = pressDuringInsertion {\n    if !press.handsFree { pressDuringInsertion?.released = true }\n    return\n}\n\n// stopHandsFree()\nif state == .inserting, pressDuringInsertion?.handsFree == true {\n    pressDuringInsertion?.pressedAgain = true\n    return\n}\n\n// replay\nif press.handsFree {\n    if press.pressedAgain { stopHandsFree() }\n} else if press.released {\n    stop()\n}\n```\n\nTwo things to check in code I can't see:\n\n- **Routing:** the hotkey layer must send a second press during `.inserting` to `stopHandsFree()`. If it goes to `begin()`, the new branch never runs.\n- **Stop before the mic opens:** `stopHandsFree()` runs right after `begin()`, so it needs a deferred-stop path like the one in `stop()`. Otherwise the replayed stop is dropped and the original bug remains.\n\nTests to write first, both during a paste:\n\n- Hands-free press and release: the take is still listening after the replay. This fails on the proposed diff.\n- Press, release, second press: the take ends.\n\nI reviewed from the diff alone; nothing was run.",
+ "usage": {
+  "input": 2,
+  "cache_write": 5399,
+  "cached_input": 0,
+  "output": 2702
+ },
+ "cost_usd": 0.19448,
+ "seconds": 31
+}

@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B states accurately what broke (the check errored, matched nothing, and the gate still exited zero) and why it matters (dictation reaching every device through Universal Clipboard), while A leaves out that risk and claims the scan was 'aborted inside process substitution', a cause the request never gave."
+}

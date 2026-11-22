@@ -1,0 +1,16 @@
+{
+ "item": "n-0341",
+ "situation": "release notes",
+ "condition": "plain",
+ "model": "haiku",
+ "effort": "high",
+ "output": "## OpenRamble 0.34.1\n\n**Faster dictation start after your Mac has been idle**\n\nIf macOS had moved OpenRamble out of memory, the first press of the dictation key could start the microphone late. That delay is fixed.\n\nOpenRamble now keeps the microphone set up between dictations, so a press only has to start it. The microphone still doesn't run between dictations. It turns on only when you press the key.\n\nIn our tests with memory full and every CPU core busy:\n- Median microphone start: 136 ms → 87 ms\n- No start took longer than 148 ms (previously up to 315 ms)",
+ "usage": {
+  "input": 2,
+  "cache_write": 3450,
+  "cached_input": 0,
+  "output": 814
+ },
+ "cost_usd": 0.0010972,
+ "seconds": 5
+}

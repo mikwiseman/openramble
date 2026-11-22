@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The `released` flag becomes\n`stopped`.",
+   "class": "restate"
+  }
+ ]
+}

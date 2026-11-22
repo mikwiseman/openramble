@@ -1,0 +1,16 @@
+{
+ "item": "r-handsfree",
+ "situation": "review",
+ "condition": "plain",
+ "model": "gpt",
+ "effort": "high",
+ "output": "This change introduces a regression: **releasing the first press can end a queued hands-free take.**\n\n- **`stop()` records a release for every queued press.** If the user presses and releases once during the paste, `stop()` sets `released = true` before the stop policy can ignore the hands-free release. The new replay code then starts the hands-free take and immediately calls `stopHandsFree()`, even though the user never pressed a second time.\n- **`stopHandsFree()` can mark a queued hold-to-talk press as released.** Its new branch accepts any queued press. If it runs while a hold-to-talk press is queued, replay calls `stop()` even if the key is still held.\n\nGate both recording paths on `pressDuringInsertion.handsFree`. Record a release in `stop()` only for hold-to-talk, and record a second press in `stopHandsFree()` only for hands-free. The queued press’s mode determines how to handle the event, since the paste belongs to the previous take.\n\nRegression coverage should verify that a hands-free press and release during a paste leaves the replayed take listening, that a second press during the paste ends it, and that a queued hold-to-talk take still follows its key release.",
+ "usage": {
+  "input": 14528,
+  "cached_input": 0,
+  "cache_write": 0,
+  "output": 452
+ },
+ "cost_usd": null,
+ "seconds": 16
+}

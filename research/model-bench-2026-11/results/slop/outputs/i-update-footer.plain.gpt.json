@@ -1,0 +1,16 @@
+{
+ "item": "i-update-footer",
+ "situation": "interface copy",
+ "condition": "plain",
+ "model": "gpt",
+ "effort": "high",
+ "output": "On by default so you can get security fixes. OpenRamble checks a small version list once a day, sharing only your app version and IP address. Your voice stays on your Mac. Turning this off stops all scheduled network access.",
+ "usage": {
+  "input": 9195,
+  "cached_input": 11648,
+  "cache_write": 0,
+  "output": 340
+ },
+ "cost_usd": null,
+ "seconds": 12
+}

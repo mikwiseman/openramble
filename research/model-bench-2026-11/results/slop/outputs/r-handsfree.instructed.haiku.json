@@ -1,0 +1,16 @@
+{
+ "item": "r-handsfree",
+ "situation": "review",
+ "condition": "instructed",
+ "model": "haiku",
+ "effort": "high",
+ "output": "**Don't merge as written.** The change fixes the reported case but introduces a regression.\n\nThe problem is the shared `released` flag. The existing branch in `stop()` sets it on any key release during a paste, with no check for `isHandsFree`. Its comment shows the flag exists for hold-to-talk releases. Before this change, replay called `stop()`, and the policy ignored it in hands-free mode. Now replay calls `stopHandsFree()` when `press.handsFree` is true, so a hands-free press whose key-up lands during the paste ends its take right after it starts.\n\nTwo smaller points:\n\n- **Mode check in `stopHandsFree()`:** the new early return sits above `guard isHandsFree`, so a stray second press during a hold-mode paste also sets `released`, and replay ends that take.\n- **Unverified start path:** replay calls `stopHandsFree()` right after `begin()`, before the microphone may be open. The diff cuts off that function's `switch`, so I can't confirm it handles this. `stop()` handles the same case with `deferUntilListening`.\n\n**Simplest fix:** gate each early return by mode, so `released` means key-up for hold presses and second press for hands-free presses:\n\n- `stop()`: return early only when `state == .inserting`, `let press = pressDuringInsertion`, and `!press.handsFree`.\n- `stopHandsFree()`: return early only when `state == .inserting`, `let press = pressDuringInsertion`, and `press.handsFree`.\n- Keep the replay change as proposed.\n\nI reviewed the diff only. I haven't run anything, since this session has no tools. Before merging, write failing tests in the DictationCore package for: a hands-free press whose key-up lands during the paste (take keeps listening), a hands-free press followed by a second press during the paste (replayed take stops), and a hold press released during the paste (stops as before).",
+ "usage": {
+  "input": 2,
+  "cache_write": 6066,
+  "cached_input": 0,
+  "output": 6096
+ },
+ "cost_usd": 0.0042614,
+ "seconds": 30
+}

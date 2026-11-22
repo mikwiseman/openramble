@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A keeps every fact from the notes, including that SDKROOT has no effect, which B drops, and it states the fix plainly before explaining why the alternative won't work."
+}

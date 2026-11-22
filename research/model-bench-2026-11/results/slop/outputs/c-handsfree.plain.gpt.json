@@ -1,0 +1,16 @@
+{
+ "item": "c-handsfree",
+ "situation": "commit message",
+ "condition": "plain",
+ "model": "gpt",
+ "effort": "high",
+ "output": "```text\nReplay queued hands-free stops after paste\n\nA hands-free start queued while a landed paste was finishing could\nlose its second press. Replaying the start then left the microphone\non and prevented the next dictation from inserting text.\n\nRecord the stop while insertion finishes and replay it with the\nqueued start. Use the key release for hold mode and the second press\nfor hands-free mode. AppState starts hands-free only while idle, so\nthe shipping app does not reach this path.\n\nHold the storm test inserter for 20 ms after the text lands. The test\nfailed on 14 of 200 seeds before the fix and passed all 200 after it.\n```",
+ "usage": {
+  "input": 10045,
+  "cached_input": 11648,
+  "cache_write": 0,
+  "output": 229
+ },
+ "cost_usd": null,
+ "seconds": 10
+}

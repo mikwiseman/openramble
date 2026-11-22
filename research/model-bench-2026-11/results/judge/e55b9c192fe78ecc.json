@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B explains the failure, the clipboard risk, and the two exit-code checks in plain language while avoiding A’s unsupported claim about `set -u`."
+}

@@ -1,0 +1,16 @@
+{
+ "item": "c-gate",
+ "situation": "commit message",
+ "condition": "plain",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "```\nRestore FORBIDDEN_PASTEBOARD in the network-surface gate\n\nThe clipboard check in check-network-surface.sh reads\nFORBIDDEN_PASTEBOARD, but its definition was deleted along with the\nretired ASR worker's control-plane scan that sat next to it. The\nrelease preflight printed \"FORBIDDEN_PASTEBOARD: unbound variable\"\nmid-gate, matched nothing, and the script exited zero, so the gate\nlooked like it was running when it was not.\n\nDefine the pattern again next to the check, with a comment saying what\nit guards: a plain clearContents()/declareTypes() puts dictation on\nUniversal Clipboard, where it reaches every device on the Apple ID.\n\nVerified: the script exits 1 with a planted clearContents() in a\nshipping path and exits 0 once it is removed.\n```",
+ "usage": {
+  "input": 2,
+  "cache_write": 1131,
+  "cached_input": 1867,
+  "output": 490
+ },
+ "cost_usd": 0.0096147,
+ "seconds": 5
+}

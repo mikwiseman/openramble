@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B leads with the fix and covers the cause, clipboard risk, and verified exit codes without repeating the diff or proposing an unrequested follow-up."
+}

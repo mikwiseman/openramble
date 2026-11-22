@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A leads with the fix and gives the failure, app impact, and test results in plain words without repeating the investigation or listing code-level details."
+}

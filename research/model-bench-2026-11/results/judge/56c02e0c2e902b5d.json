@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A gives the same correct answer and steps, including the fixture-diff check, more tightly, while B adds filler like the note that it doesn't have the generator's exact command."
+}

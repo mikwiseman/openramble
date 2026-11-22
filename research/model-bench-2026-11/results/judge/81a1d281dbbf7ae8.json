@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "Its subject states the fix more clearly, and the body covers the failure, the fix, the test results, and the shipping app’s behavior without extra commentary."
+}

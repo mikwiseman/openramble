@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "It leads with the verdict, explains the release regression and the stop-before-listening risk, and gives a fix and tests without B’s speculative detours."
+}

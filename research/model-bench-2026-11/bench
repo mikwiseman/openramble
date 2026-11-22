@@ -158,7 +158,7 @@ def sandbox(folder, readable=()):
 
 def sh(command, folder, log, env=None, readable=(), timeout=3600):
     """Run a shell command inside the sandbox. Returns exit status and seconds."""
-    started = time.time()
+    started = time.monotonic()
     with open(log, "ab") as out:
         out.write(f"\n$ {command}\n".encode())
         out.flush()
@@ -168,7 +168,7 @@ def sh(command, folder, log, env=None, readable=(), timeout=3600):
                                   timeout=timeout).returncode
         except subprocess.TimeoutExpired:
             code = 124
-    return {"ok": code == 0, "code": code, "seconds": round(time.time() - started)}
+    return {"ok": code == 0, "code": code, "seconds": round(time.monotonic() - started)}
 
 
 # --- Checkouts ---------------------------------------------------------------
@@ -477,7 +477,9 @@ def run_tool(model_key, effort, folder, prompt, transcript, tools=True, timeout=
     tool printed; nothing is inferred here."""
     command, env = tool_command(model_key, effort, folder, tools)
     forget(folder)
-    started, load_before = time.time(), load()
+    # The monotonic clock stops while the Mac sleeps and the wall clock does
+    # not, so the difference is the time a closed lid took out of the run.
+    started, started_wall, load_before = time.monotonic(), time.time(), load()
     with open(transcript, "wb") as out, open(str(transcript) + ".stderr", "wb") as err:
         process = subprocess.Popen(sandbox(folder) + command, cwd=folder, env=env, stdin=subprocess.PIPE,
                                    stdout=out, stderr=err, start_new_session=True)
@@ -488,7 +490,9 @@ def run_tool(model_key, effort, folder, prompt, transcript, tools=True, timeout=
             os.killpg(process.pid, signal.SIGKILL)
             process.wait()
             timed_out = True
-    return {"exit": process.returncode, "timed_out": timed_out, "seconds": round(time.time() - started),
+    seconds = time.monotonic() - started
+    return {"exit": process.returncode, "timed_out": timed_out, "seconds": round(seconds),
+            "slept_seconds": max(0, round(time.time() - started_wall - seconds)),
             "load_before": load_before, "load_after": load(), "memories_written": forget(folder)}
 
 
@@ -614,7 +618,8 @@ def effort_and_behaviour(parsed, patch):
 def replay_run(task, model_key, rep=1, effort=EFFORT, force=False):
     run_id = f"{task.id}.{model_key}.{effort}.{rep}"
     out = RESULTS / "replay" / run_id
-    if (out / "grade.json").exists() and not force:
+    # A void run measured nothing, so asking again runs it again.
+    if (out / "grade.json").exists() and not force and json.loads((out / "grade.json").read_text())["state"] != "void":
         say(f"[{run_id}] already graded, skipped")
         return json.loads((out / "grade.json").read_text())
     out.mkdir(parents=True, exist_ok=True)
@@ -959,6 +964,7 @@ def report():
                 (f"unasked files: {', '.join(g.get('unasked_files', []))}", g.get("unasked_files")),
                 (f"reached outside the folder {len(r['outside_reads'])} times", r["outside_reads"]),
                 (f"{r['network_calls']} network commands", r["network_calls"]),
+                (f"the Mac slept {r.get('slept_seconds', 0) // 60} min during the run", r.get("slept_seconds", 0) > 60),
                 (f"{r['final_words']} words in the report", r["final_words"] > 150)) if on]
             size = g.get("size") or {}
             lines.append("| " + " | ".join([

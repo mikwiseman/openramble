@@ -1,0 +1,21 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "Define `FORBIDDEN_PASTEBOARD` directly above the clipboard check that uses it:\n\n```sh\nFORBIDDEN_PASTEBOARD='clearContents\\(\\)|declareTypes\\('\n```",
+   "class": "restate"
+  },
+  {
+   "quote": "A comment records why the pattern exists and how it went missing, so the definition is not removed again as apparent leftover from the ASR scan.",
+   "class": "padding"
+  },
+  {
+   "quote": "That is worth a follow-up.",
+   "class": "offer"
+  }
+ ]
+}

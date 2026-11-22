@@ -1,0 +1,16 @@
+{
+ "item": "i-paste-failed",
+ "situation": "interface copy",
+ "condition": "plain",
+ "model": "haiku",
+ "effort": "high",
+ "output": "Your words are saved. Couldn't paste them here, so copy them from the clipboard or the history panel.",
+ "usage": {
+  "input": 2,
+  "cache_write": 3345,
+  "cached_input": 0,
+  "output": 35
+ },
+ "cost_usd": 0.0006867,
+ "seconds": 2
+}

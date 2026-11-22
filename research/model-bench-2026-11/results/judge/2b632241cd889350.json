@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "Hold-to-talk still\nreplays the key release.",
+   "class": "padding"
+  }
+ ]
+}

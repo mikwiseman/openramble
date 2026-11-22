@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B gives a clear sequence for the key-release regression and catches that the new branch can also mark a queued hold-to-talk press as released."
+}

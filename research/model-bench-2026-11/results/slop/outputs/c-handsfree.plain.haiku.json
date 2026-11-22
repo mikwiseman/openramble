@@ -1,0 +1,16 @@
+{
+ "item": "c-handsfree",
+ "situation": "commit message",
+ "condition": "plain",
+ "model": "haiku",
+ "effort": "high",
+ "output": "```\nReplay a hands-free stop that arrives during insertion\n\nA press of the dictation key that arrives while a landed paste is still\nfinishing is queued and replayed once the paste is done. Its stop was\nrecorded only for a hold's release, but a hands-free press ends on a\nsecond press, so stopHandsFree() during .inserting was ignored. The\nreplayed take then ran with nothing to stop it: the session stayed\nlistening, the microphone stayed on, and the next dictation inserted\nnothing (storm test, seed 45).\n\nRecord a second press as the stop of a queued hands-free press, and\nreplay it with stopHandsFree(). A hold's release still goes through\nstop(), which is ignored for a hands-free press. The field `released`\nis renamed `stopped` to cover both.\n\nThe shipping app does not reach this path today: AppState starts\nhands-free only from a double tap while idle. The storm test reproduces\nit with the inserter holding 20 ms after the text lands: 14 of 200 seeds\nfail without this change, none with it.\n```\n\nThe 20 ms inserter hold is not in the diff you sent, so the message doesn't include it as part of this commit. If that change goes in a separate commit, the last paragraph should say so, or the test change should be added here so the commit that reproduces the bug travels with the fix.",
+ "usage": {
+  "input": 2,
+  "cache_write": 4651,
+  "cached_input": 0,
+  "output": 1634
+ },
+ "cost_usd": 0.0017474,
+ "seconds": 9
+}

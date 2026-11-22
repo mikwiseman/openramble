@@ -1,0 +1,16 @@
+{
+ "item": "q-bundle",
+ "situation": "reply",
+ "condition": "plain",
+ "model": "fable",
+ "effort": "high",
+ "output": "**Not under the current rules, and I'd recommend against it.** The rules file lists `is.waiwai.dictation` as a permanent release invariant because existing Accessibility permission grants depend on it.\n\nmacOS ties Accessibility grants to the app's bundle identifier and signing identity. If the identifier changes, macOS treats the app as a new one:\n\n- **Accessibility:** every existing install silently loses its grant, and users must re-approve it in System Settings. For a dictation app, that means it stops working until they do.\n- **Sparkle updates:** an update whose bundle ID differs from the installed app is not a clean in-place update, so existing users would likely need a manual reinstall.\n- **Other state:** preferences, other permissions such as Microphone, and any login item registration are also tied to the identifier and would not carry over.\n\n**You don't need the rename for branding.** Users almost never see the bundle identifier. You can ship as \"OpenRamble\" by changing the display name (`CFBundleDisplayName` / `CFBundleName`), the app filename, the icon and the marketing copy, while keeping `is.waiwai.dictation`.\n\n**If you still want it, before launch is the cheapest time.** As the owner you can retire the invariant, and the cost grows with every install. The wording \"existing grants\" implies there are already installs (beta testers, your own machines), and each would need to re-grant permissions and probably reinstall. I can't see `docs/release.md` or `AGENTS.md` in this session, so there may be other dependencies on the identifier that I can't check, such as notarization setup or the appcast.\n\nIf you do go ahead, update the rules file and release docs in the same change so the invariant names the new identifier.",
+ "usage": {
+  "input": 2,
+  "cache_write": 2813,
+  "cached_input": 0,
+  "output": 939
+ },
+ "cost_usd": 0.08258399999999999,
+ "seconds": 11
+}

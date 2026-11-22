@@ -1,0 +1,40 @@
+{
+ "task": "t-exists",
+ "load": "32.1",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 5
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 2
+ },
+ "own_tests": {
+  "files": 0,
+  "fail_on_base": null
+ },
+ "hidden": {
+  "ok": true,
+  "code": 0,
+  "seconds": 0
+ },
+ "size": {
+  "source": 4,
+  "tests": 0,
+  "fixtures": 0,
+  "other": 0,
+  "reference_source": 0,
+  "ratio": null
+ },
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "state": "fail",
+ "reason": "changed 4 lines where no change was right"
+}

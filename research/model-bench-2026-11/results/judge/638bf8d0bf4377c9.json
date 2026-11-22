@@ -1,0 +1,32 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "2. Keep the existing Sparkle EdDSA key. That rule is independent of the bundle ID, and replacing the key would break updates on its own.",
+   "class": "restate"
+  },
+  {
+   "quote": "3. Re-sign the Sparkle nested code from the inside out, without `codesign --deep`.",
+   "class": "restate"
+  },
+  {
+   "quote": "I haven't touched any files, and",
+   "class": "padding"
+  },
+  {
+   "quote": "**Why it's locked:**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**The deciding question:**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**If you do decide to rename:**",
+   "class": "decoration"
+  }
+ ]
+}

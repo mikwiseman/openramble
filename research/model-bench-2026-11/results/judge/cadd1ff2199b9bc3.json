@@ -1,0 +1,12 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "It is only set up in advance, and it starts when you press the key.",
+   "class": "restate"
+  }
+ ]
+}

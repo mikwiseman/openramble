@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "Confirm the Swift change is what you intend.",
+   "class": "padding"
+  }
+ ]
+}

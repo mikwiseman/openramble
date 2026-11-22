@@ -1,0 +1,16 @@
+{
+ "item": "r-handsfree",
+ "situation": "review",
+ "condition": "plain",
+ "model": "haiku",
+ "effort": "high",
+ "output": "**Verdict: don't merge as written.** The symmetry with `stop()` is right, but the diff reuses `released` for two different signals, and that breaks the hands-free rule.\n\n**1. Likely regression: a key release now ends a hands-free take.** `stop()`'s insertion branch sets `pressDuringInsertion?.released = true` on every release, without checking `handsFree`. Before this change, the replay called `stop()` for a released press, which does nothing in hands-free mode. The diff now calls `stopHandsFree()` for any released hands-free press. So if the hands-free start press is released during the paste (the normal case if a tap starts hands-free), the take ends as soon as it begins. That contradicts \"releasing the key means nothing in hands-free mode.\"\n\n**2. Replay may run before the microphone is open.** `stop()` handles a stop that arrives before the mic opens via `.deferUntilListening` and `stopArrivedBeforeTheMicrophoneOpened`. The replay calls `begin(...)` and then `stopHandsFree()` immediately. I can't see `stopHandsFree`'s `switch state` from here, so I can't tell whether that call is handled or silently dropped. The same handling is needed on this path.\n\n**3. No test.** Nothing covers either case.\n\n**Suggested direction:** keep the two signals separate.\n\n- Add a `stopRequested` flag on the pending press. Only `stopHandsFree()` sets it.\n- In `stop()`'s insertion branch, keep marking `released` only for non-hands-free presses, or leave `released` alone for hands-free presses.\n- In the replay: `if press.stopRequested { stopHandsFree() } else if press.released && !press.handsFree { stop() }`, routed through the same deferred-stop handling as `stop()`.\n\n**Tests to add:**\n- Hands-free start press released during the paste: the take stays on.\n- Start press plus second press during the paste: the replayed take ends with no stuck microphone.\n- Hold-to-talk press released during the paste: unchanged behavior.\n\nI haven't run anything. This review is from reading the diff and the excerpt only, and I don't know how `pressDuringInsertion` is created. If the queued press can be a hands-free press that was released before any second press, point 1 is a real regression.",
+ "usage": {
+  "input": 2,
+  "cache_write": 4230,
+  "cached_input": 0,
+  "output": 6681
+ },
+ "cost_usd": 0.004186700000000001,
+ "seconds": 34
+}

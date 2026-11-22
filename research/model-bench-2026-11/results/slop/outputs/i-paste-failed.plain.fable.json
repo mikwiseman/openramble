@@ -1,0 +1,16 @@
+{
+ "item": "i-paste-failed",
+ "situation": "interface copy",
+ "condition": "plain",
+ "model": "fable",
+ "effort": "high",
+ "output": "Couldn't paste your dictation here. It's saved, so you can paste it later.",
+ "usage": {
+  "input": 2,
+  "cache_write": 2678,
+  "cached_input": 0,
+  "output": 28
+ },
+ "cost_usd": 0.043983999999999995,
+ "seconds": 1
+}

@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A gives the answer first and every needed step (regenerate, port Rust, run the test, commit together, or fix an accidental regression) in plain words, while B adds explanation and a tangential file-cutting note he didn't ask for."
+}

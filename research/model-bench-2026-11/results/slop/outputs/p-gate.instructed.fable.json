@@ -1,0 +1,16 @@
+{
+ "item": "p-gate",
+ "situation": "pull request description",
+ "condition": "instructed",
+ "model": "fable",
+ "effort": "high",
+ "output": "**Title:** Restore the clipboard pattern so the network gate checks it again\n\n```markdown\n## What broke\n\nThe release preflight printed `FORBIDDEN_PASTEBOARD: unbound variable` in the middle of the network gate, and the gate still exited zero.\n\nThe pattern's definition sat next to the retired ASR worker's scan and was deleted with it. The clipboard check then read an unset variable, matched nothing, and passed. It looked like it was running and was not.\n\n## Why it matters\n\nA plain `clearContents()` or `declareTypes()` puts dictation on Universal Clipboard, where it reaches every device on the Apple ID. This check is what keeps that from shipping.\n\n## The fix\n\nDefine `FORBIDDEN_PASTEBOARD` again in `scripts/check-network-surface.sh`, directly above the check that uses it, with a comment explaining why it lives there.\n\n## Proof\n\n- Planted a `clearContents()`: the script exits 1.\n- Removed it: the script exits 0.\n\n## Not in this change\n\nThe check can still pass when its own scan errors out, so another missing variable would fail the same silent way. Making a scan error fail the gate is a separate fix.\n```\n\nThe last section is my reading of the failure, not something I tested; drop it if you would rather not raise it here.",
+ "usage": {
+  "input": 2,
+  "cache_write": 4990,
+  "cached_input": 0,
+  "output": 866
+ },
+ "cost_usd": 0.114496,
+ "seconds": 10
+}

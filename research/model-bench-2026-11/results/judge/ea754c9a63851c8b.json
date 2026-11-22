@@ -1,0 +1,23 @@
+{
+ "facts": [
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The user never pressed a second time; the key release ended the take.",
+   "class": "restate"
+  },
+  {
+   "quote": "- **Stale `isHandsFree` if `begin()` declines.** If `begin()` refuses to start (not enabled, or model not ready), `stopHandsFree()` runs against whatever `isHandsFree` and `state` are left from before. This is probably benign, but confirm it.",
+   "class": "hedge"
+  },
+  {
+   "quote": "- **Design question.** A press and a second press both inside the paste replay as start-then-stop, which gives an empty take. Dropping the queued press (`pressDuringInsertion = nil`) may be cleaner, unless you want it to mirror the \"a tap stays a tap\" behaviour of hold mode.",
+   "class": "padding"
+  },
+  {
+   "quote": "## Other issues",
+   "class": "decoration"
+  }
+ ]
+}

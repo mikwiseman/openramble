@@ -1,0 +1,16 @@
+{
+ "item": "q-audio",
+ "situation": "reply",
+ "condition": "plain",
+ "model": "fable",
+ "effort": "high",
+ "output": "No, according to the repository's rules, the Mac app does not send your audio anywhere. I only have the rules file in this session, so I'm reporting the stated policy and have not checked the code myself.\n\nThe rules allow the Mac app exactly two kinds of network access, and neither sends audio:\n\n1. **Model downloads** (`LocalASR/ModelDownloading.swift`): these fetch speech-recognition models to your Mac when you explicitly ask. The `LocalASR` name suggests transcription then runs on your machine.\n2. **Sparkle update checks and downloads** (`SparkleUpdater.swift`): scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update always requires a click.\n\nNo other shipping code may touch the network. The rules say CI enforces this through `scripts/check-network-surface.sh`, which holds the list of denied network APIs.\n\nThe update check does contact the update server, so by default the app makes some network requests, but they carry no audio.",
+ "usage": {
+  "input": 2,
+  "cache_write": 2993,
+  "cached_input": 0,
+  "output": 488
+ },
+ "cost_usd": 0.067424,
+ "seconds": 6
+}

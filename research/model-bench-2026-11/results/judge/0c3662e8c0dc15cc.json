@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A gives exactly the PR description with the cause, the fix, and the verification in plain words, while B adds an unrequested follow-up, a meta note to the user, and an unsupported detail ('in a shipping path')."
+}

@@ -1,0 +1,12 @@
+{
+ "facts": [
+  false,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "How many installs exist today?",
+   "class": "offer"
+  }
+ ]
+}

@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A gives the correct answer and the exact steps in a few plain lines, while B is longer, adds an irrelevant file-cutting step and a no-tools disclaimer, and wrongly says the generator rewrites `corpus-text.json`, which is the input corpus rather than a recorded output."
+}

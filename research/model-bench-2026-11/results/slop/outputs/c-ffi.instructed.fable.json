@@ -1,0 +1,16 @@
+{
+ "item": "c-ffi",
+ "situation": "commit message",
+ "condition": "instructed",
+ "model": "fable",
+ "effort": "high",
+ "output": "```\nFix FFI build on macOS 27: don't strip host proc-macros\n\nOn macOS 27.0.1, scripts/build-ffi.sh fails in a fresh target directory\nwith \"can't find crate for thiserror_impl\". dyld refuses to load every\nhost proc-macro dylib: \"mis-aligned LINKEDIT string pool\".\n\nThe script exports MACOSX_DEPLOYMENT_TARGET=14.0, which also reaches\nhost proc-macros and build scripts. At a 14.0 floor the linker writes\nchained fixups. rustc then strips release dylibs with its bundled\nrust-objcopy, which leaves the string table 4-byte aligned, and\nmacOS 27.0.1 rejects that. The same dylib loads when left unstripped\nor stripped with /usr/bin/strip. SDKROOT has no effect.\n\nSet CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_STRIP=false so host artifacts\nskip the strip pass. Scoping the deployment target to the two cross\ntargets is not an option: rustc reads it only from the environment, so\nRUSTFLAGS or a link argument cannot do it.\n\nThe shipped static library is unchanged, and every object in it still\ntargets macOS 14.0 on both architectures.\n```",
+ "usage": {
+  "input": 2,
+  "cache_write": 5341,
+  "cached_input": 0,
+  "output": 653
+ },
+ "cost_usd": 0.111592,
+ "seconds": 6
+}

@@ -1,0 +1,16 @@
+{
+ "item": "r-handsfree",
+ "situation": "review",
+ "condition": "instructed",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "**Not ready to merge: it fixes the second-press case but breaks the plain hands-free tap.**\n\n**Bug:** `stop()` (the key release) and `stopHandsFree()` (the second press) now set the same `released` flag. In hands-free mode a release must mean nothing, but a queued hands-free press whose key comes up during the paste sets `released = true`. On replay, `press.handsFree` calls `stopHandsFree()`, and the take ends right after it starts. Before this change that release went through `stop()` on a hands-free take, where `decideStop` ignored it. So an ordinary hands-free tap that lands during a paste now starts and immediately stops.\n\n**Smallest fix:** make the release a no-op for hands-free presses in `stop()`:\n\n```swift\nif state == .inserting, let press = pressDuringInsertion {\n    if !press.handsFree { pressDuringInsertion?.released = true }\n    return\n}\n```\n\nThen `released` on a hands-free press can only come from the second press, and the replay branch in the diff works as written. Alternatively, add a separate `secondPress` field, which is clearer but heavier.\n\n**Checks I can't make from the snippets:**\n- Does the hotkey layer send the second press to `stopHandsFree()` while the state is `.inserting`, or does it come in as a new `start`/press? If it's the latter, the new guard never fires.\n- After the replayed `begin`, the state may still be \"starting\" (microphone not open). Confirm `stopHandsFree()` defers the stop there the way `stop()` does with `.deferUntilListening`.\n\n**Tests:** the change has none. I'd add two, both with the press queued during `.inserting`:\n1. Press then release, then the paste finishes: the take is still listening.\n2. Press, release, then second press, then the paste finishes: the take stops.\n\nThe first one fails on the current diff.",
+ "usage": {
+  "input": 2,
+  "cache_write": 3374,
+  "cached_input": 1870,
+  "output": 2423
+ },
+ "cost_usd": 0.037917,
+ "seconds": 20
+}

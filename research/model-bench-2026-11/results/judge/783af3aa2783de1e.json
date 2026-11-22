@@ -1,0 +1,12 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "scheduled checks are on by default and can be turned off in Settings. Installing an update always requires a click.",
+   "class": "padding"
+  }
+ ]
+}

@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "It leads with the regression, gives a direct fix, and names both tests without adding speculative checks."
+}

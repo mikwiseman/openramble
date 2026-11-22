@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "It leads with the regression, explains both mode checks, and gives the smallest fix and the tests needed to verify it."
+}

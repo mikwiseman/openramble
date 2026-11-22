@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B is accurate and adds a useful check (review the fixture diff), while A wrongly says the generator rewrites `corpus-text.json`, which is actually its input, and ends with an irrelevant note about lacking tools."
+}

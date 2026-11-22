@@ -1,0 +1,16 @@
+{
+ "item": "n-0341",
+ "situation": "release notes",
+ "condition": "plain",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "# OpenRamble 0.34.1\n\n**Faster first dictation after the app has been idle**\n\nIf your Mac was low on memory, macOS could move OpenRamble out of memory. The first time you pressed the dictation key after that, the microphone started late.\n\nOpenRamble now keeps the microphone set up between dictations without running it. When you press the key, it only has to start.\n\nIn our tests, with memory full and every CPU core busy, the microphone started in 87 ms instead of 136 ms at the median. The slowest start dropped from 315 ms to 148 ms.\n\n**Your microphone is still off between dictations.** It only runs while you're dictating.",
+ "usage": {
+  "input": 2,
+  "cache_write": 761,
+  "cached_input": 1867,
+  "output": 303
+ },
+ "cost_usd": 0.0062647,
+ "seconds": 3
+}

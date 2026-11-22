@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B gives a paste-ready, properly wrapped commit message that states the real risk (a dictation clipboard write could ship unflagged), and adds one useful fact: the gate still exits zero when any pattern variable is unset; the caveat about not reproducing the verification is the only extra."
+}

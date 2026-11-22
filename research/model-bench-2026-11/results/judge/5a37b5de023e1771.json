@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "Both catch the core bug where the first press's release is replayed as a second press, but A also gives the concrete fix and flags two real risks B misses: the routing of the second press and the stop arriving before the microphone opens."
+}

@@ -1,0 +1,15 @@
+{
+ "facts": [
+  true
+ ],
+ "slop": [
+  {
+   "quote": "- **A third press during the paste is untested.** The second press is idempotent with this change. Confirm what the key handler does with further presses while `pressDuringInsertion` is non-nil.",
+   "class": "padding"
+  },
+  {
+   "quote": "In hands-free mode this should mean nothing, but",
+   "class": "restate"
+  }
+ ]
+}

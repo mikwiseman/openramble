@@ -1,0 +1,12 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "If you still want the new identifier, you'd first need to change the invariant in the rules file.",
+   "class": "padding"
+  }
+ ]
+}

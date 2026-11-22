@@ -1,0 +1,16 @@
+{
+ "item": "c-ffi",
+ "situation": "commit message",
+ "condition": "plain",
+ "model": "gpt",
+ "effort": "high",
+ "output": "```text\nFix macOS 27.0.1 FFI builds by disabling host stripping\n\nThe macOS 14.0 deployment target makes the linker emit chained fixups.\nWhen rustc strips host proc-macro dylibs with its bundled rust-objcopy,\nit leaves the LINKEDIT string pool aligned to four bytes. dyld rejects\nthose dylibs on macOS 27.0.1, so clean builds fail with\n\"can't find crate for thiserror_impl\".\n\nDisable stripping for release-profile proc macros and build scripts\nthrough Cargo's build override. The shipped static library targets\nmacOS 14.0 on both Apple Silicon and Intel.\n```",
+ "usage": {
+  "input": 2753,
+  "cached_input": 11648,
+  "cache_write": 0,
+  "output": 453
+ },
+ "cost_usd": null,
+ "seconds": 14
+}

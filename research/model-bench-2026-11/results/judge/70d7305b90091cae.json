@@ -1,0 +1,14 @@
+{
+ "facts": [
+  true,
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "I didn't commit anything, since I have no shell access in this session. To commit, save the message to a file and run `git commit -F <file>` with the change staged.",
+   "class": "padding"
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+{
+ "item": "q-audio",
+ "situation": "reply",
+ "condition": "plain",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "No, according to the rules file. It says the Mac app has exactly two network areas, and neither involves sending audio:\n\n1. **Model downloads** (`LocalASR/ModelDownloading.swift`): these are explicit, and they fetch ASR models to your machine. The transcription itself is local (\"LocalASR\").\n2. **Sparkle update checks** (`SparkleUpdater.swift`): these check for and download app updates. Scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update always requires a click.\n\nThe rules file says no other shipping code may access the network. `scripts/check-network-surface.sh` keeps a denied-API list that CI enforces by filename, so a violation should fail the build.\n\n- **This is a statement of policy, not a code audit.** I only have the rules text. I haven't read the Swift sources or the CI script, so I can't confirm the code matches.\n- **The update check is still an outbound request.** The rules don't describe what it sends. It's an update check, not audio upload, but if you want to rule out any outbound traffic, turn off scheduled checks in Settings.\n- **The Linux and desktop items don't apply to the Mac app.** Items 3 and 4 cover the Tauri desktop app (Windows, Linux) and the Linux server's inbound listener.\n\nIf you want independent confirmation, you could run the check script yourself or watch the app's traffic with something like Little Snitch or `nettop` while dictating.",
+ "usage": {
+  "input": 2,
+  "cache_write": 971,
+  "cached_input": 1867,
+  "output": 695
+ },
+ "cost_usd": 0.011024699999999998,
+ "seconds": 7
+}

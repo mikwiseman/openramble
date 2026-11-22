@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A states the cause, fix and verification just as completely, and keeps the accurate 'plain clearContents()/declareTypes()' qualifier that B drops, which leaves B wrongly implying any such call is the problem and showing the awkward fragment 'declareTypes('."
+}

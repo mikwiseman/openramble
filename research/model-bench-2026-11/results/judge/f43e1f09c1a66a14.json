@@ -1,0 +1,44 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "Scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update always requires a click.",
+   "class": "restate"
+  },
+  {
+   "quote": "The rules file says no other shipping code may access the network. `scripts/check-network-surface.sh` keeps a denied-API list that CI enforces by filename, so a violation should fail the build.",
+   "class": "restate"
+  },
+  {
+   "quote": "- **The Linux and desktop items don't apply to the Mac app.** Items 3 and 4 cover the Tauri desktop app (Windows, Linux) and the Linux server's inbound listener.",
+   "class": "padding"
+  },
+  {
+   "quote": "It's an update check, not audio upload, but",
+   "class": "padding"
+  },
+  {
+   "quote": "**This is a statement of policy, not a code audit.**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**The update check is still an outbound request.**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**Model downloads**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**Sparkle update checks**",
+   "class": "decoration"
+  },
+  {
+   "quote": "If you want independent confirmation, you could run the check script yourself or watch the app's traffic with something like Little Snitch or `nettop` while dictating.",
+   "class": "offer"
+  }
+ ]
+}

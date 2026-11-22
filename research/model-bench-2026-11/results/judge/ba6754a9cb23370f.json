@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B leads with the regression, also catches that the new `stopHandsFree()` branch can mark a queued hold-to-talk press as released, and gives a clean fix and tests without A's hedging and extra caveats."
+}

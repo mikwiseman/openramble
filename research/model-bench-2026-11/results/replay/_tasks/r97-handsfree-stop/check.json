@@ -1,0 +1,102 @@
+{
+ "task": "r97-handsfree-stop",
+ "checked_at": "2026-11-22 16:28",
+ "load": "11.8",
+ "leaked": [],
+ "parent": {
+  "task": "r97-handsfree-stop",
+  "load": "11.8",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 36
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 1
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": false,
+   "code": 1,
+   "seconds": 74
+  },
+  "suite": {
+   "ok": false,
+   "code": 1,
+   "seconds": 110
+  },
+  "suite_first_try": {
+   "ok": false,
+   "code": 1,
+   "seconds": 107
+  },
+  "size": {
+   "source": 0,
+   "tests": 0,
+   "fixtures": 0,
+   "other": 0,
+   "reference_source": 25,
+   "ratio": 0.0
+  },
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "fail",
+  "reason": "hidden tests"
+ },
+ "reference": {
+  "task": "r97-handsfree-stop",
+  "load": "7.4",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 38
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 2
+  },
+  "own_tests": {
+   "files": 2,
+   "fail_on_base": true
+  },
+  "hidden": {
+   "ok": true,
+   "code": 0,
+   "seconds": 44
+  },
+  "suite": {
+   "ok": true,
+   "code": 0,
+   "seconds": 96
+  },
+  "size": {
+   "source": 25,
+   "tests": 69,
+   "fixtures": 0,
+   "other": 0,
+   "reference_source": 25,
+   "ratio": 1.0
+  },
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "pass",
+  "reason": ""
+ },
+ "usable": true
+}

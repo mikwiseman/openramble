@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B explains why the gate passed, what the fix restores, why the check matters, and how both exit codes were verified, with less repetition."
+}

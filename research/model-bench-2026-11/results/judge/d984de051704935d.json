@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "Both find the same bug, but A also gives a concrete code fix, flags two real risks the snippets can't settle (how the second press is routed during `.inserting`, and deferring the stop before the microphone opens), and names the test that fails on the current diff, while B's fix direction is vaguer and leaves those risks out."
+}

@@ -1,0 +1,16 @@
+{
+ "item": "i-update-footer",
+ "situation": "interface copy",
+ "condition": "plain",
+ "model": "fable",
+ "effort": "high",
+ "output": "On by default so security fixes reach you. Once a day, OpenRamble reads a small version list. The request includes your app version and IP address, with no device profile and nothing you dictate. Turn this off and OpenRamble makes no scheduled network requests.",
+ "usage": {
+  "input": 2,
+  "cache_write": 2746,
+  "cached_input": 0,
+  "output": 276
+ },
+ "cost_usd": 0.054992,
+ "seconds": 4
+}

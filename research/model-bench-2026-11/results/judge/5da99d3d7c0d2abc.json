@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "Both commit messages are accurate and tight, but A adds one fact he needs: the gate still exits zero when any check reads an unset variable, so the same silent failure can recur elsewhere. That outweighs A's unneeded caveat about verification."
+}

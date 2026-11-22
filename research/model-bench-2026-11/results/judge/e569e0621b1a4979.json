@@ -1,0 +1,15 @@
+{
+ "facts": [
+  true
+ ],
+ "slop": [
+  {
+   "quote": "So an ordinary hands-free tap that lands during a paste now starts and immediately stops.",
+   "class": "padding"
+  },
+  {
+   "quote": "Alternatively, add a separate `secondPress` field, which is clearer but heavier.",
+   "class": "padding"
+  }
+ ]
+}

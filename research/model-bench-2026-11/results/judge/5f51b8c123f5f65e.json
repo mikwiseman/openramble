@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A puts the verdict first and covers the main regression, the missing mode check, a simpler fix, and the tests in far fewer words, while B adds headers, a more complex fix, and speculative points about code it says it cannot see."
+}

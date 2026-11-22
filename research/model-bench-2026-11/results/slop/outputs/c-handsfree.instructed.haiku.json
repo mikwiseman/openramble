@@ -1,0 +1,16 @@
+{
+ "item": "c-handsfree",
+ "situation": "commit message",
+ "condition": "instructed",
+ "model": "haiku",
+ "effort": "high",
+ "output": "```\nKeep a hands-free stop that arrives during paste\n\nA press that landed during a paste is replayed when the paste finishes.\nIf that press was hands-free, its second press was dropped while the\npaste was in flight, and the replayed take started with nothing to stop\nit. The session stayed listening with the microphone on, and the next\ndictation inserted nothing. Seed 45 of the gesture storm test hit this.\n\nRecord the second press as the stop of a waiting hands-free press, and\nreplay it through stopHandsFree(). A hands-free press's release no\nlonger counts as its stop. A hold's release still replays through\nstop().\n\nThe shipping app does not reach this path: it starts hands-free only\nfrom a double tap while idle.\n\nWithout the fix, 14 of 200 storm seeds fail. With it, none fail.\n```\n\nThe 20 ms hold in the storm test's inserter isn't in this diff. If it's meant to go in this commit, it needs its own mention in the body, since the test result depends on it.",
+ "usage": {
+  "input": 2,
+  "cache_write": 6487,
+  "cached_input": 0,
+  "output": 1259
+ },
+ "cost_usd": 0.0019271,
+ "seconds": 8
+}

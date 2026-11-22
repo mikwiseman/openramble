@@ -1,0 +1,108 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index d453560..763811b 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -80,7 +80,9 @@ jobs:
+ 
+       # The main promise of the product is verified automatically, not by word of mouth.
+       - name: Check that the network is only where it is allowed
+-        run: ./scripts/check-network-surface.sh
++        run: |
++          ./scripts/check-network-surface.sh
++          ./scripts/tests/test-network-gate.sh
+ 
+   arm64-build:
+     name: Apple Silicon only
+diff --git a/scripts/check-network-surface.sh b/scripts/check-network-surface.sh
+index f578dac..4a5e571 100755
+--- a/scripts/check-network-surface.sh
++++ b/scripts/check-network-surface.sh
+@@ -36,6 +36,10 @@ FORBIDDEN+='|NSUbiquitousKeyValueStore|CKContainer|CKDatabase'
+ # Loading models past our manifest.
+ FORBIDDEN+='|MLModelCollection'
+ 
++# A naked clearContents() hands dictation to Universal Clipboard. Writes must use
++# prepareForNewContents(with: .currentHostOnly) instead.
++FORBIDDEN_PASTEBOARD='clearContents\(\)'
++
+ status=0
+ 
+ echo "Checking network symbols..."
+diff --git a/scripts/check.sh b/scripts/check.sh
+index 7a84aca..9c5036e 100755
+--- a/scripts/check.sh
++++ b/scripts/check.sh
+@@ -148,6 +148,7 @@ run_app() {
+ run_network_gate() {
+   echo "→ Network Surface"
+   ./scripts/check-network-surface.sh > /dev/null || fail "Network gate failed."
++  ./scripts/tests/test-network-gate.sh > /dev/null || fail "Network gate no longer catches its violations."
+   green "the promise about the network stands"
+   echo "→ Diagnostics Surface"
+   ./scripts/check-diagnostics-surface.sh > /dev/null || fail "Diagnostics gate failed."
+diff --git a/scripts/tests/test-network-gate.sh b/scripts/tests/test-network-gate.sh
+new file mode 100755
+index 0000000..54d63ce
+--- /dev/null
++++ b/scripts/tests/test-network-gate.sh
+@@ -0,0 +1,60 @@
++#!/bin/bash
++# The network gate must fail on the violations it exists to catch. Each case copies
++# the shipping tree into a scratch fixture, seeds one violation, and expects exit 1.
++# A clean copy must pass.
++
++set -euo pipefail
++
++REPOSITORY_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
++FIXTURE="$REPOSITORY_ROOT/.build-zero-network/network-gate-fixture"
++SOURCE_FILE="apps/macos/OpenRamble/System/TextInserter.swift"
++
++fail_test() {
++  printf 'FAIL: %s\n' "$1" >&2
++  exit 1
++}
++
++fresh_fixture() {
++  rm -rf "$FIXTURE"
++  mkdir -p "$FIXTURE/scripts" "$FIXTURE/apps/macos" "$FIXTURE/Packages"
++  cp "$REPOSITORY_ROOT/scripts/check-network-surface.sh" "$FIXTURE/scripts/"
++  cp -R "$REPOSITORY_ROOT/apps/macos/OpenRamble" "$FIXTURE/apps/macos/"
++  cp "$REPOSITORY_ROOT/apps/macos/project.yml" "$FIXTURE/apps/macos/"
++  cp -R "$REPOSITORY_ROOT/Packages/DictationCore" "$REPOSITORY_ROOT/Packages/LocalASR" "$FIXTURE/Packages/"
++}
++
++# Runs the gate on the fixture. Sets GATE_STATUS and GATE_OUTPUT.
++run_gate() {
++  set +e
++  GATE_OUTPUT=$("$FIXTURE/scripts/check-network-surface.sh" 2>&1)
++  GATE_STATUS=$?
++  set -e
++}
++
++trap 'rm -rf "$FIXTURE"' EXIT
++
++fresh_fixture
++run_gate
++[[ $GATE_STATUS -eq 0 ]] || fail_test "clean tree was rejected:
++$GATE_OUTPUT"
++
++fresh_fixture
++printf '\nfunc leak(_ board: NSPasteboard) { board.clearContents() }\n' \
++  >> "$FIXTURE/$SOURCE_FILE"
++run_gate
++[[ $GATE_STATUS -eq 1 ]] || fail_test "naked clearContents() was not caught (exit $GATE_STATUS)"
++grep -Fq 'flushing buffer past .currentHostOnly' <<<"$GATE_OUTPUT" \
++  || fail_test "naked clearContents() failed without the clipboard message"
++
++fresh_fixture
++printf '\n// board.clearContents() is explained here, not called.\n' >> "$FIXTURE/$SOURCE_FILE"
++run_gate
++[[ $GATE_STATUS -eq 0 ]] || fail_test "a comment mentioning clearContents() was rejected:
++$GATE_OUTPUT"
++
++fresh_fixture
++printf '\nlet session = URLSession.shared\n' >> "$FIXTURE/$SOURCE_FILE"
++run_gate
++[[ $GATE_STATUS -eq 1 ]] || fail_test "URLSession outside the allowed files was not caught (exit $GATE_STATUS)"
++
++echo "Passed: network gate passes a clean tree and rejects clipboard and network violations."

@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "It answers no immediately and gives the steps for both an intentional change and a regression without guessing why the test failed."
+}

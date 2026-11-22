@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "the rules file forbids exactly this",
+   "class": "restate"
+  }
+ ]
+}

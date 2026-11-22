@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "(don't edit them by hand)",
+   "class": "restate"
+  }
+ ]
+}

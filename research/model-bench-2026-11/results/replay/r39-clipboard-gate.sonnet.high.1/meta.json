@@ -1,0 +1,42 @@
+{
+ "run": "r39-clipboard-gate.sonnet.high.1",
+ "task": "r39-clipboard-gate",
+ "model": "claude-sonnet-5-5",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "started": "2026-11-22 18:39",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 56,
+ "slept_seconds": 0,
+ "load_before": "16.4",
+ "load_after": "10.9",
+ "memories_written": 1,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r39-clipboard-gate.sonnet.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 17,
+ "by_kind": {
+  "Bash": 17
+ },
+ "turns": 18,
+ "usage": {
+  "input": 36,
+  "cache_write": 38107,
+  "cached_input": 661268,
+  "output": 12986
+ },
+ "tokens": 712397,
+ "cost_usd": 0.3484868,
+ "models_used": [
+  "claude-sonnet-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 11,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 322
+}

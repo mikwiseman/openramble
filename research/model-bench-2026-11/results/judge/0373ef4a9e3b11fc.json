@@ -1,0 +1,16 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The rules file lists `is.waiwai.dictation` as a permanent release invariant because existing Accessibility permission grants depend on it.",
+   "class": "restate"
+  },
+  {
+   "quote": "If you do go ahead, update the rules file and release docs in the same change so the invariant names the new identifier.",
+   "class": "padding"
+  }
+ ]
+}

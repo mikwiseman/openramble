@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A gives the required fix directly and correctly explains that the test compares Rust with recorded fixtures, while B wrongly claims the generator rewrites the input corpus."
+}

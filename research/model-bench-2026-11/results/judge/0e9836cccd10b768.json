@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A pinpoints the regression without overstating which presses it affects, gives the smallest fix, and flags both replay checks and the tests that matter."
+}

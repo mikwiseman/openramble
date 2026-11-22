@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A covers the cause, symptom, fix, the reason the deployment target can't be scoped, and the shipped-library guarantee in fewer words, while B mostly restates the investigation notes, including side findings like SDKROOT and /usr/bin/strip that the commit doesn't need."
+}

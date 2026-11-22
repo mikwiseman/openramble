@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "B gives the same correct no-and-fix-path in fewer words and also covers the case where the Swift change was accidental, while A spends space on filler like 'the red test is doing its job'."
+}

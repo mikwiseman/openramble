@@ -1,0 +1,49 @@
+{
+ "task": "r39-clipboard-gate",
+ "load": "9.4",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 1
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 0
+ },
+ "own_tests": {
+  "files": 1,
+  "fail_on_base": null
+ },
+ "hidden": {
+  "ok": true,
+  "code": 0,
+  "seconds": 3,
+  "failed": [],
+  "tries": 1
+ },
+ "size": {
+  "source": 145,
+  "tests": 156,
+  "fixtures": 0,
+  "other": 0,
+  "reference_source": 6,
+  "ratio": 24.17
+ },
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "state": "pass",
+ "reason": "",
+ "claims": {
+  "says_done": true,
+  "says_checks_pass": true
+ },
+ "false_green": false,
+ "unproven_claim": false,
+ "run": "r39-clipboard-gate.fable.high.1"
+}

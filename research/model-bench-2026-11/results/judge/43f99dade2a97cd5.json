@@ -1,0 +1,44 @@
+{
+ "facts": [
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "Scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update requires a click.",
+   "class": "restate"
+  },
+  {
+   "quote": "These fetch model files to your machine and only run when you request a download.",
+   "class": "padding"
+  },
+  {
+   "quote": "**Model downloads**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**Sparkle update checks**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**Run `scripts/check-network-surface.sh`**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**Check what the Sparkle update request contains.**",
+   "class": "decoration"
+  },
+  {
+   "quote": "**Check the enforcement method.**",
+   "class": "decoration"
+  },
+  {
+   "quote": "The rules say CI enforces the boundary, but I haven't seen that output.",
+   "class": "restate"
+  },
+  {
+   "quote": "The rules file doesn't say what metadata Sparkle sends with an update check (typically app and OS version, and possibly a system profile if profiling is enabled). Confirm that setting in the Sparkle configuration.",
+   "class": "padding"
+  }
+ ]
+}

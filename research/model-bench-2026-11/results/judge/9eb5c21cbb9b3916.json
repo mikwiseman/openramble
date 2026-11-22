@@ -1,0 +1,13 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The commit message is ready to paste, but",
+   "class": "stock"
+  }
+ ]
+}

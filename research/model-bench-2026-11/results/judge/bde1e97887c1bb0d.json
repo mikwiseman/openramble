@@ -1,0 +1,17 @@
+{
+ "facts": [
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "A comment explains why the pattern exists: a plain `clearContents()` or `declareTypes()` puts dictation on Universal Clipboard, where it reaches every device on the Apple ID. The comment also records how the definition got lost.",
+   "class": "restate"
+  },
+  {
+   "quote": "If you want it, it is a one-line follow-up.",
+   "class": "offer"
+  }
+ ]
+}

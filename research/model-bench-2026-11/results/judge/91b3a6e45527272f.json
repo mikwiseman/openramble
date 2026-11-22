@@ -1,0 +1,14 @@
+{
+ "facts": [
+  true,
+  true,
+  true,
+  true
+ ],
+ "slop": [
+  {
+   "quote": "and lowering it for host builds isn't possible\nwithout also changing it for the shipped library",
+   "class": "padding"
+  }
+ ]
+}

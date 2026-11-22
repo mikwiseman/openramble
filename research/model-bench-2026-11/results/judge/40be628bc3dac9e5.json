@@ -1,0 +1,4 @@
+{
+ "better": "B",
+ "why": "It covers the failure, cause, privacy impact, fix, and exit-code checks in fewer words and avoids A’s unsupported claim of having run the checks."
+}

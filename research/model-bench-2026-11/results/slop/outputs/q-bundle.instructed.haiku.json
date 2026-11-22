@@ -1,0 +1,16 @@
+{
+ "item": "q-bundle",
+ "situation": "reply",
+ "condition": "instructed",
+ "model": "haiku",
+ "effort": "high",
+ "output": "**No, not under the current rules.** The rules file makes `is.waiwai.dictation` permanent because macOS ties Accessibility grants to the bundle identifier. A new identifier means every existing user loses that permission and must re-grant it manually. Sparkle also expects updates to keep the same bundle ID, so existing installs likely couldn't auto-update to the renamed app.\n\nTo get the OpenRamble name without the cost, change only the display name (`CFBundleDisplayName` / product name) and keep the bundle ID.\n\nIf you still want the new identifier, you'd first need to change the invariant in the rules file. I haven't checked the repo, so I can't tell whether any users have installed the current build yet.",
+ "usage": {
+  "input": 2,
+  "cache_write": 5316,
+  "cached_input": 0,
+  "output": 1066
+ },
+ "cost_usd": 0.0015964,
+ "seconds": 7
+}

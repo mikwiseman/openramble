@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "Both find the same bug, but A states it plainly and gives a smaller fix: one guard in `stop()` lets the proposed diff work as written, while B adds a new field and three code edits and hedges with \"presumably.\""
+}

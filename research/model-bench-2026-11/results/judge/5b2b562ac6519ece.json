@@ -1,0 +1,4 @@
+{
+ "better": "A",
+ "why": "A leads with the fix and covers the cause, clipboard risk, and verified exit codes without B’s unsupported claim about `set -u` or its unsolicited follow-up."
+}
