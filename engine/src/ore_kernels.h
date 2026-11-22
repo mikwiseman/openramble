@@ -63,7 +63,7 @@ typedef struct ore_kernels {
     // [0, rows), summed in order of k with fused multiply-add. W row r starts
     // at w + r * wstride elements and is contiguous in k; `w_is_f16` selects
     // half or single precision. The frames come packed by ore_pack16:
-    // xp[(tb * n_in + k) * 16 + f]. `scratch` holds 4 * n_in floats.
+    // xp[(tb * n_in + k) * 16 + f]. `scratch` holds 6 * n_in floats.
     void (*gemm_f32)(const void * w, int w_is_f16, size_t wstride, int n_in, int r0, int r1, const float * xp,
                      int rows, float * y, size_t ystride, float * scratch);
 

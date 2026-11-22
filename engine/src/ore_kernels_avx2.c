@@ -290,17 +290,19 @@ static void gemm_q80_avx2(const uint8_t * w, int n_in, int r0, int r1, const ore
 
 // ---- float product ----------------------------------------------------------
 
-// Four weight rows against a block of 16 frames (two vectors of eight): each
+// Six weight rows against a block of 16 frames (two vectors of eight): each
 // weight is broadcast and multiplied into the frame vectors, so every output
-// accumulates in order of k.
+// accumulates in order of k. Twelve independent sums keep both multiply-add
+// units busy.
+#define ORE_F32_ROWS 6
 ORE_AVX2
 static void gemm_f32_avx2(const void * w, int w_is_f16, size_t wstride, int n_in, int r0, int r1, const float * xp,
                           int rows, float * y, size_t ystride, float * scratch) {
     const int ntb = ore_frame_blocks(rows);
-    for (int r = r0; r < r1; r += 4) {
-        const int     nr = ORE_MIN(4, r1 - r);
-        const float * wr[4];
-        for (int i = 0; i < 4; ++i) {
+    for (int r = r0; r < r1; r += ORE_F32_ROWS) {
+        const int     nr = ORE_MIN(ORE_F32_ROWS, r1 - r);
+        const float * wr[ORE_F32_ROWS];
+        for (int i = 0; i < ORE_F32_ROWS; ++i) {
             const int ri = r + ORE_MIN(i, nr - 1);
             if (w_is_f16) {
                 const uint16_t * h   = (const uint16_t *) w + (size_t) ri * wstride;
@@ -315,41 +317,35 @@ static void gemm_f32_avx2(const void * w, int w_is_f16, size_t wstride, int n_in
                 wr[i] = (const float *) w + (size_t) ri * wstride;
             }
         }
-        const float * w0 = wr[0], *w1 = wr[1], *w2 = wr[2], *w3 = wr[3];
+        const float * w0 = wr[0], *w1 = wr[1], *w2 = wr[2], *w3 = wr[3], *w4 = wr[4], *w5 = wr[5];
         for (int tb = 0; tb < ntb; ++tb) {
-            const float * xb  = xp + (size_t) tb * n_in * ORE_FB;
-            __m256        c00 = _mm256_setzero_ps(), c01 = c00, c10 = c00, c11 = c00;
-            __m256        c20 = c00, c21 = c00, c30 = c00, c31 = c00;
+            const float * xb = xp + (size_t) tb * n_in * ORE_FB;
+            __m256        c[ORE_F32_ROWS][2];
+            for (int i = 0; i < ORE_F32_ROWS; ++i) c[i][0] = c[i][1] = _mm256_setzero_ps();
             for (int k = 0; k < n_in; ++k) {
                 const float * xk = xb + (size_t) k * ORE_FB;
                 const __m256  x0 = _mm256_loadu_ps(xk), x1 = _mm256_loadu_ps(xk + 8);
-                __m256        wv;
-                wv  = _mm256_broadcast_ss(w0 + k);
-                c00 = _mm256_fmadd_ps(wv, x0, c00);
-                c01 = _mm256_fmadd_ps(wv, x1, c01);
-                wv  = _mm256_broadcast_ss(w1 + k);
-                c10 = _mm256_fmadd_ps(wv, x0, c10);
-                c11 = _mm256_fmadd_ps(wv, x1, c11);
-                wv  = _mm256_broadcast_ss(w2 + k);
-                c20 = _mm256_fmadd_ps(wv, x0, c20);
-                c21 = _mm256_fmadd_ps(wv, x1, c21);
-                wv  = _mm256_broadcast_ss(w3 + k);
-                c30 = _mm256_fmadd_ps(wv, x0, c30);
-                c31 = _mm256_fmadd_ps(wv, x1, c31);
+#define ORE_ROW(i, wp)                                   \
+    {                                                    \
+        const __m256 wv = _mm256_broadcast_ss(wp + k);   \
+        c[i][0]         = _mm256_fmadd_ps(wv, x0, c[i][0]); \
+        c[i][1]         = _mm256_fmadd_ps(wv, x1, c[i][1]); \
+    }
+                ORE_ROW(0, w0)
+                ORE_ROW(1, w1)
+                ORE_ROW(2, w2)
+                ORE_ROW(3, w3)
+                ORE_ROW(4, w4)
+                ORE_ROW(5, w5)
+#undef ORE_ROW
             }
             const int valid = ORE_MIN(ORE_FB, rows - tb * ORE_FB);
-            float     out[4][16];
-            _mm256_storeu_ps(out[0], c00);
-            _mm256_storeu_ps(out[0] + 8, c01);
-            _mm256_storeu_ps(out[1], c10);
-            _mm256_storeu_ps(out[1] + 8, c11);
-            _mm256_storeu_ps(out[2], c20);
-            _mm256_storeu_ps(out[2] + 8, c21);
-            _mm256_storeu_ps(out[3], c30);
-            _mm256_storeu_ps(out[3] + 8, c31);
             for (int i = 0; i < nr; ++i) {
+                float out[16];
+                _mm256_storeu_ps(out, c[i][0]);
+                _mm256_storeu_ps(out + 8, c[i][1]);
                 float * yr = y + (size_t) tb * ORE_FB * ystride + r + i;
-                for (int f = 0; f < valid; ++f) yr[(size_t) f * ystride] = out[i][f];
+                for (int f = 0; f < valid; ++f) yr[(size_t) f * ystride] = out[f];
             }
         }
     }

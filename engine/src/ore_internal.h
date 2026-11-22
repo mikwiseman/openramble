@@ -38,6 +38,8 @@ struct ore_model {
     ore_gguf * g;
     // encoder
     int         n_layers, d_model, n_heads, d_ff, conv_kernel, n_mels, sub_ch;
+    int         length_masking;  // 1: valid lengths count from the samples (Parakeet Ultra)
+    int         att_band;        // frames attention reaches each way; 0 = the whole clip
     ore_mel     mel;
     ore_tensor  c0w, c0b, c2b, c3w, c3b, c5b, c6w, c6b, pre_out_w, pre_out_b;
     float *     c2_t;  // depthwise 3x3 kernels, [tap][channel]

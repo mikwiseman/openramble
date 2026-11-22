@@ -269,16 +269,18 @@ static void gemm_q80_neon(const uint8_t * w, int n_in, int r0, int r1, const ore
 
 // ---- float product ----------------------------------------------------------
 
-// Four weight rows against a block of sixteen frames: each weight is broadcast
+// Six weight rows against a block of sixteen frames: each weight is broadcast
 // and multiplied into four vectors of frames, so every output accumulates in
-// order of k.
+// order of k. Twenty-four independent sums keep all the multiply-add units
+// busy.
+#define ORE_F32_ROWS 6
 static void gemm_f32_neon(const void * w, int w_is_f16, size_t wstride, int n_in, int r0, int r1, const float * xp,
                           int rows, float * y, size_t ystride, float * scratch) {
     const int ntb = ore_frame_blocks(rows);
-    for (int r = r0; r < r1; r += 4) {
-        const int     nr = ORE_MIN(4, r1 - r);
-        const float * wr[4];
-        for (int i = 0; i < 4; ++i) {
+    for (int r = r0; r < r1; r += ORE_F32_ROWS) {
+        const int     nr = ORE_MIN(ORE_F32_ROWS, r1 - r);
+        const float * wr[ORE_F32_ROWS];
+        for (int i = 0; i < ORE_F32_ROWS; ++i) {
             const int ri = r + ORE_MIN(i, nr - 1);
             if (w_is_f16) {
                 const uint16_t * h   = (const uint16_t *) w + (size_t) ri * wstride;
@@ -293,23 +295,32 @@ static void gemm_f32_neon(const void * w, int w_is_f16, size_t wstride, int n_in
                 wr[i] = (const float *) w + (size_t) ri * wstride;
             }
         }
+        const float * w0 = wr[0], *w1 = wr[1], *w2 = wr[2], *w3 = wr[3], *w4 = wr[4], *w5 = wr[5];
         for (int tb = 0; tb < ntb; ++tb) {
             const float * xb = xp + (size_t) tb * n_in * ORE_FB;
-            float32x4_t   c[4][4];
-            for (int i = 0; i < 4; ++i) {
+            float32x4_t   c[ORE_F32_ROWS][4];
+            for (int i = 0; i < ORE_F32_ROWS; ++i) {
                 for (int j = 0; j < 4; ++j) c[i][j] = vdupq_n_f32(0.0f);
             }
             for (int k = 0; k < n_in; ++k) {
                 const float *     xk = xb + (size_t) k * ORE_FB;
                 const float32x4_t x0 = vld1q_f32(xk), x1 = vld1q_f32(xk + 4);
                 const float32x4_t x2 = vld1q_f32(xk + 8), x3 = vld1q_f32(xk + 12);
-                for (int i = 0; i < 4; ++i) {
-                    const float32x4_t wv = vld1q_dup_f32(wr[i] + k);
-                    c[i][0]              = vfmaq_f32(c[i][0], wv, x0);
-                    c[i][1]              = vfmaq_f32(c[i][1], wv, x1);
-                    c[i][2]              = vfmaq_f32(c[i][2], wv, x2);
-                    c[i][3]              = vfmaq_f32(c[i][3], wv, x3);
-                }
+#define ORE_ROW(i, wp)                                \
+    {                                                 \
+        const float32x4_t wv = vld1q_dup_f32(wp + k); \
+        c[i][0]              = vfmaq_f32(c[i][0], wv, x0); \
+        c[i][1]              = vfmaq_f32(c[i][1], wv, x1); \
+        c[i][2]              = vfmaq_f32(c[i][2], wv, x2); \
+        c[i][3]              = vfmaq_f32(c[i][3], wv, x3); \
+    }
+                ORE_ROW(0, w0)
+                ORE_ROW(1, w1)
+                ORE_ROW(2, w2)
+                ORE_ROW(3, w3)
+                ORE_ROW(4, w4)
+                ORE_ROW(5, w5)
+#undef ORE_ROW
             }
             const int valid = ORE_MIN(ORE_FB, rows - tb * ORE_FB);
             for (int i = 0; i < nr; ++i) {

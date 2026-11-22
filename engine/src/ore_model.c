@@ -180,7 +180,6 @@ struct ore_model * ore_model_open_internal(const char * path, const char ** err)
     if (!key_is(g, "general.architecture", "parakeet") || !key_is(g, "stt.parakeet.head_kind", "tdt") ||
         !key_is(g, "stt.parakeet.encoder.att_context_style", "regular") ||
         !key_is(g, "stt.parakeet.encoder.conv_norm_type", "batch_norm") ||
-        !key_is(g, "stt.parakeet.encoder.length_masking", "kestrel") ||
         !key_is(g, "stt.parakeet.joint.activation", "relu") || !key_is(g, "stt.frontend.type", "mel") ||
         !key_is(g, "stt.frontend.window", "hann") || !key_is(g, "stt.frontend.normalize", "per_feature")) {
         goto fail;
@@ -208,8 +207,26 @@ struct ore_model * ore_model_open_internal(const char * path, const char ** err)
         !ore_gguf_f32(g, "stt.frontend.pre_emphasis", &preemph) || !ore_gguf_f32(g, "stt.frontend.dither", &dither)) {
         goto fail;
     }
+    // Two families share this architecture. Parakeet Ultra counts valid
+    // lengths from the samples and always attends over the whole clip. The
+    // older checkpoints (v3 and its fine-tunes) do neither, and past 20.5 s
+    // they run with the 256-frame attention window NVIDIA documents for long
+    // audio, as transcribe.cpp runs them.
+    {
+        const char * lm;
+        size_t       n;
+        if (!ore_gguf_str(g, "stt.parakeet.encoder.length_masking", &lm, &n) || (n == 4 && !memcmp(lm, "none", 4))) {
+            m->length_masking = 0;
+            m->att_band       = 256;
+        } else if (n == 7 && !memcmp(lm, "kestrel", 7)) {
+            m->length_masking = 1;
+            m->att_band       = 0;
+        } else {
+            goto fail;
+        }
+    }
     const int d = m->d_model, C = m->sub_ch, H = m->pred_hidden;
-    if (sub != 8 || xscale || use_bias || ctx_l != -1 || ctx_r != -1 || dither != 0.0f || sr != 16000 ||
+    if (sub != 8 || xscale || use_bias || ctx_l != -1 || ctx_r != -1 || dither < 0.0f || sr != 16000 ||
         m->n_layers < 1 || m->n_layers > 64 || d < 16 || d % 16 || m->n_heads < 1 || d % m->n_heads ||
         m->conv_kernel < 1 || m->conv_kernel > 63 || !(m->conv_kernel & 1) || m->n_mels % 8 || C < 1 ||
         m->pred_layers < 1 || m->pred_layers > 8 || H < 1 || extra < 1 || extra > ORE_MAX_DURATIONS ||

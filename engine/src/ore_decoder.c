@@ -544,7 +544,7 @@ int ore_decode(struct ore_session * s, const float * enc, int T) {
     ore_pack16(enc, (size_t) m->d_model, T, m->d_model, 0, ntb, xp);
     {
         proj_ctx c = { s, xp, T, proj };
-        ore_parallel_for(s->pool, JH, 32, job_proj, &c);
+        ore_parallel_for(s->pool, JH, 48, job_proj, &c);
     }
     for (int t = 0; t < T; ++t) {
         float * row = proj + (size_t) t * JH;

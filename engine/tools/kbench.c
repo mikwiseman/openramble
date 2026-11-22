@@ -127,7 +127,7 @@ int main(int argc, char ** argv) {
                 ore_qact_free(&a);
             } else {
                 float * xp      = (float *) ore_alloc((size_t) ntb * n_in * ORE_FB * sizeof(float));
-                float * scratch = (float *) ore_alloc((size_t) 4 * n_in * sizeof(float));
+                float * scratch = (float *) ore_alloc((size_t) 6 * n_in * sizeof(float));
                 for (int rep = 0; rep < nrep; ++rep) {
                     double t0 = now_ms();
                     ore_pack16(x, (size_t) n_in, T, n_in, 0, ntb, xp);
@@ -214,7 +214,7 @@ int main(int argc, char ** argv) {
             k->glu(x, x + N, out + 2 * N, N - 3);
             memcpy(out + 3 * N, x + 2 * N, sizeof(float) * NS);
             k->softmax(out + 3 * N, NS);
-            k->dwconv_bn_silu(taps, x, 9, N - 16, sc, bt, out + 3 * N + 160);
+            k->dwconv_bn_silu(taps, x, 9, 509, sc, bt, out + 3 * N + 160);
             if (ti > 0) {
                 printf("  %s\n", k->name);
                 compare("against the reference:", r, o, (size_t) N * 4);

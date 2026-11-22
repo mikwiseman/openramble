@@ -107,7 +107,7 @@ static void linear(struct ore_session * s, const ore_tensor * w, ore_lin_in * in
             ore_parallel_for(s->pool, ntb, 1, job_quant_q8k, &c);
             in->have_q8k = 1;
         }
-        ore_parallel_for(s->pool, n_out, 32, job_gemm_q4k, &c);
+        ore_parallel_for(s->pool, n_out, 48, job_gemm_q4k, &c);
     } else if (w->type == ORE_T_Q8_0) {
         if (!in->have_q80) {
             if (!ore_qact_reserve(&in->q80, in->rows, in->n, ORE_Q80_BLOCK)) {
@@ -117,14 +117,14 @@ static void linear(struct ore_session * s, const ore_tensor * w, ore_lin_in * in
             ore_parallel_for(s->pool, ntb, 1, job_quant_q80, &c);
             in->have_q80 = 1;
         }
-        ore_parallel_for(s->pool, n_out, 32, job_gemm_q80, &c);
+        ore_parallel_for(s->pool, n_out, 48, job_gemm_q80, &c);
     } else {
         if (!in->have_xp) {
             if (!need(s, &in->xp, (size_t) ntb * in->n * ORE_FB)) return;
             ore_parallel_for(s->pool, ntb, 1, job_pack, &c);
             in->have_xp = 1;
         }
-        ore_parallel_for(s->pool, n_out, 32, job_gemm_f32, &c);
+        ore_parallel_for(s->pool, n_out, 48, job_gemm_f32, &c);
     }
 }
 
@@ -245,10 +245,16 @@ static void job_heads(void * v, int h0, int h1, int thread) {
         // position scores: bd[tq][j] = q_v[tq] . p[j], j = tk - tq + T - 1
         ore_pack16(s->qv.p + h * hd, (size_t) d, T, hd, 0, ntb, ts->pk.p);
         k->gemm_f32(s->p.p + h * hd, 0, (size_t) d, hd, 0, P, ts->pk.p, T, bd, (size_t) P, ts->f.p);
+        const int band = s->m->att_band;
         for (int tq = 0; tq < T; ++tq) {
             float *       row = ac + (size_t) tq * T;
             const float * br  = bd + (size_t) tq * P + (T - 1 - tq);
             for (int tk = 0; tk < T; ++tk) row[tk] = (row[tk] + br[tk]) * scale;
+            if (band > 0 && T - 1 > band) {
+                // Out of reach: a score so low its weight is exactly zero.
+                for (int tk = 0; tk < tq - band; ++tk) row[tk] = -1e30f;
+                for (int tk = tq + band + 1; tk < T; ++tk) row[tk] = -1e30f;
+            }
             k->softmax(row, T);
         }
         // out[tq][h][dd] = sum_tk attn[tq][tk] * v[tk][h][dd]
@@ -443,11 +449,17 @@ int ore_encode(struct ore_session * s, const float * pcm, int n_samples, const f
     pc.H1    = (T_mel - 1) / 2 + 1;
     pc.H2    = (pc.H1 - 1) / 2 + 1;
     pc.H3    = (pc.H2 - 1) / 2 + 1;
-    // Valid lengths count from the samples, not from the padded mel.
-    const int len0 = n_samples / m->mel.hop_length;
-    pc.len1        = (len0 - 1) / 2 + 1;
-    pc.len2        = (pc.len1 - 1) / 2 + 1;
-    pc.len3        = (pc.len2 - 1) / 2 + 1;
+    if (m->length_masking) {
+        // Valid lengths count from the samples, not from the padded mel.
+        const int len0 = n_samples / m->mel.hop_length;
+        pc.len1        = (len0 - 1) / 2 + 1;
+        pc.len2        = (pc.len1 - 1) / 2 + 1;
+        pc.len3        = (pc.len2 - 1) / 2 + 1;
+    } else {
+        pc.len1 = pc.H1;
+        pc.len2 = pc.H2;
+        pc.len3 = pc.H3;
+    }
     // Frames past the valid length are padding: attention never looks at
     // them and the decoder never reads them, so they are not computed.
     const int T = ORE_MIN(pc.len3, pc.H3);
@@ -455,7 +467,7 @@ int ore_encode(struct ore_session * s, const float * pcm, int n_samples, const f
     const int n_flat = m->sub_ch * (m->n_mels / 8);
     pc.flat          = need(s, &s->flat, (size_t) T * n_flat);
     for (int i = 0; i < s->n_threads; ++i) {
-        size_t fs = (size_t) 4 * ORE_MAX(ORE_MAX(dff, d), ORE_MAX(n_flat, T));
+        size_t fs = (size_t) 6 * ORE_MAX(ORE_MAX(dff, d), ORE_MAX(n_flat, T));
         need(s, &s->ts[i].f, fs);
     }
     if (s->oom) return 0;
