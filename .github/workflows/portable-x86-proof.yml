@@ -1,9 +1,15 @@
 name: Portable x86 proof
 
 # Proof-only, on the proof branch, never on main. Builds the recognition
-# runtime twice on one hosted machine, as the packages build it today and with
-# the fixed instruction set, then counts instructions, times recognition and
-# runs both on an emulated processor that has AVX2 and no AVX-512.
+# runtime four ways on one hosted machine, counts instructions, times
+# recognition, and then runs the builds on a stock machine and on an emulated
+# processor that has AVX2 and no AVX-512.
+#
+#   shipped    what the packages are today: nothing set
+#   fixed      the first commit alone: the fixed instruction set
+#   portable   both commits: the fixed instruction set and no system BLAS
+#   reference  the build the research measured: transcribe.cpp configured by
+#              hand with the same switches, as engine-bench.yml does it
 on:
   push:
     branches: ["claude/funny-benz-160e76-proof"]
@@ -18,15 +24,16 @@ concurrency:
 
 env:
   FIXED_ARGS: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON"
+  PORTABLE_ARGS: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF"
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
   CLIP_URL: https://raw.githubusercontent.com/mikwiseman/transcribe.cpp/dacdba09be2b8d4dfe97a9d7464c51f462d5f622/samples/dots.wav
   Q4_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
   Q4_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
   # The file the Windows and Linux app ships (apps/desktop/src-tauri/model-manifest.json).
   Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
   Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
-  # A finished run of desktop-release.yml on the branch with the change.
-  PACKAGES_RUN: "45049805547"
-  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  # The run of desktop-release.yml on the branch with both commits.
+  PACKAGES_RUN: "45056597412"
 
 jobs:
   runtime:
@@ -48,45 +55,36 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - name: Processor and tools
+      - name: Processor
         run: |
+          {
+            if command -v lscpu > /dev/null; then
+              lscpu | grep -E 'Model name' | sed 's/  */ /g'
+              echo "avx2: $(grep -cw avx2 /proc/cpuinfo), avx512f: $(grep -cw avx512f /proc/cpuinfo) (logical processors that report it)"
+            else
+              powershell -Command "(Get-CimInstance Win32_Processor).Name"
+              pwsh -Command '"avx2: " + [System.Runtime.Intrinsics.X86.Avx2]::IsSupported + ", avx512f: " + [System.Runtime.Intrinsics.X86.Avx512F]::IsSupported'
+            fi
+          } > built-on.txt
           {
             echo "## ${{ matrix.name }}"
             echo '```'
-            if command -v lscpu > /dev/null; then
-              lscpu | grep -E 'Model name|^CPU\(s\)' | cut -c1-200
-              echo "avx2: $(grep -cw avx2 /proc/cpuinfo), avx512f: $(grep -cw avx512f /proc/cpuinfo) (logical processors that report it)"
-            else
-              powershell -Command "Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors | Format-List"
-              pwsh -Command '"avx2: " + [System.Runtime.Intrinsics.X86.Avx2]::IsSupported + ", avx512f: " + [System.Runtime.Intrinsics.X86.Avx512F]::IsSupported'
-            fi
-            echo "objdump: $(command -v objdump || echo none); llvm-objdump: $(command -v llvm-objdump || echo none)"
-            (objdump --version || llvm-objdump --version) 2> /dev/null | head -2 || true
+            cat built-on.txt
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
-          # If this image has only LLVM's disassembler, let it answer to the plain name.
-          if ! command -v objdump > /dev/null; then
-            mkdir -p "$RUNNER_TEMP/shim"
-            printf '#!/bin/bash\nexec llvm-objdump "$@"\n' > "$RUNNER_TEMP/shim/objdump"
-            chmod +x "$RUNNER_TEMP/shim/objdump"
-            echo "$RUNNER_TEMP/shim" >> "$GITHUB_PATH"
-          fi
 
       - name: Build as shipped
-        run: |
-          CARGO_TARGET_DIR=target-shipped cargo build --release -p ramble-engine --example clock --locked
-          grep -rh "Adding CPU backend variant" target-shipped/release/build/transcribe-cpp-sys-*/output | head -3 | tee -a "$GITHUB_STEP_SUMMARY"
+        run: CARGO_TARGET_DIR=target-shipped cargo build --release -p ramble-engine --example clock --locked
 
       - name: Build with the fixed instruction set
-        run: |
-          CARGO_TARGET_DIR=target-fixed TRANSCRIBE_CMAKE_ARGS="$FIXED_ARGS" cargo build --release -p ramble-engine --example clock --locked
-          grep -rh "Adding CPU backend variant" target-fixed/release/build/transcribe-cpp-sys-*/output | head -3 | tee -a "$GITHUB_STEP_SUMMARY"
+        run: CARGO_TARGET_DIR=target-fixed TRANSCRIBE_CMAKE_ARGS="$FIXED_ARGS" cargo build --release -p ramble-engine --example clock --locked
 
-      # The build the research measured: transcribe.cpp configured by hand with
-      # the same switches, as engine-bench.yml does it, and this same program
-      # linked against it. Position-independent only because Rust links one
-      # that way.
+      - name: Build with the fixed instruction set and no system BLAS
+        run: CARGO_TARGET_DIR=target-portable TRANSCRIBE_CMAKE_ARGS="$PORTABLE_ARGS" cargo build --release -p ramble-engine --example clock --locked
+
+      # Position-independent only because Rust links a program that way.
       - name: Build the measured AVX2 reference
+        continue-on-error: true
         run: |
           here=$(pwd -W 2> /dev/null || pwd)
           git clone --quiet https://github.com/mikwiseman/transcribe.cpp tcpp
@@ -94,31 +92,54 @@ jobs:
           cmake -S tcpp -B tcpp/build -DCMAKE_BUILD_TYPE=Release \
             -DTRANSCRIBE_BUILD_TESTS=OFF -DTRANSCRIBE_BUILD_EXAMPLES=OFF \
             -DTRANSCRIBE_BUILD_SHARED=OFF -DTRANSCRIBE_METAL=OFF -DTRANSCRIBE_INSTALL=ON \
-            -DCMAKE_POSITION_INDEPENDENT_CODE=ON $FIXED_ARGS > tcpp-configure.log
-          grep "Adding CPU backend variant" tcpp-configure.log | tee -a "$GITHUB_STEP_SUMMARY"
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON $PORTABLE_ARGS > tcpp-configure.log
           cmake --build tcpp/build --config Release --parallel 4 > tcpp-build.log 2>&1 || { tail -50 tcpp-build.log; exit 1; }
           cmake --install tcpp/build --config Release --prefix "$here/tcpp-prefix" > /dev/null
           TRANSCRIBE_DIR="$here/tcpp-prefix" CARGO_TARGET_DIR=target-reference cargo build --release -p ramble-engine --example clock --locked
 
-      - name: Instruction sets in the runtime's libraries
+      - name: How each build was configured
         run: |
           {
-            echo "### Runtime libraries"
+            echo "### Configuration"
             echo '```'
-            for variant in shipped fixed; do
+            for variant in shipped fixed portable; do
               out=$(find target-$variant/release/build -maxdepth 2 -type d -path '*/transcribe-cpp-sys-*/out' | head -1)
-              grep -h '^GGML_NATIVE:\|^GGML_AVX2:\|^GGML_AVX512:' "$out/build/CMakeCache.txt" | tr -d '\r' | tr '\n' ' '
+              echo "$variant:"
+              grep -h "Adding CPU backend variant\|transcribe: .*BLAS" "${out%/out}/output" | sed 's/^/  /' | cut -c1-200
+              grep -h '^GGML_NATIVE:\|^GGML_AVX2:\|^GGML_AVX512:\|^TRANSCRIBE_USE_SYSTEM_BLAS:' "$out/build/CMakeCache.txt" | tr -d '\r' | tr '\n' ' ' | sed 's/^/  /'
               echo
-              find "$out" -path "$out/build" -prune -o -type f \( -name '*.a' -o -name '*.lib' \) -print | sort | while read -r library; do
-                objdump -d --no-show-raw-insn "$library" | awk -v name="$variant ${library#"$out"/}" '
-                  /^ *[0-9a-f]+:/ { total++ } /%zmm/ { wide++ } /%k[0-7]/ { mask++ } /%ymm/ { avx2++ }
-                  /vfn?m(add|sub)[0-9]+[ps][sd]/ { fma++ }
-                  END { printf "%s: %d instructions, %d on AVX-512 registers, %d on mask registers, %d on 256-bit registers, %d fused multiply-adds\n", name, total, wide, mask, avx2, fma }'
-              done
+              manifest=$(find "$out" -path "$out/build" -prune -o -type f -name transcribe-link.json -print | head -1)
+              grep -h 'system_libs\|library_paths\|link_flags' "$manifest" | tr -d '\r' | sed 's/^ */  /'
             done
-            echo "--- the check the release workflow runs, on each build"
-            scripts/check-desktop-instruction-sets.sh target-shipped 2>&1 | tail -2 || echo "as shipped: the check FAILS"
-            scripts/check-desktop-instruction-sets.sh target-fixed 2>&1 | tail -2 || echo "fixed: the check FAILS"
+            echo "reference:"
+            (grep -h "Adding CPU backend variant\|transcribe: .*BLAS" tcpp-configure.log || true) | sed 's/^/  /' | cut -c1-200
+            if [ "$RUNNER_OS" = Linux ]; then
+              echo "--- shared libraries each program needs that have blas in the name"
+              for variant in shipped fixed portable reference; do
+                [ -f target-$variant/release/examples/clock ] || continue
+                echo "$variant: $(objdump -p target-$variant/release/examples/clock | awk '/NEEDED/ { print $2 }' | (grep -i blas || true) | tr '\n' ' ')"
+              done
+              library=$(readlink -f /usr/lib/x86_64-linux-gnu/libblas.so.3 || true)
+              echo "this image's libblas.so.3 is $library, from $(dpkg -S "$library" 2> /dev/null | cut -d: -f1)"
+            fi
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Instruction sets in the runtime's libraries, as shipped
+        run: |
+          {
+            echo "### Runtime libraries, as shipped"
+            echo '```'
+            out=$(find target-shipped/release/build -maxdepth 2 -type d -path '*/transcribe-cpp-sys-*/out' | head -1)
+            find "$out" -path "$out/build" -prune -o -type f \( -name '*.a' -o -name '*.lib' \) -print | sort | while read -r library; do
+              objdump -d --no-show-raw-insn "$library" | awk -v name="${library#"$out"/}" '
+                /^ *[0-9a-f]+:/ { total++ } /%zmm/ { wide++ } /%k[0-7]/ { mask++ } /%ymm/ { avx2++ }
+                END { printf "%s: %d instructions, %d on AVX-512 registers, %d on mask registers, %d on 256-bit registers\n", name, total, wide, mask, avx2 }'
+            done
+            echo "--- the release check on this build"
+            scripts/check-desktop-portability.sh target-shipped 2>&1 | tail -1 || echo "as shipped: the check FAILS"
+            echo "--- the release check on the build with only the first commit"
+            scripts/check-desktop-portability.sh target-fixed 2>&1 | tail -1 || echo "fixed: the check FAILS"
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
@@ -140,7 +161,8 @@ jobs:
             echo '```'
             for round in 1 2; do
               for model in q8 q4; do
-                for variant in shipped fixed reference; do
+                for variant in shipped fixed portable reference; do
+                  ls target-$variant/release/examples/clock* > /dev/null 2>&1 || { echo "round $round | $model | $variant | not built"; continue; }
                   target-$variant/release/examples/clock $model dots.wav 3 2 8 16 30 2> heard-$variant-$model.txt \
                     | sed "s/^/round $round | $model | $variant | /"
                 done
@@ -148,19 +170,24 @@ jobs:
             done
             echo "--- words"
             for model in q8 q4; do
-              if cmp -s heard-shipped-$model.txt heard-fixed-$model.txt && cmp -s heard-reference-$model.txt heard-fixed-$model.txt; then echo "$model: text identical in all three builds"; else echo "$model: text DIFFERENT"; fi
+              same=yes
+              for variant in shipped fixed reference; do
+                cmp -s heard-$variant-$model.txt heard-portable-$model.txt || same="no ($variant differs)"
+              done
+              echo "$model: text identical in all four builds: $same"
             done
-            cat heard-fixed-q8.txt
+            head -2 heard-portable-q8.txt
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Keep the two programs
+      - name: Keep the programs
         if: runner.os == 'Linux'
         run: |
           mkdir clocks
-          cp target-shipped/release/examples/clock clocks/clock-shipped
-          cp target-fixed/release/examples/clock clocks/clock-fixed
-          cp heard-fixed-q8.txt clocks/
+          for variant in shipped fixed portable; do
+            cp target-$variant/release/examples/clock clocks/clock-$variant
+          done
+          cp heard-portable-q8.txt built-on.txt clocks/
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: runner.os == 'Linux'
@@ -169,54 +196,30 @@ jobs:
           path: clocks/*
           if-no-files-found: error
 
-      # The published Windows executable has several hundred instructions on
-      # mask registers and none on AVX-512 registers. This finds which linked
-      # library they come from.
-      - name: Where the Windows app's mask-register instructions come from
-        if: runner.os == 'Windows'
-        run: |
-          CARGO_TARGET_DIR=target-fixed TRANSCRIBE_CMAKE_ARGS="$FIXED_ARGS" cargo build --release -p openramble-desktop --locked
-          count() { (objdump -d --no-show-raw-insn "$1" 2> /dev/null || true) | awk '/%zmm/ { wide++ } /%k[0-7]/ { mask++ } END { printf "%d %d", wide, mask }'; }
-          {
-            echo "### Windows app built here (not the installer), by linked library"
-            echo '```'
-            read -r wide mask <<< "$(count target-fixed/release/openramble-desktop.exe)"
-            echo "openramble-desktop.exe: $wide on AVX-512 registers, $mask on mask registers"
-            find target-fixed/release/deps -name '*.rlib' > archives.txt
-            find target-fixed/release/build -name '*.lib' >> archives.txt
-            for directory in "/c/Program Files/Microsoft Visual Studio"/*/*/VC/Tools/MSVC/*/lib/x64; do
-              for name in msvcprt.lib vcruntime.lib msvcrt.lib libcmt.lib libvcruntime.lib libcpmt.lib; do
-                if [ -f "$directory/$name" ]; then echo "$directory/$name" >> archives.txt; fi
-              done
-            done
-            while IFS= read -r archive; do
-              read -r wide mask <<< "$(count "$archive")"
-              if [ "$wide" != 0 ] || [ "$mask" != 0 ]; then echo "$wide on AVX-512 registers, $mask on mask registers: $archive"; fi
-            done < archives.txt
-            echo "archives read: $(wc -l < archives.txt)"
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: The release check passes on the build with both commits
+        run: scripts/check-desktop-portability.sh target-portable | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: The release check passes on the fixed build
-        run: scripts/check-desktop-instruction-sets.sh target-fixed
-
-  # QEMU's emulated processor has AVX2, FMA, F16C and BMI2 and no AVX-512, so
-  # an AVX-512 instruction stops the program exactly as it does on a real
+  # A stock Ubuntu 24.04 image, which has no BLAS library, and then QEMU's
+  # emulated processor, which has AVX2, FMA, F16C and BMI2 and no AVX-512, so
+  # an AVX-512 instruction stops a program exactly as it does on a real
   # computer without it. 24.04 because 22.04's QEMU cannot emulate AVX at all.
-  emulated:
-    name: Recognition without AVX-512 (emulated)
+  elsewhere:
+    name: Recognition on another computer
     needs: runtime
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: clocks
 
-      - name: Emulator
+      - name: Model and clip
         run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user
+          mkdir q8
+          curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
+          curl -L --fail --retry 3 -o dots.wav "$CLIP_URL"
+          echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
+          chmod +x clock-shipped clock-fixed clock-portable
           cat > features.c <<'EOF'
           #include <stdio.h>
           int main(void) {
@@ -228,51 +231,60 @@ jobs:
           }
           EOF
           gcc -O1 -o features features.c
-          {
-            echo "## Emulated processor"
-            echo '```'
-            qemu-x86_64 --version | head -1
-            echo "this machine: $(./features)"
-            echo "emulated:     $(qemu-x86_64 -cpu max ./features)"
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Model and clip
+      - name: On this machine as it comes, then emulated
         run: |
-          mkdir q8
-          curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
-          curl -L --fail --retry 3 -o dots.wav "$CLIP_URL"
-          echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
-
-      - name: Recognize a 2 s clip on the emulated processor
-        run: |
-          chmod +x clock-shipped clock-fixed
+          try() {
+            set +e
+            timeout 25m "$@" > out.txt 2> err.txt
+            code=$?
+            set -e
+            echo "  exit status $code"
+            (grep -h 'error while loading\|uncaught target signal\|Illegal' err.txt || true) | sed 's/^/  /' | cut -c1-200
+            (grep -h '^ *2 |' out.txt || true) | sed 's/^/  seconds, milliseconds, characters: /'
+            (grep -h '^heard 2 s' err.txt || true) | sed 's/^/  /'
+          }
           {
-            echo "### 2 s clip, the Q8_0 file, emulated processor"
+            echo "## Another computer"
             echo '```'
-            for variant in shipped fixed; do
-              set +e
-              timeout 60m qemu-x86_64 -cpu max ./clock-$variant q8 dots.wav 1 2 > out-$variant.txt 2> err-$variant.txt
-              code=$?
-              set -e
-              echo "$variant: exit status $code (132 is an illegal instruction)"
-              cat out-$variant.txt
-              tail -2 err-$variant.txt
-              echo "$code" > code-$variant.txt
+            echo "the programs were built on: $(tr '\n' ' ' < built-on.txt)"
+            echo "this machine: $(lscpu | grep 'Model name' | sed 's/.*: *//'); $(./features)"
+            echo "exit status 127 is a missing library, 132 an illegal instruction"
+            echo "--- no BLAS library installed (the image as it comes)"
+            for variant in shipped fixed portable; do
+              echo "$variant:"
+              try ./clock-$variant q8 dots.wav 1 2
+              if [ "$variant" = portable ]; then echo "$code" > code-portable-stock.txt; cp err.txt err-portable-stock.txt; fi
             done
-            echo "--- the same build on this machine's own processor heard"
-            head -1 heard-fixed-q8.txt
+            sudo apt-get update > /dev/null
+            sudo apt-get install -y libblas3 qemu-user > /dev/null
+            echo "--- after installing libblas3"
+            for variant in shipped fixed; do
+              echo "$variant:"
+              try ./clock-$variant q8 dots.wav 1 2
+            done
+            echo "--- on an emulated processor: $(qemu-x86_64 --version | head -1)"
+            echo "emulated: $(qemu-x86_64 -cpu max ./features)"
+            for variant in shipped fixed portable; do
+              echo "$variant:"
+              try qemu-x86_64 -cpu max ./clock-$variant q8 dots.wav 1 2
+              if [ "$variant" = portable ]; then echo "$code" > code-portable-emulated.txt; cp err.txt err-portable-emulated.txt; fi
+            done
+            echo "--- the build machine heard"
+            head -1 heard-portable-q8.txt
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
-          [ "$(cat code-fixed.txt)" = 0 ]
-          cmp <(grep '^heard 2 s' err-fixed.txt) <(grep '^heard 2 s' heard-fixed-q8.txt)
+          [ "$(cat code-portable-stock.txt)" = 0 ]
+          [ "$(cat code-portable-emulated.txt)" = 0 ]
+          cmp <(grep '^heard 2 s' err-portable-stock.txt) <(head -1 heard-portable-q8.txt)
+          cmp <(grep '^heard 2 s' err-portable-emulated.txt) <(head -1 heard-portable-q8.txt)
 
   # The packages themselves: the published 0.37.0 ones, and the ones a run of
   # desktop-release.yml built on the branch with the change.
   packages:
-    name: Packages, instruction sets
+    name: Packages
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 90
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -282,10 +294,11 @@ jobs:
           inspect() {
             label=$1; deb=$2; setup=$3
             rm -rf deb exe; mkdir deb exe
-            (cd deb && ar x "$deb" && mkdir root && tar -xf data.tar.* -C root)
+            (cd deb && ar x "$deb" && mkdir root && tar -xf data.tar.* -C root && tar -xf control.tar.*)
             (cd exe && 7z x -y "$setup" > /dev/null || true)
             echo "## $label"
             echo '```'
+            echo "the .deb asks for: $(grep '^Depends' deb/control | cut -d: -f2-)"
             for f in $(find deb/root -type f -size +1M) $(find exe -type f \( -name '*.exe' -o -name '*.dll' \) -size +1M); do
               objdump -f "$f" > /dev/null 2>&1 || continue
               objdump -d --no-show-raw-insn "$f" > listing.txt 2> /dev/null || true
@@ -295,6 +308,7 @@ jobs:
               ymm=$(grep -c '%ymm' listing.txt || true)
               fma=$(grep -cE 'vfn?m(add|sub)[0-9]+[ps][sd]' listing.txt || true)
               echo "$f: $total instructions; AVX-512 registers $zmm, mask registers $k; 256-bit registers $ymm; fused multiply-adds $fma"
+              echo "  shared libraries it needs with blas in the name: $(objdump -p "$f" | awk '/NEEDED|DLL Name/ { print $NF }' | (grep -i blas || true) | tr '\n' ' ')"
               # Where they are. The Linux executable keeps its function names.
               rm -f other.txt
               awk '
@@ -311,10 +325,10 @@ jobs:
                   printf "  everything else: %d, in %d functions\n", other, length(by)
                   for (f in by) printf "%d %s\n", by[f], f > "other.txt"
                 }' listing.txt
-              if [ -f other.txt ]; then sort -rn other.txt | head -12 | sed 's/^/    /'; fi
+              if [ -f other.txt ]; then sort -rn other.txt | head -6 | sed 's/^/    /'; fi
               # The Windows executable has no names. Show which instructions they are.
               echo "  mask-register instructions by name:"
-              (grep -E '%k[0-7]' listing.txt || true) | awk '{ print $2 }' | sort | uniq -c | sort -rn | head -12 | sed 's/^/   /'
+              (grep -E '%k[0-7]' listing.txt || true) | awk '{ print $2 }' | sort | uniq -c | sort -rn | head -8 | sed 's/^/   /'
             done
             echo '```'
           }
@@ -323,7 +337,6 @@ jobs:
           curl -L --fail --retry 3 -o before/pkg.deb "$base/OpenRamble_0.37.0_amd64.deb"
           curl -L --fail --retry 3 -o before/setup.exe "$base/OpenRamble_0.37.0_x64-setup.exe"
           inspect "Published desktop-v0.37.0" "$PWD/before/pkg.deb" "$PWD/before/setup.exe" | tee -a "$GITHUB_STEP_SUMMARY"
-          if [ -n "$PACKAGES_RUN" ]; then
-            gh run download "$PACKAGES_RUN" --repo "$GITHUB_REPOSITORY" --dir after
-            inspect "Built with the change (run $PACKAGES_RUN)" "$(ls "$PWD"/after/openramble-linux/*.deb)" "$(ls "$PWD"/after/openramble-windows/*-setup.exe)" | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
+          gh run watch "$PACKAGES_RUN" --repo "$GITHUB_REPOSITORY" --exit-status --interval 30 > /dev/null
+          gh run download "$PACKAGES_RUN" --repo "$GITHUB_REPOSITORY" --dir after
+          inspect "Built with the change (run $PACKAGES_RUN)" "$(ls "$PWD"/after/openramble-linux/*.deb)" "$(ls "$PWD"/after/openramble-windows/*-setup.exe)" | tee -a "$GITHUB_STEP_SUMMARY"
