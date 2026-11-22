@@ -47,10 +47,22 @@ The sources in `src/` compile as they are. There is nothing to configure.
   `ore_kernels_avx2.c` the flag `/arch:AVX2`; every other compiler reads the
   instruction set from the source.
 
-One binary runs on every processor of its architecture. At start the engine
-asks the processor what it has and picks a set of kernels: NEON with dot
-products on arm64, AVX2 with FMA on x86-64, or plain C. Every set gives the
-same bits.
+One binary runs on every processor of its architecture. When a session opens,
+the engine asks the processor what it has and picks a set of kernels.
+
+| Kernel set | Processors |
+|---|---|
+| `neon` | arm64 with dot products: every Apple silicon Mac, Arm servers and Windows on Arm since 2018 |
+| `avx512` | x86-64 with AVX-512 and VNNI: AMD from Zen 4, Intel from Ice Lake where present |
+| `avx2` | x86-64 with AVX2 and FMA: Intel from 2013, AMD from 2015 |
+| `sse` | x86-64 with SSSE3 and SSE4.1: Intel from 2008, AMD from 2011 |
+| `generic` | anything else, in plain C |
+
+`neon`, `avx512`, `avx2` and `generic` give the same bits, and the hosted
+machines confirm it: the same clips give byte-identical text, token times and
+confidences on Linux, Windows and macOS, on x86 and Arm. `sse` runs on
+processors without fused multiply-add, so its results can differ in the last
+bits; it gives the same text on the clips tested.
 
 ## Tools
 
@@ -62,16 +74,25 @@ same bits.
   of kernels agrees with the plain C one.
 - `tcpp-probe` is the same as `ore-cli` for transcribe.cpp, for comparisons.
   It is built only when CMake is given `-DORE_TCPP_PREFIX=`.
+- `selftest` checks every part that needs no model file: each kernel set
+  against the plain C one, the conversions, the thread pool, the file reader
+  and the mel front end. `ctest` runs it.
 - `scripts/check-symbols.sh libore.a` fails if the built library needs
   anything from the system beyond memory, math, one mapped file, a clock and
   threads.
+
+## Long audio
+
+Parakeet Ultra recognizes at most 30 seconds at a time. A longer clip is cut
+at pauses, found with the small speech detector the model file carries, and
+each piece is recognized on its own. The rule is the model's own, ported from
+transcribe.cpp, and the cuts fall on the same samples. A model without that
+detector (the v3 family) takes clips of at most two minutes.
 
 ## What it does not do
 
 - It has no accelerator path. On Apple silicon the Metal runtime the Mac app
   uses is faster.
-- It takes one clip at a time and does not cut long audio itself. The app
-  gives it clips of at most 30 seconds.
 - It does not stream partial results.
 
 The measurements, the design and what is unfinished are in
