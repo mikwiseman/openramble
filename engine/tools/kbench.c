@@ -8,10 +8,10 @@
 // time and a bit-for-bit comparison.
 #include "../src/ore_gguf.h"
 #include "../src/ore_kernels.h"
-
 #include "tools.h"
 
 #ifdef ORE_BENCH_GGML
+// ggml's internal routines, declared here as ggml-cpu/quants.h declares them.
 void quantize_row_q8_K(const float * x, void * y, int64_t k);
 void ggml_vec_dot_q4_K_q8_K(int n, float * s, size_t bs, const void * vx, size_t bx, const void * vy, size_t by, int nrc);
 #define GGML_Q8K_BYTES 292
@@ -40,6 +40,10 @@ static void compare(const char * what, const float * a, const float * b, size_t 
         if (v > maxv) maxv = v;
     }
     printf("    %-28s %zu of %zu differ, max |diff| %.3g (max |value| %.3g)\n", what, diff, n, maxd, maxv);
+    if (diff) {
+        printf("      first values: %.6g %.6g %.6g %.6g  against  %.6g %.6g %.6g %.6g\n", a[0], a[1], a[2], a[3], b[0],
+               b[1], b[2], b[3]);
+    }
 }
 
 typedef struct {
@@ -66,6 +70,8 @@ int main(int argc, char ** argv) {
     const ore_kernels * best     = ore_kernels_pick();
     if (best != &ore_kernels_generic) tables[n_tables++] = best;
     printf("frames %d, reps %d, best table: %s\n", T, reps, best->name);
+    const int ntb = ore_frame_blocks(T);
+    int       bad = 0;
 
     const job_t jobs[] = {
         { "enc.blocks.0.ff1.linear1.weight", "Q4_K 1024 -> 4096" },
@@ -93,65 +99,63 @@ int main(int argc, char ** argv) {
         float * y    = (float *) ore_alloc((size_t) T * n_out * sizeof(float));
 
         for (int ti = 0; ti < n_tables; ++ti) {
-            const ore_kernels * k   = tables[ti];
-            float *             out = ti == 0 ? yref : y;
+            const ore_kernels * k      = tables[ti];
+            float *             out    = ti == 0 ? yref : y;
             double              best_q = 1e30, best_m = 1e30;
             const int           nrep = ti == 0 ? 1 : reps;  // the reference is slow; once is enough
-            if (w.type == ORE_T_Q4_K) {
-                ore_q8k a = { 0 };
-                ore_q8k_reserve(&a, T, n_in);
+            if (w.type == ORE_T_Q4_K || w.type == ORE_T_Q8_0) {
+                const int q4 = w.type == ORE_T_Q4_K;
+                ore_qact  a  = { 0 };
+                ore_qact_reserve(&a, T, n_in, q4 ? 256 : 32);
                 for (int rep = 0; rep < nrep; ++rep) {
                     double t0 = now_ms();
-                    k->quantize_q8k(x, (size_t) n_in, 0, T, &a);
+                    if (q4) {
+                        k->quantize_q8k(x, (size_t) n_in, 0, ntb, &a);
+                    } else {
+                        k->quantize_q80(x, (size_t) n_in, 0, ntb, &a);
+                    }
                     double t1 = now_ms();
-                    k->gemm_q4k(w.data, n_in, 0, n_out, &a, out, (size_t) n_out);
+                    if (q4) {
+                        k->gemm_q4k(w.data, n_in, 0, n_out, &a, out, (size_t) n_out);
+                    } else {
+                        k->gemm_q80(w.data, n_in, 0, n_out, &a, out, (size_t) n_out);
+                    }
                     double t2 = now_ms();
                     if (t1 - t0 < best_q) best_q = t1 - t0;
                     if (t2 - t1 < best_m) best_m = t2 - t1;
                 }
-                ore_q8k_free(&a);
-            } else if (w.type == ORE_T_Q8_0) {
-                ore_q80 a = { 0 };
-                ore_q80_reserve(&a, T, n_in);
-                for (int rep = 0; rep < nrep; ++rep) {
-                    double t0 = now_ms();
-                    k->quantize_q80(x, (size_t) n_in, 0, T, &a);
-                    double t1 = now_ms();
-                    k->gemm_q80(w.data, n_in, 0, n_out, &a, out, (size_t) n_out);
-                    double t2 = now_ms();
-                    if (t1 - t0 < best_q) best_q = t1 - t0;
-                    if (t2 - t1 < best_m) best_m = t2 - t1;
-                }
-                ore_q80_free(&a);
+                ore_qact_free(&a);
             } else {
-                const size_t tp      = ((size_t) T + 15) & ~(size_t) 15;
-                float *      xt      = (float *) ore_alloc((size_t) n_in * tp * sizeof(float));
-                float *      scratch = (float *) ore_alloc((size_t) 4 * n_in * sizeof(float));
+                float * xp      = (float *) ore_alloc((size_t) ntb * n_in * ORE_FB * sizeof(float));
+                float * scratch = (float *) ore_alloc((size_t) 4 * n_in * sizeof(float));
                 for (int rep = 0; rep < nrep; ++rep) {
                     double t0 = now_ms();
-                    ore_transpose_pad(x, (size_t) n_in, T, n_in, xt, tp);
+                    ore_pack16(x, (size_t) n_in, T, n_in, 0, ntb, xp);
                     double t1 = now_ms();
-                    k->gemm_f32(w.data, w.type == ORE_T_F16, (size_t) n_in, n_in, 0, n_out, xt, tp, T, out,
-                                (size_t) n_out, scratch);
+                    k->gemm_f32(w.data, w.type == ORE_T_F16, (size_t) n_in, n_in, 0, n_out, xp, T, out, (size_t) n_out,
+                                scratch);
                     double t2 = now_ms();
                     if (t1 - t0 < best_q) best_q = t1 - t0;
                     if (t2 - t1 < best_m) best_m = t2 - t1;
                 }
-                ore_free(xt);
+                ore_free(xp);
                 ore_free(scratch);
             }
             printf("  %-8s prepare %7.2f ms, product %8.2f ms, %7.1f G multiply-adds/s\n", k->name, best_q, best_m,
                    macs / best_m / 1e6);
-            if (ti > 0) compare("against the reference:", yref, y, (size_t) T * n_out);
+            if (ti > 0) {
+                compare("against the reference:", yref, y, (size_t) T * n_out);
+                if (memcmp(yref, y, (size_t) T * n_out * sizeof(float)) != 0) bad = 1;
+            }
         }
 
 #ifdef ORE_BENCH_GGML
         if (w.type == ORE_T_Q4_K) {
-            const int    nb  = n_in / 256;
-            const size_t rs  = (size_t) nb * GGML_Q8K_BYTES;
-            uint8_t *    wd  = (uint8_t *) ore_alloc((size_t) T * rs);
-            float *      yg  = (float *) ore_alloc((size_t) T * n_out * sizeof(float));
-            const size_t nb01 = (size_t) nb * ORE_Q4K_BYTES;
+            const int    nb     = n_in / 256;
+            const size_t rs     = (size_t) nb * GGML_Q8K_BYTES;
+            uint8_t *    wd     = (uint8_t *) ore_alloc((size_t) T * rs);
+            float *      yg     = (float *) ore_alloc((size_t) T * n_out * sizeof(float));
+            const size_t nb01   = (size_t) nb * ORE_Q4K_BYTES;
             double       best_q = 1e30, best_m = 1e30;
             for (int rep = 0; rep < reps; ++rep) {
                 double t0 = now_ms();
@@ -161,7 +165,7 @@ int main(int argc, char ** argv) {
                 for (int iir1 = 0; iir1 < T; iir1 += 16) {
                     for (int iir0 = 0; iir0 < n_out; iir0 += 16) {
                         for (int ir1 = iir1; ir1 < iir1 + 16 && ir1 < T; ++ir1) {
-                            float tmp[16];
+                            float tmp[32];
                             for (int ir0 = iir0; ir0 < iir0 + 16 && ir0 < n_out; ++ir0) {
                                 ggml_vec_dot_q4_K_q8_K(n_in, &tmp[ir0 - iir0], 0, w.data + (size_t) ir0 * nb01, 0,
                                                        wd + (size_t) ir1 * rs, 0, 1);
@@ -187,5 +191,9 @@ int main(int argc, char ** argv) {
         ore_free(y);
     }
     ore_gguf_close(g);
+    if (bad) {
+        printf("FAILED: a table disagrees with the reference\n");
+        return 1;
+    }
     return 0;
 }

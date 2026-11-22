@@ -14,83 +14,106 @@
 #define ORE_DOTPROD __attribute__((target("+dotprod")))
 #endif
 
+// Frame f of block tb, columns [4 * k4, 4 * k4 + 4).
+ORE_INLINE int8_t * qcell(const ore_qact * a, int tb, int k4, int f) {
+    return a->q + (((size_t) tb * (size_t) (a->n / 4) + (size_t) k4) * ORE_FB + (size_t) f) * 4;
+}
+
 // ---- quantize ---------------------------------------------------------------
 
-static void quantize_q8k_neon(const float * x, size_t xstride, int t0, int t1, ore_q8k * out) {
-    const int n = out->n, nb = out->nb;
-    for (int t = t0; t < t1; ++t) {
-        const float * row = x + (size_t) t * xstride;
-        int8_t *      q   = out->q + (size_t) t * n;
-        for (int b = 0; b < nb; ++b) {
-            const float * p  = row + b * 256;
-            int8_t *      qb = q + b * 256;
-            float32x4_t   mx0 = vld1q_f32(p), mx1 = vld1q_f32(p + 4);
-            float32x4_t   mn0 = mx0, mn1 = mx1;
-            for (int j = 8; j < 256; j += 8) {
-                const float32x4_t a = vld1q_f32(p + j), c = vld1q_f32(p + j + 4);
-                mx0 = vmaxq_f32(mx0, a);
-                mn0 = vminq_f32(mn0, a);
-                mx1 = vmaxq_f32(mx1, c);
-                mn1 = vminq_f32(mn1, c);
-            }
-            const float vmax = vmaxvq_f32(vmaxq_f32(mx0, mx1));
-            const float vmin = vminvq_f32(vminq_f32(mn0, mn1));
-            const float mx   = (-vmin > vmax) ? vmin : vmax;
-            int16_t *   gs   = out->gs + ((size_t) b * out->rows_pad + t) * 8;
-            float *     d    = out->d + (size_t) b * out->rows_pad + t;
-            if (mx == 0.0f) {
-                memset(qb, 0, 256);
-                memset(gs, 0, 8 * sizeof(int16_t));
-                *d = 0.0f;
-                continue;
-            }
-            const float iscale = -127.f / mx;
-            for (int g = 0; g < 8; ++g) {
-                const float * pg = p + g * 32;
-                int8x16_t     qv[2];
-                for (int h = 0; h < 2; ++h) {
-                    const int32x4_t i0 = vcvtnq_s32_f32(vmulq_n_f32(vld1q_f32(pg + h * 16), iscale));
-                    const int32x4_t i1 = vcvtnq_s32_f32(vmulq_n_f32(vld1q_f32(pg + h * 16 + 4), iscale));
-                    const int32x4_t i2 = vcvtnq_s32_f32(vmulq_n_f32(vld1q_f32(pg + h * 16 + 8), iscale));
-                    const int32x4_t i3 = vcvtnq_s32_f32(vmulq_n_f32(vld1q_f32(pg + h * 16 + 12), iscale));
-                    const int16x8_t s0 = vcombine_s16(vqmovn_s32(i0), vqmovn_s32(i1));
-                    const int16x8_t s1 = vcombine_s16(vqmovn_s32(i2), vqmovn_s32(i3));
-                    qv[h]              = vcombine_s8(vqmovn_s16(s0), vqmovn_s16(s1));
-                    vst1q_s8(qb + g * 32 + h * 16, qv[h]);
+static void quantize_q8k_neon(const float * x, size_t xstride, int tb0, int tb1, ore_qact * out) {
+    const int nb = out->nb;
+    for (int tb = tb0; tb < tb1; ++tb) {
+        for (int f = 0; f < ORE_FB; ++f) {
+            const int     t   = tb * ORE_FB + f;
+            const float * row = x + (size_t) t * xstride;
+            for (int b = 0; b < nb; ++b) {
+                int8_t  tmp[256];
+                int32_t sums[8] = { 0 };
+                float   d       = 0.0f;
+                float   mx      = 0.0f;
+                if (t < out->rows) {
+                    const float * p   = row + b * 256;
+                    float32x4_t   mx0 = vld1q_f32(p), mx1 = vld1q_f32(p + 4);
+                    float32x4_t   mn0 = mx0, mn1 = mx1;
+                    for (int j = 8; j < 256; j += 8) {
+                        const float32x4_t a = vld1q_f32(p + j), c = vld1q_f32(p + j + 4);
+                        mx0 = vmaxq_f32(mx0, a);
+                        mn0 = vminq_f32(mn0, a);
+                        mx1 = vmaxq_f32(mx1, c);
+                        mn1 = vminq_f32(mn1, c);
+                    }
+                    const float vmax = vmaxvq_f32(vmaxq_f32(mx0, mx1));
+                    const float vmin = vminvq_f32(vminq_f32(mn0, mn1));
+                    mx               = (-vmin > vmax) ? vmin : vmax;
                 }
-                gs[g] = vaddvq_s16(vaddq_s16(vpaddlq_s8(qv[0]), vpaddlq_s8(qv[1])));
+                if (mx != 0.0f) {
+                    const float * p      = row + b * 256;
+                    const float   iscale = -127.f / mx;
+                    for (int g = 0; g < 8; ++g) {
+                        const float * pg = p + g * 32;
+                        int8x16_t     qv[2];
+                        for (int h = 0; h < 2; ++h) {
+                            const int32x4_t i0 = vcvtnq_s32_f32(vmulq_n_f32(vld1q_f32(pg + h * 16), iscale));
+                            const int32x4_t i1 = vcvtnq_s32_f32(vmulq_n_f32(vld1q_f32(pg + h * 16 + 4), iscale));
+                            const int32x4_t i2 = vcvtnq_s32_f32(vmulq_n_f32(vld1q_f32(pg + h * 16 + 8), iscale));
+                            const int32x4_t i3 = vcvtnq_s32_f32(vmulq_n_f32(vld1q_f32(pg + h * 16 + 12), iscale));
+                            const int16x8_t s0 = vcombine_s16(vqmovn_s32(i0), vqmovn_s32(i1));
+                            const int16x8_t s1 = vcombine_s16(vqmovn_s32(i2), vqmovn_s32(i3));
+                            qv[h]              = vcombine_s8(vqmovn_s16(s0), vqmovn_s16(s1));
+                            vst1q_s8(tmp + g * 32 + h * 16, qv[h]);
+                        }
+                        sums[g] = vaddvq_s16(vaddq_s16(vpaddlq_s8(qv[0]), vpaddlq_s8(qv[1])));
+                    }
+                    d = 1.0f / iscale;
+                } else {
+                    memset(tmp, 0, sizeof tmp);
+                }
+                int8_t * dst = qcell(out, tb, b * 64, f);
+                for (int c = 0; c < 64; ++c) memcpy(dst + (size_t) c * 64, tmp + 4 * c, 4);
+                out->d[((size_t) tb * nb + b) * ORE_FB + f] = d;
+                for (int g = 0; g < 8; ++g) out->gs[(((size_t) tb * nb + b) * 8 + g) * ORE_FB + f] = sums[g];
             }
-            *d = 1.0f / iscale;
         }
     }
 }
 
-static void quantize_q80_neon(const float * x, size_t xstride, int t0, int t1, ore_q80 * out) {
-    const int n = out->n, nb = out->nb;
-    for (int t = t0; t < t1; ++t) {
-        const float * row = x + (size_t) t * xstride;
-        int8_t *      q   = out->q + (size_t) t * n;
-        float *       d   = out->d + (size_t) t * nb;
-        for (int b = 0; b < nb; ++b) {
-            const float * p = row + b * 32;
-            float32x4_t   v[8];
-            float32x4_t   am = vdupq_n_f32(0.0f);
-            for (int j = 0; j < 8; ++j) {
-                v[j] = vld1q_f32(p + 4 * j);
-                am   = vmaxq_f32(am, vabsq_f32(v[j]));
-            }
-            const float amax = vmaxvq_f32(am);
-            const float dd   = amax / 127.0f;
-            const float id   = dd != 0.0f ? 1.0f / dd : 0.0f;
-            d[b]             = vgetq_lane_f32(vcvt_f32_f16(vcvt_f16_f32(vdupq_n_f32(dd))), 0);
-            for (int h = 0; h < 2; ++h) {
-                const int32x4_t i0 = vcvtnq_s32_f32(vmulq_n_f32(v[h * 4 + 0], id));
-                const int32x4_t i1 = vcvtnq_s32_f32(vmulq_n_f32(v[h * 4 + 1], id));
-                const int32x4_t i2 = vcvtnq_s32_f32(vmulq_n_f32(v[h * 4 + 2], id));
-                const int32x4_t i3 = vcvtnq_s32_f32(vmulq_n_f32(v[h * 4 + 3], id));
-                const int16x8_t s0 = vcombine_s16(vqmovn_s32(i0), vqmovn_s32(i1));
-                const int16x8_t s1 = vcombine_s16(vqmovn_s32(i2), vqmovn_s32(i3));
-                vst1q_s8(q + b * 32 + h * 16, vcombine_s8(vqmovn_s16(s0), vqmovn_s16(s1)));
+static void quantize_q80_neon(const float * x, size_t xstride, int tb0, int tb1, ore_qact * out) {
+    const int nb = out->nb;
+    for (int tb = tb0; tb < tb1; ++tb) {
+        for (int f = 0; f < ORE_FB; ++f) {
+            const int     t   = tb * ORE_FB + f;
+            const float * row = x + (size_t) t * xstride;
+            for (int b = 0; b < nb; ++b) {
+                int8_t tmp[32];
+                float  d = 0.0f;
+                if (t < out->rows) {
+                    const float * p = row + b * 32;
+                    float32x4_t   v[8];
+                    float32x4_t   am = vdupq_n_f32(0.0f);
+                    for (int j = 0; j < 8; ++j) {
+                        v[j] = vld1q_f32(p + 4 * j);
+                        am   = vmaxq_f32(am, vabsq_f32(v[j]));
+                    }
+                    const float amax = vmaxvq_f32(am);
+                    const float dd   = amax / 127.0f;
+                    const float id   = dd != 0.0f ? 1.0f / dd : 0.0f;
+                    d                = vgetq_lane_f32(vcvt_f32_f16(vcvt_f16_f32(vdupq_n_f32(dd))), 0);
+                    for (int h = 0; h < 2; ++h) {
+                        const int32x4_t i0 = vcvtnq_s32_f32(vmulq_n_f32(v[h * 4 + 0], id));
+                        const int32x4_t i1 = vcvtnq_s32_f32(vmulq_n_f32(v[h * 4 + 1], id));
+                        const int32x4_t i2 = vcvtnq_s32_f32(vmulq_n_f32(v[h * 4 + 2], id));
+                        const int32x4_t i3 = vcvtnq_s32_f32(vmulq_n_f32(v[h * 4 + 3], id));
+                        const int16x8_t s0 = vcombine_s16(vqmovn_s32(i0), vqmovn_s32(i1));
+                        const int16x8_t s1 = vcombine_s16(vqmovn_s32(i2), vqmovn_s32(i3));
+                        vst1q_s8(tmp + h * 16, vcombine_s8(vqmovn_s16(s0), vqmovn_s16(s1)));
+                    }
+                } else {
+                    memset(tmp, 0, sizeof tmp);
+                }
+                int8_t * dst = qcell(out, tb, b * 8, f);
+                for (int c = 0; c < 8; ++c) memcpy(dst + (size_t) c * 64, tmp + 4 * c, 4);
+                out->d[((size_t) tb * nb + b) * ORE_FB + f] = d;
             }
         }
     }
@@ -98,104 +121,88 @@ static void quantize_q80_neon(const float * x, size_t xstride, int t0, int t1, o
 
 // ---- Q4_K product -----------------------------------------------------------
 
-// Two weight rows against four frames at a time. Each weight group of 32 is
-// unpacked once and used for all four frames.
-ORE_DOTPROD
-static void gemm_q4k_neon(const uint8_t * w, int n_in, int r0, int r1, const ore_q8k * x, float * y, size_t ystride) {
-    const int        nb = n_in / 256;
-    const size_t     rb = (size_t) nb * ORE_Q4K_BYTES;
-    const int        T  = x->rows;
-    const int        n  = x->n;
-    const size_t     tp = (size_t) x->rows_pad;
-    const uint8x16_t m4 = vdupq_n_u8(0x0f);
-    const int32x4_t  z  = vdupq_n_s32(0);
+// One 16-frame block against two weight rows, `nv` vectors of four frames.
+// Four weights are broadcast and dotted with four columns of every frame, so
+// each lane of the accumulator is one frame's sum; the group scale is applied
+// once per group, and nothing is ever added across a register.
+ORE_DOTPROD ORE_INLINE void q4k_block_neon(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+                                           const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G,
+                                           const float * D, float * o0, float * o1, const int nv) {
+    float32x4_t s0[4], s1[4];
+    for (int v = 0; v < 4; ++v) s0[v] = s1[v] = vdupq_n_f32(0.0f);
+    for (int b = 0; b < nb; ++b) {
+        int32x4_t S0[4], S1[4], M0[4], M1[4];
+        for (int v = 0; v < 4; ++v) S0[v] = S1[v] = M0[v] = M1[v] = vdupq_n_s32(0);
+        for (int g = 0; g < 8; ++g) {
+            int32x4_t a0[4], a1[4];
+            for (int v = 0; v < 4; ++v) a0[v] = a1[v] = vdupq_n_s32(0);
+            const uint32_t * p0 = u0 + b * 64 + g * 8;
+            const uint32_t * p1 = u1 + b * 64 + g * 8;
+            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            for (int c = 0; c < 8; ++c) {
+                const int8x16_t wb0 = vreinterpretq_s8_u32(vld1q_dup_u32(p0 + c));
+                const int8x16_t wb1 = vreinterpretq_s8_u32(vld1q_dup_u32(p1 + c));
+                for (int v = 0; v < nv; ++v) {
+                    const int8x16_t xv = vld1q_s8(Ag + c * 64 + v * 16);
+                    a0[v]              = vdotq_s32(a0[v], wb0, xv);
+                    a1[v]              = vdotq_s32(a1[v], wb1, xv);
+                }
+            }
+            const int32x4_t sc0 = vld1q_dup_s32(&h0[b].sc[g]), sc1 = vld1q_dup_s32(&h1[b].sc[g]);
+            const int32x4_t m0 = vld1q_dup_s32(&h0[b].mn[g]), m1 = vld1q_dup_s32(&h1[b].mn[g]);
+            for (int v = 0; v < nv; ++v) {
+                S0[v] = vmlaq_s32(S0[v], a0[v], sc0);
+                S1[v] = vmlaq_s32(S1[v], a1[v], sc1);
+                const int32x4_t gv = vld1q_s32(G + ((size_t) b * 8 + g) * ORE_FB + v * 4);
+                M0[v]              = vmlaq_s32(M0[v], gv, m0);
+                M1[v]              = vmlaq_s32(M1[v], gv, m1);
+            }
+        }
+        for (int v = 0; v < nv; ++v) {
+            const float32x4_t dx = vld1q_f32(D + (size_t) b * ORE_FB + v * 4);
+            s0[v] = vfmsq_f32(s0[v], vmulq_n_f32(dx, h0[b].dmin), vcvtq_f32_s32(M0[v]));
+            s0[v] = vfmaq_f32(s0[v], vmulq_n_f32(dx, h0[b].d), vcvtq_f32_s32(S0[v]));
+            s1[v] = vfmsq_f32(s1[v], vmulq_n_f32(dx, h1[b].dmin), vcvtq_f32_s32(M1[v]));
+            s1[v] = vfmaq_f32(s1[v], vmulq_n_f32(dx, h1[b].d), vcvtq_f32_s32(S1[v]));
+        }
+    }
+    for (int v = 0; v < nv; ++v) {
+        vst1q_f32(o0 + v * 4, s0[v]);
+        vst1q_f32(o1 + v * 4, s1[v]);
+    }
+}
 
+ORE_DOTPROD
+static void gemm_q4k_neon(const uint8_t * w, int n_in, int r0, int r1, const ore_qact * x, float * y, size_t ystride) {
+    const int    nb = n_in / 256;
+    const size_t rb = (size_t) nb * ORE_Q4K_BYTES;
+    const size_t n4 = (size_t) n_in / 4;
     for (int r = r0; r < r1; r += 2) {
         const int       pair = r + 1 < r1;
         const uint8_t * w0   = w + (size_t) r * rb;
         const uint8_t * w1   = pair ? w0 + rb : w0;
         ore_q4k_hdr     h0[ORE_Q4K_MAX_BLOCKS], h1[ORE_Q4K_MAX_BLOCKS];
+        uint32_t        u0[ORE_Q4K_MAX_COLS / 4], u1[ORE_Q4K_MAX_COLS / 4];
         ore_q4k_decode_row(w0, nb, h0);
         ore_q4k_decode_row(w1, nb, h1);
-        for (int t = 0; t < T; t += 4) {
-            const int8_t * a0   = x->q + (size_t) t * n;
-            const int8_t * a1   = a0 + n;
-            const int8_t * a2   = a1 + n;
-            const int8_t * a3   = a2 + n;
-            float32x4_t    sum0 = vdupq_n_f32(0.0f), sum1 = vdupq_n_f32(0.0f);
-            for (int b = 0; b < nb; ++b) {
-                const uint8_t * q0 = w0 + (size_t) b * ORE_Q4K_BYTES + 16;
-                const uint8_t * q1 = w1 + (size_t) b * ORE_Q4K_BYTES + 16;
-                const int8_t *  p0 = a0 + b * 256;
-                const int8_t *  p1 = a1 + b * 256;
-                const int8_t *  p2 = a2 + b * 256;
-                const int8_t *  p3 = a3 + b * 256;
-                int32x4_t       S0 = z, S1 = z;  // one lane per frame
-                for (int g = 0; g < 4; ++g) {
-                    const uint8x16_t x0a = vld1q_u8(q0 + 32 * g), x0b = vld1q_u8(q0 + 32 * g + 16);
-                    const uint8x16_t x1a = vld1q_u8(q1 + 32 * g), x1b = vld1q_u8(q1 + 32 * g + 16);
-                    for (int hi = 0; hi < 2; ++hi) {
-                        int8x16_t wa0, wb0, wa1, wb1;
-                        if (hi == 0) {
-                            wa0 = vreinterpretq_s8_u8(vandq_u8(x0a, m4));
-                            wb0 = vreinterpretq_s8_u8(vandq_u8(x0b, m4));
-                            wa1 = vreinterpretq_s8_u8(vandq_u8(x1a, m4));
-                            wb1 = vreinterpretq_s8_u8(vandq_u8(x1b, m4));
-                        } else {
-                            wa0 = vreinterpretq_s8_u8(vshrq_n_u8(x0a, 4));
-                            wb0 = vreinterpretq_s8_u8(vshrq_n_u8(x0b, 4));
-                            wa1 = vreinterpretq_s8_u8(vshrq_n_u8(x1a, 4));
-                            wb1 = vreinterpretq_s8_u8(vshrq_n_u8(x1b, 4));
-                        }
-                        const int       grp = 2 * g + hi;
-                        const int       off = grp * 32;
-                        // One dot product per (row, frame): four lanes each.
-                        // Adding lanes pairwise gives one int per frame, and
-                        // the group scale then costs one multiply per row
-                        // instead of one per frame.
-                        const int8x16_t ya0 = vld1q_s8(p0 + off), yb0 = vld1q_s8(p0 + off + 16);
-                        const int8x16_t ya1 = vld1q_s8(p1 + off), yb1 = vld1q_s8(p1 + off + 16);
-                        const int8x16_t ya2 = vld1q_s8(p2 + off), yb2 = vld1q_s8(p2 + off + 16);
-                        const int8x16_t ya3 = vld1q_s8(p3 + off), yb3 = vld1q_s8(p3 + off + 16);
-                        const int32x4_t d00 = vdotq_s32(vdotq_s32(z, wa0, ya0), wb0, yb0);
-                        const int32x4_t d01 = vdotq_s32(vdotq_s32(z, wa0, ya1), wb0, yb1);
-                        const int32x4_t d02 = vdotq_s32(vdotq_s32(z, wa0, ya2), wb0, yb2);
-                        const int32x4_t d03 = vdotq_s32(vdotq_s32(z, wa0, ya3), wb0, yb3);
-                        const int32x4_t d10 = vdotq_s32(vdotq_s32(z, wa1, ya0), wb1, yb0);
-                        const int32x4_t d11 = vdotq_s32(vdotq_s32(z, wa1, ya1), wb1, yb1);
-                        const int32x4_t d12 = vdotq_s32(vdotq_s32(z, wa1, ya2), wb1, yb2);
-                        const int32x4_t d13 = vdotq_s32(vdotq_s32(z, wa1, ya3), wb1, yb3);
-                        S0 = vmlaq_s32(S0, vpaddq_s32(vpaddq_s32(d00, d01), vpaddq_s32(d02, d03)),
-                                       vld1q_dup_s32(&h0[b].sc[grp]));
-                        S1 = vmlaq_s32(S1, vpaddq_s32(vpaddq_s32(d10, d11), vpaddq_s32(d12, d13)),
-                                       vld1q_dup_s32(&h1[b].sc[grp]));
-                    }
-                }
-                // Mins against the frames' group sums.
-                const int16_t * gs  = x->gs + ((size_t) b * tp + t) * 8;
-                const int16x8_t g0  = vld1q_s16(gs), g1 = vld1q_s16(gs + 8);
-                const int16x8_t g2  = vld1q_s16(gs + 16), g3 = vld1q_s16(gs + 24);
-                const int16x8_t m0v = vld1q_s16(h0[b].mn);
-                const int16x8_t m1v = vld1q_s16(h1[b].mn);
-#define ORE_MINDOT(gv, mv) vmlal_high_s16(vmull_s16(vget_low_s16(gv), vget_low_s16(mv)), gv, mv)
-                const int32x4_t M0 = vpaddq_s32(vpaddq_s32(ORE_MINDOT(g0, m0v), ORE_MINDOT(g1, m0v)),
-                                                vpaddq_s32(ORE_MINDOT(g2, m0v), ORE_MINDOT(g3, m0v)));
-                const int32x4_t M1 = vpaddq_s32(vpaddq_s32(ORE_MINDOT(g0, m1v), ORE_MINDOT(g1, m1v)),
-                                                vpaddq_s32(ORE_MINDOT(g2, m1v), ORE_MINDOT(g3, m1v)));
-#undef ORE_MINDOT
-                const float32x4_t dx = vld1q_f32(x->d + (size_t) b * tp + t);
-                sum0 = vfmsq_f32(sum0, vmulq_n_f32(dx, h0[b].dmin), vcvtq_f32_s32(M0));
-                sum0 = vfmaq_f32(sum0, vmulq_n_f32(dx, h0[b].d), vcvtq_f32_s32(S0));
-                sum1 = vfmsq_f32(sum1, vmulq_n_f32(dx, h1[b].dmin), vcvtq_f32_s32(M1));
-                sum1 = vfmaq_f32(sum1, vmulq_n_f32(dx, h1[b].d), vcvtq_f32_s32(S1));
+        ore_q4k_unpack_row(w0, nb, (uint8_t *) u0);
+        ore_q4k_unpack_row(w1, nb, (uint8_t *) u1);
+        for (int tb = 0; tb < x->ntb; ++tb) {
+            const int       valid = ORE_MIN(ORE_FB, x->rows - tb * ORE_FB);
+            const int8_t *  A     = x->q + (size_t) tb * n4 * 64;
+            const int32_t * G     = x->gs + (size_t) tb * nb * 8 * ORE_FB;
+            const float *   D     = x->d + (size_t) tb * nb * ORE_FB;
+            float           o0[16], o1[16];
+            switch ((valid + 3) / 4) {
+                case 1: q4k_block_neon(u0, u1, h0, h1, nb, A, G, D, o0, o1, 1); break;
+                case 2: q4k_block_neon(u0, u1, h0, h1, nb, A, G, D, o0, o1, 2); break;
+                case 3: q4k_block_neon(u0, u1, h0, h1, nb, A, G, D, o0, o1, 3); break;
+                default: q4k_block_neon(u0, u1, h0, h1, nb, A, G, D, o0, o1, 4); break;
             }
-            float s0[4], s1[4];
-            vst1q_f32(s0, sum0);
-            vst1q_f32(s1, sum1);
-            const int tn = ORE_MIN(4, T - t);
-            for (int c = 0; c < tn; ++c) {
-                y[(size_t) (t + c) * ystride + r] = s0[c];
-                if (pair) y[(size_t) (t + c) * ystride + r + 1] = s1[c];
+            float * yr = y + (size_t) tb * ORE_FB * ystride + r;
+            for (int f = 0; f < valid; ++f) {
+                yr[(size_t) f * ystride] = o0[f];
+                if (pair) yr[(size_t) f * ystride + 1] = o1[f];
             }
         }
     }
@@ -204,41 +211,57 @@ static void gemm_q4k_neon(const uint8_t * w, int n_in, int r0, int r1, const ore
 // ---- Q8_0 product -----------------------------------------------------------
 
 ORE_DOTPROD
-static void gemm_q80_neon(const uint8_t * w, int n_in, int r0, int r1, const ore_q80 * x, float * y, size_t ystride) {
-    const int       nb = n_in / 32;
-    const size_t    rb = (size_t) nb * ORE_Q80_BYTES;
-    const int       T  = x->rows;
-    const int32x4_t z  = vdupq_n_s32(0);
+static void gemm_q80_neon(const uint8_t * w, int n_in, int r0, int r1, const ore_qact * x, float * y, size_t ystride) {
+    const int    nb = n_in / 32;
+    const size_t rb = (size_t) nb * ORE_Q80_BYTES;
+    const size_t n4 = (size_t) n_in / 4;
     for (int r = r0; r < r1; r += 2) {
         const int       pair = r + 1 < r1;
         const uint8_t * w0   = w + (size_t) r * rb;
         const uint8_t * w1   = pair ? w0 + rb : w0;
-        for (int t = 0; t < T; t += 2) {
-            const int      two = t + 1 < T;
-            const int8_t * a0  = x->q + (size_t) t * x->n;
-            const int8_t * a1  = a0 + x->n;  // a padding row when !two
-            const float *  d0  = x->d + (size_t) t * nb;
-            const float *  d1  = d0 + nb;
-            float32x4_t    c00 = vdupq_n_f32(0), c01 = c00, c10 = c00, c11 = c00;
+        // The rows' values and scales, pulled out of their 34-byte blocks.
+        uint32_t u0[ORE_Q4K_MAX_COLS / 4], u1[ORE_Q4K_MAX_COLS / 4];
+        float    dw0[ORE_Q4K_MAX_COLS / 32], dw1[ORE_Q4K_MAX_COLS / 32];
+        for (int b = 0; b < nb; ++b) {
+            memcpy((uint8_t *) u0 + b * 32, w0 + (size_t) b * ORE_Q80_BYTES + 2, 32);
+            memcpy((uint8_t *) u1 + b * 32, w1 + (size_t) b * ORE_Q80_BYTES + 2, 32);
+            dw0[b] = ore_f16_to_f32(ore_rd16(w0 + (size_t) b * ORE_Q80_BYTES));
+            dw1[b] = ore_f16_to_f32(ore_rd16(w1 + (size_t) b * ORE_Q80_BYTES));
+        }
+        for (int tb = 0; tb < x->ntb; ++tb) {
+            const int      valid = ORE_MIN(ORE_FB, x->rows - tb * ORE_FB);
+            const int8_t * A     = x->q + (size_t) tb * n4 * 64;
+            const float *  D     = x->d + (size_t) tb * nb * ORE_FB;
+            float32x4_t    s0[4], s1[4];
+            for (int v = 0; v < 4; ++v) s0[v] = s1[v] = vdupq_n_f32(0.0f);
             for (int b = 0; b < nb; ++b) {
-                const uint8_t * k0  = w0 + (size_t) b * ORE_Q80_BYTES;
-                const uint8_t * k1  = w1 + (size_t) b * ORE_Q80_BYTES;
-                const float     dw0 = ore_f16_to_f32(ore_rd16(k0));
-                const float     dw1 = ore_f16_to_f32(ore_rd16(k1));
-                const int8x16_t wa0 = vld1q_s8((const int8_t *) k0 + 2), wb0 = vld1q_s8((const int8_t *) k0 + 18);
-                const int8x16_t wa1 = vld1q_s8((const int8_t *) k1 + 2), wb1 = vld1q_s8((const int8_t *) k1 + 18);
-                const int8x16_t ya0 = vld1q_s8(a0 + b * 32), yb0 = vld1q_s8(a0 + b * 32 + 16);
-                const int8x16_t ya1 = vld1q_s8(a1 + b * 32), yb1 = vld1q_s8(a1 + b * 32 + 16);
-                c00 = vfmaq_n_f32(c00, vcvtq_f32_s32(vdotq_s32(vdotq_s32(z, wa0, ya0), wb0, yb0)), dw0 * d0[b]);
-                c01 = vfmaq_n_f32(c01, vcvtq_f32_s32(vdotq_s32(vdotq_s32(z, wa0, ya1), wb0, yb1)), dw0 * d1[b]);
-                c10 = vfmaq_n_f32(c10, vcvtq_f32_s32(vdotq_s32(vdotq_s32(z, wa1, ya0), wb1, yb0)), dw1 * d0[b]);
-                c11 = vfmaq_n_f32(c11, vcvtq_f32_s32(vdotq_s32(vdotq_s32(z, wa1, ya1), wb1, yb1)), dw1 * d1[b]);
+                int32x4_t a0[4], a1[4];
+                for (int v = 0; v < 4; ++v) a0[v] = a1[v] = vdupq_n_s32(0);
+                for (int c = 0; c < 8; ++c) {
+                    const int8x16_t wb0 = vreinterpretq_s8_u32(vld1q_dup_u32(u0 + b * 8 + c));
+                    const int8x16_t wb1 = vreinterpretq_s8_u32(vld1q_dup_u32(u1 + b * 8 + c));
+                    const int8_t *  Ac  = A + ((size_t) b * 8 + c) * 64;
+                    for (int v = 0; v < 4; ++v) {
+                        const int8x16_t xv = vld1q_s8(Ac + v * 16);
+                        a0[v]              = vdotq_s32(a0[v], wb0, xv);
+                        a1[v]              = vdotq_s32(a1[v], wb1, xv);
+                    }
+                }
+                for (int v = 0; v < 4; ++v) {
+                    const float32x4_t dx = vld1q_f32(D + (size_t) b * ORE_FB + v * 4);
+                    s0[v]                = vfmaq_f32(s0[v], vcvtq_f32_s32(a0[v]), vmulq_n_f32(dx, dw0[b]));
+                    s1[v]                = vfmaq_f32(s1[v], vcvtq_f32_s32(a1[v]), vmulq_n_f32(dx, dw1[b]));
+                }
             }
-            y[(size_t) t * ystride + r] = vaddvq_f32(c00);
-            if (two) y[(size_t) (t + 1) * ystride + r] = vaddvq_f32(c01);
-            if (pair) {
-                y[(size_t) t * ystride + r + 1] = vaddvq_f32(c10);
-                if (two) y[(size_t) (t + 1) * ystride + r + 1] = vaddvq_f32(c11);
+            float o0[16], o1[16];
+            for (int v = 0; v < 4; ++v) {
+                vst1q_f32(o0 + v * 4, s0[v]);
+                vst1q_f32(o1 + v * 4, s1[v]);
+            }
+            float * yr = y + (size_t) tb * ORE_FB * ystride + r;
+            for (int f = 0; f < valid; ++f) {
+                yr[(size_t) f * ystride] = o0[f];
+                if (pair) yr[(size_t) f * ystride + 1] = o1[f];
             }
         }
     }
@@ -246,11 +269,12 @@ static void gemm_q80_neon(const uint8_t * w, int n_in, int r0, int r1, const ore
 
 // ---- float product ----------------------------------------------------------
 
-// Four weight rows against sixteen frames: each weight is broadcast and
-// multiplied into four vectors of frames, so every output accumulates in order
-// of k.
-static void gemm_f32_neon(const void * w, int w_is_f16, size_t wstride, int n_in, int r0, int r1, const float * xt,
-                          size_t xt_stride, int rows, float * y, size_t ystride, float * scratch) {
+// Four weight rows against a block of sixteen frames: each weight is broadcast
+// and multiplied into four vectors of frames, so every output accumulates in
+// order of k.
+static void gemm_f32_neon(const void * w, int w_is_f16, size_t wstride, int n_in, int r0, int r1, const float * xp,
+                          int rows, float * y, size_t ystride, float * scratch) {
+    const int ntb = ore_frame_blocks(rows);
     for (int r = r0; r < r1; r += 4) {
         const int     nr = ORE_MIN(4, r1 - r);
         const float * wr[4];
@@ -269,14 +293,14 @@ static void gemm_f32_neon(const void * w, int w_is_f16, size_t wstride, int n_in
                 wr[i] = (const float *) w + (size_t) ri * wstride;
             }
         }
-        for (int t = 0; t < rows; t += 16) {
+        for (int tb = 0; tb < ntb; ++tb) {
+            const float * xb = xp + (size_t) tb * n_in * ORE_FB;
             float32x4_t   c[4][4];
-            const float * xp = xt + t;
             for (int i = 0; i < 4; ++i) {
                 for (int j = 0; j < 4; ++j) c[i][j] = vdupq_n_f32(0.0f);
             }
             for (int k = 0; k < n_in; ++k) {
-                const float *     xk = xp + (size_t) k * xt_stride;
+                const float *     xk = xb + (size_t) k * ORE_FB;
                 const float32x4_t x0 = vld1q_f32(xk), x1 = vld1q_f32(xk + 4);
                 const float32x4_t x2 = vld1q_f32(xk + 8), x3 = vld1q_f32(xk + 12);
                 for (int i = 0; i < 4; ++i) {
@@ -287,14 +311,15 @@ static void gemm_f32_neon(const void * w, int w_is_f16, size_t wstride, int n_in
                     c[i][3]              = vfmaq_f32(c[i][3], wv, x3);
                 }
             }
-            const int tn = ORE_MIN(16, rows - t);
+            const int valid = ORE_MIN(ORE_FB, rows - tb * ORE_FB);
             for (int i = 0; i < nr; ++i) {
                 float out[16];
                 vst1q_f32(out, c[i][0]);
                 vst1q_f32(out + 4, c[i][1]);
                 vst1q_f32(out + 8, c[i][2]);
                 vst1q_f32(out + 12, c[i][3]);
-                for (int j = 0; j < tn; ++j) y[(size_t) (t + j) * ystride + r + i] = out[j];
+                float * yr = y + (size_t) tb * ORE_FB * ystride + r + i;
+                for (int f = 0; f < valid; ++f) yr[(size_t) f * ystride] = out[f];
             }
         }
     }

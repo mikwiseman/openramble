@@ -152,16 +152,19 @@ ORE_INLINE void ore_q4k_scales(const uint8_t * blk, uint8_t sc[8], uint8_t mn[8]
 }
 
 // A Q4_K block's header, decoded once per weight row and reused for every
-// frame: group scales, group mins, and the two block scales as floats.
+// frame. The scale and min are stored in the shape a 16-bit multiply-add wants:
+// sc2 holds the scale in both halves of a 32-bit lane, mn in the low half only.
 typedef struct {
     int32_t sc[8];
-    int16_t mn[8];
+    int32_t sc2[8];
+    int32_t mn[8];
     float   d;
     float   dmin;
 } ore_q4k_hdr;
 
 // Widest Q4_K row the kernels accept: 64 blocks, 16,384 columns.
 #define ORE_Q4K_MAX_BLOCKS 64
+#define ORE_Q4K_MAX_COLS (ORE_Q4K_MAX_BLOCKS * ORE_Q4K_BLOCK)
 
 ORE_INLINE void ore_q4k_decode_row(const uint8_t * row, int nb, ore_q4k_hdr * h) {
     for (int b = 0; b < nb; ++b) {
@@ -169,11 +172,26 @@ ORE_INLINE void ore_q4k_decode_row(const uint8_t * row, int nb, ore_q4k_hdr * h)
         uint8_t         sc[8], mn[8];
         ore_q4k_scales(blk, sc, mn);
         for (int g = 0; g < 8; ++g) {
-            h[b].sc[g] = sc[g];
-            h[b].mn[g] = mn[g];
+            h[b].sc[g]  = sc[g];
+            h[b].sc2[g] = (int32_t) sc[g] * 0x10001;
+            h[b].mn[g]  = mn[g];
         }
         h[b].d    = ore_f16_to_f32(ore_rd16(blk));
         h[b].dmin = ore_f16_to_f32(ore_rd16(blk + 2));
+    }
+}
+
+// One Q4_K row's four-bit values as bytes 0..15, in column order.
+ORE_INLINE void ore_q4k_unpack_row(const uint8_t * row, int nb, uint8_t * out) {
+    for (int b = 0; b < nb; ++b) {
+        const uint8_t * qs = row + (size_t) b * ORE_Q4K_BYTES + 16;
+        uint8_t *       o  = out + (size_t) b * 256;
+        for (int g = 0; g < 4; ++g) {
+            for (int i = 0; i < 32; ++i) {
+                o[g * 64 + i]      = qs[g * 32 + i] & 0x0f;
+                o[g * 64 + 32 + i] = qs[g * 32 + i] >> 4;
+            }
+        }
     }
 }
 

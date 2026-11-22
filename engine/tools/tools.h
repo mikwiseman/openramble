@@ -10,7 +10,7 @@
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-static double now_ms(void) {
+static inline double now_ms(void) {
     LARGE_INTEGER f, c;
     QueryPerformanceFrequency(&f);
     QueryPerformanceCounter(&c);
@@ -18,7 +18,7 @@ static double now_ms(void) {
 }
 #else
 #include <time.h>
-static double now_ms(void) {
+static inline double now_ms(void) {
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
     return t.tv_sec * 1e3 + t.tv_nsec / 1e6;
@@ -27,7 +27,7 @@ static double now_ms(void) {
 
 // Reads a 16 kHz PCM WAV (16-bit int or 32-bit float), first channel only.
 // Returns malloc'd samples in [-1, 1] and sets *n, or NULL.
-static float * wav_read(const char * path, long * n) {
+static inline float * wav_read(const char * path, long * n) {
     FILE * f = fopen(path, "rb");
     if (!f) return NULL;
     unsigned char h[12];
@@ -96,7 +96,7 @@ static float * wav_read(const char * path, long * n) {
 }
 
 // A clip of `seconds` made by repeating the samples as often as needed.
-static float * clip_of(const float * pcm, long n, double seconds, long * out_n) {
+static inline float * clip_of(const float * pcm, long n, double seconds, long * out_n) {
     long    want = (long) (seconds * 16000.0);
     float * out  = (float *) malloc(sizeof(float) * (size_t) (want > 0 ? want : 1));
     if (!out) return NULL;
@@ -105,7 +105,7 @@ static float * clip_of(const float * pcm, long n, double seconds, long * out_n) 
     return out;
 }
 
-static int cmp_double(const void * a, const void * b) {
+static inline int cmp_double(const void * a, const void * b) {
     double x = *(const double *) a, y = *(const double *) b;
     return x < y ? -1 : x > y;
 }

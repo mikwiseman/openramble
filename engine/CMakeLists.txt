@@ -49,6 +49,9 @@ set(ORE_TCPP_PREFIX "" CACHE PATH "Install prefix of transcribe.cpp for the comp
 if(ORE_TCPP_PREFIX)
     function(ore_link_tcpp target)
         target_include_directories(${target} PRIVATE ${ORE_TCPP_PREFIX}/include)
+        # The header marks its functions as DLL imports on Windows unless told
+        # the library is a static archive.
+        target_compile_definitions(${target} PRIVATE TRANSCRIBE_STATIC)
         target_link_directories(${target} PRIVATE ${ORE_TCPP_PREFIX}/lib ${ORE_TCPP_PREFIX}/lib64)
         target_link_libraries(${target} PRIVATE transcribe ggml ggml-cpu ggml-base Threads::Threads)
         if(APPLE)
