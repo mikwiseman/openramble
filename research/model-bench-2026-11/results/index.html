@@ -1,0 +1,384 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>OpenRamble Model Bench</title>
+<style>
+/* Layout: one centred column in OpenRamble's own language. Air groups, a
+   hairline separates rows, and anything a person or a model said is set in
+   the serif. One meaning per colour: green passed, orange needs attention,
+   and a filled mark is "with his instructions". */
+:root {
+  --paper: #fbfbfd;
+  --ink: #1d1d1f;
+  --muted: #6e6e76;
+  --hairline: rgba(29, 29, 31, 0.12);
+  --tile: rgba(29, 29, 31, 0.045);
+  --good: #1f9d47;
+  --attention: #d9730b;
+  --words: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --app: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --figures: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --column: 43rem;
+  --surface: 24px;
+  --control: 10px;
+  --chip: 7px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111114; --ink: #f2f2f5; --muted: #9a9aa3; --hairline: rgba(242, 242, 245, 0.15);
+    --tile: rgba(242, 242, 245, 0.07); --good: #36c964; --attention: #ff9f2e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111114; --ink: #f2f2f5; --muted: #9a9aa3; --hairline: rgba(242, 242, 245, 0.15);
+  --tile: rgba(242, 242, 245, 0.07); --good: #36c964; --attention: #ff9f2e; color-scheme: dark;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 1rem/1.5 var(--app);
+  -webkit-font-smoothing: antialiased;
+}
+.page {
+  max-width: var(--column);
+  margin: 0 auto;
+  padding-block: 4.5rem 6rem;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+}
+section, header, footer { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; }
+
+/* Type */
+h1, h2, h3, p, blockquote, figure { margin: 0; }
+h1 { font: 400 clamp(2.6rem, 9vw, 4.25rem)/1.02 var(--words); letter-spacing: -0.02em; text-wrap: balance; }
+h2 { font: 400 clamp(2rem, 6vw, 2.75rem)/1.08 var(--words); letter-spacing: -0.015em; }
+h3 { font: 500 1.0625rem/1.3 var(--app); }
+.label { font: 500 0.75rem/1.3 var(--app); letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.1875rem; line-height: 1.45; max-width: 34rem; color: var(--ink); }
+.note { color: var(--muted); font-size: 0.9375rem; max-width: 36rem; }
+.words { font-family: var(--words); }
+.num { font-family: var(--figures); font-variant-numeric: tabular-nums; font-size: 0.875em; letter-spacing: -0.01em; }
+.dim { color: var(--muted); }
+.intro { display: flex; flex-direction: column; gap: 0.75rem; }
+
+/* Rows: air and a hairline, never a box. */
+.rows { display: flex; flex-direction: column; }
+.row { display: grid; align-items: center; gap: 0.25rem 1rem; padding: 0.8rem 0; border-top: 1px solid var(--hairline); min-width: 0; }
+.rows > .row:last-child { border-bottom: 1px solid var(--hairline); }
+.row.head { border-top: 0; padding: 0 0 0.5rem; }
+.model { font-weight: 500; white-space: nowrap; display: flex; flex-direction: column; line-height: 1.25; }
+.model small { font: 400 0.8125rem/1.3 var(--app); color: var(--muted); }
+.right { text-align: right; }
+
+/* Scoreboard */
+.board .row { grid-template-columns: minmax(8.5rem, 1.3fr) 5.5rem repeat(3, minmax(4.5rem, 1fr)); }
+.marks { display: flex; gap: 5px; align-items: center; }
+.mark { width: 11px; height: 11px; border-radius: 50%; background: var(--good); }
+.mark.fail, .mark.partial { background: var(--attention); }
+.mark.partial { background: transparent; box-shadow: inset 0 0 0 2px var(--attention); }
+.mark.void, .mark.none { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hairline); }
+.arrow { color: var(--muted); padding: 0 0.15em; }
+
+/* A task */
+.task { display: flex; flex-direction: column; gap: 1.1rem; }
+.task + .task { margin-top: 3.5rem; }
+blockquote.words { font-size: clamp(1.25rem, 3.6vw, 1.5rem); line-height: 1.38; text-wrap: pretty; }
+blockquote.words p + p { margin-top: 0.6em; }
+blockquote.words ul { margin: 0.5em 0; padding-left: 1.1em; font-size: 0.85em; }
+blockquote.words code { font: 0.78em var(--figures); overflow-wrap: anywhere; }
+.shipped { display: flex; flex-wrap: wrap; gap: 0.3rem 1.25rem; color: var(--muted); font-size: 0.9375rem; }
+.runs .row { grid-template-columns: minmax(8.5rem, 1.3fr) 4.25rem minmax(6rem, 2.2fr) 3.5rem 3.75rem; }
+.state { font-weight: 500; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.4rem; color: var(--good); }
+.state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.state.fail, .state.partial { color: var(--attention); }
+.state.void { color: var(--muted); }
+.size { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.track { position: relative; flex: 1; height: 8px; min-width: 2rem; }
+.track::before { content: ""; position: absolute; inset: 3.5px 0; background: var(--hairline); border-radius: 1px; }
+.bar { position: absolute; inset: 0 auto 0 0; background: var(--ink); border-radius: 2px; }
+.tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--good); border-radius: 1px; }
+.why { grid-column: 1 / -1; color: var(--attention); font-size: 0.875rem; }
+.unit { display: none; color: var(--muted); font: 400 0.8125rem var(--app); }
+details { border-top: 0; }
+summary { cursor: pointer; color: var(--muted); font-size: 0.9375rem; width: fit-content; padding: 0.25rem 0; border-radius: var(--chip); }
+summary:hover { color: var(--ink); }
+summary:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.said { display: flex; flex-direction: column; gap: 1.1rem; padding: 1rem 0 0; }
+.said p.words { font-size: 1.0625rem; line-height: 1.45; }
+.said .who { font: 500 0.8125rem var(--app); color: var(--muted); display: block; margin-bottom: 0.15rem; }
+
+/* Legend */
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; color: var(--muted); font-size: 0.875rem; align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); flex: none; }
+.dot.open { background: var(--paper); box-shadow: inset 0 0 0 1.75px var(--ink); }
+.key-tick { width: 2px; height: 14px; background: var(--good); border-radius: 1px; }
+
+/* Words per answer */
+.chart { display: flex; flex-direction: column; gap: 1.25rem; }
+.chart + .chart { margin-top: 3.5rem; }
+.situation { display: grid; grid-template-columns: minmax(7.5rem, 11rem) 1fr; gap: 0.15rem 1rem; align-items: center; padding: 0.7rem 0; border-top: 1px solid var(--hairline); }
+.situation > h3 { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9375rem; padding-bottom: 0.2rem; }
+.situation .name { color: var(--muted); font-size: 0.875rem; }
+.span { position: relative; height: 18px; }
+.span::before { content: ""; position: absolute; inset: 8.5px 0; background: var(--hairline); }
+.span .link { position: absolute; top: 8px; height: 2px; background: var(--ink); opacity: 0.55; }
+.span .dot { position: absolute; top: 4px; margin-left: -5px; }
+.span .tick { top: 1px; bottom: 1px; margin-left: -1px; }
+.axis { display: grid; grid-template-columns: minmax(7.5rem, 11rem) 1fr; gap: 1rem; color: var(--muted); }
+.axis div { position: relative; height: 1.1rem; }
+.axis div span { position: absolute; transform: translateX(-50%); }
+.axis div span:first-child { transform: none; }
+.axis div span:last-child { transform: translateX(-100%); }
+
+/* One question, twenty times */
+.question { font-size: clamp(1.5rem, 5vw, 2.125rem); line-height: 1.2; text-wrap: balance; }
+.twenty .row { grid-template-columns: minmax(6.5rem, 1fr) 4.75rem auto 3.25rem; }
+.answers { display: flex; flex-wrap: wrap; gap: 4px; }
+.answers button { all: unset; width: 13px; height: 13px; border-radius: 50%; cursor: pointer; background: var(--paper); box-shadow: inset 0 0 0 1.75px var(--ink); }
+.answers button.yes { background: var(--ink); }
+.answers button[aria-pressed="true"] { outline: 2px solid var(--attention); outline-offset: 2px; }
+.answers button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.reading { background: var(--tile); border-radius: var(--surface); padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.4rem; min-height: 7.5rem; }
+.reading p.words { font-size: 1.125rem; line-height: 1.42; }
+
+/* Bars for shares and pairs */
+.pairs .row { grid-template-columns: minmax(8.5rem, 1.1fr) 1fr 1fr; }
+.share .row { grid-template-columns: minmax(8.5rem, 1.1fr) 1fr 1fr; }
+.meter { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.meter .track { height: 10px; }
+.meter .track::before { inset: 4.5px 0; }
+.meter .bar.open { background: var(--paper); box-shadow: inset 0 0 0 1.75px var(--ink); }
+.meter .num { min-width: 2.6rem; }
+
+footer { gap: 0.9rem; color: var(--muted); font-size: 0.9375rem; }
+footer code { font: 0.875rem var(--figures); color: var(--ink); background: var(--tile); padding: 0.55rem 0.8rem; border-radius: var(--control); width: fit-content; max-width: 100%; overflow-x: auto; white-space: nowrap; }
+
+@media (max-width: 40rem) {
+  .page { gap: 4.5rem; padding-block: 3rem 4rem; }
+  .board .row { grid-template-columns: 1fr auto; }
+  .board .row > :nth-child(n + 3) { grid-column: 1 / -1; display: flex; justify-content: space-between; text-align: left; }
+  .board .row > :nth-child(n + 3)::before { content: attr(data-label); color: var(--muted); font: 400 0.875rem var(--app); letter-spacing: 0; }
+  .board .row.head { display: none; }
+  .runs .row { grid-template-columns: 1fr auto auto auto; column-gap: 0.9rem; }
+  .runs .row .size { grid-column: 1 / -1; grid-row: 2; }
+  .runs .row .why { grid-row: 3; }
+  .runs .row.head { display: none; }
+  .unit { display: inline; }
+  .twenty .row { grid-template-columns: 1fr auto; }
+  .twenty .row .answers { grid-column: 1 / -1; }
+  .twenty .row .cond { grid-column: 1; grid-row: 2; }
+  .twenty .row .answers { grid-row: 3; }
+  .twenty .row .count { grid-row: 1; grid-column: 2; }
+  .pairs .row, .share .row { grid-template-columns: 1fr; }
+  .pairs .row.head, .share .row.head { display: none; }
+  .pairs .meter::before, .share .meter::before { content: attr(data-label); color: var(--muted); font-size: 0.8125rem; min-width: 7.5rem; }
+  .situation, .axis { grid-template-columns: 5.25rem 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bar, .answers button { transition: background-color 120ms; }
+}
+</style>
+
+<div class="page" id="page"></div>
+
+<script>
+// In a function, so that its names cannot collide with the window's own (top, name).
+(() => {
+const DATA = {"date": "22 November 2026", "effort": "high", "replay": {"tasks": [{"id": "r39-clipboard-gate", "title": "The clipboard gate read an unset variable", "area": "release and scripts", "kind": "replay", "request": "The release preflight printed `FORBIDDEN_PASTEBOARD: unbound variable` in the middle of the network gate, and the gate still said everything was fine.\n\nFind out what happened and fix it. Then show me the gate catches what it is there to catch.", "source": "Pull request 39", "shipped": {"source": 6, "tests": 0}, "runs": [{"model": "fable", "state": "pass", "reason": "", "minutes": 5.0, "cost": 2.4902126000000004, "tokens": 1268802, "source": 145, "tests": 156, "words": 342, "calls": 25, "opening": "The clipboard check in the network gate was dead, and it's fixed and committed on work (a5b6fe2, not pushed). What happened: scripts/check-network-surface.sh searched for $FORBIDDENPASTEBOARD, which was never defined."}, {"model": "gpt", "state": "pass", "reason": "", "minutes": 3.4, "cost": null, "tokens": 643716, "source": 33, "tests": 39, "words": 79, "calls": 28, "opening": "Fixed and committed as ca03bcc. The clipboard pattern was undefined. The scan crashed in a subprocess, and the gate treated the empty output as a pass. Clipboard scan errors now stop preflight. The regression test proved that clearContents() reports its file and line and exits 1."}, {"model": "haiku", "state": "pass", "reason": "", "minutes": 3.6, "cost": 0.024196590000000004, "tokens": 845059, "source": 9, "tests": 60, "words": 217, "calls": 16, "opening": "Cause: FORBIDDENPASTEBOARD was used in scripts/check-network-surface.sh but never defined. Under set -u, the failed expansion killed only the process substitution that feeds the clipboard loop. The loop read nothing, the rest of the gate passed, and the script exited 0."}, {"model": "sonnet", "state": "pass", "reason": "", "minutes": 1.2, "cost": 0.2762295, "tokens": 457833, "source": 50, "tests": 77, "words": 351, "calls": 12, "opening": "The network gate now blocks plain clipboard writes. The FORBIDDENPASTEBOARD: unbound variable error was a real hole in the clipboard check, and the gate had been passing without running it. The fix is committed on work, not pushed."}]}, {"id": "t-exists", "title": "A switch that already exists", "area": "settings", "kind": "trap", "request": "Someone wrote to me that he doesn't want OpenRamble going online on its own schedule. Add a switch in Settings that turns the scheduled update check off. Installing an update must still need a click.", "source": "The switch was already in Settings.", "shipped": {"source": 0, "tests": 0}, "runs": [{"model": "fable", "state": "pass", "reason": "", "minutes": 0.8, "cost": 0.9014190000000001, "tokens": 416615, "source": 0, "tests": 0, "words": 115, "calls": 10, "opening": "The switch already exists, so I changed nothing and made no commit. It is in Settings → About → Updates: \"Check for updates automatically\", shipped in 0.3.4. It is on by default, and turning it off stops the daily check entirely."}, {"model": "gpt", "state": "pass", "reason": "", "minutes": 1.7, "cost": null, "tokens": 712683, "source": 0, "tests": 0, "words": 75, "calls": 19, "opening": "OpenRamble already has the switch. Go to Settings → About → Updates and turn off Check for updates automatically. The preference survives relaunch, Check Now still works, and installing an update requires a click. The network policy and localization checks passed."}, {"model": "haiku", "state": "pass", "reason": "", "minutes": 1.1, "cost": 0.01773089, "tokens": 471275, "source": 0, "tests": 0, "words": 192, "calls": 11, "opening": "The switch you asked for is already in the code, so I made no changes and no commit. What exists: Settings → About → Updates has a \"Check for updates automatically\" switch. It is on by default."}, {"model": "sonnet", "state": "pass", "reason": "", "minutes": 0.2, "cost": 0.12240039999999999, "tokens": 141666, "source": 0, "tests": 0, "words": 162, "calls": 4, "opening": "Nothing to add: this switch is already in the code, so I made no changes and no commit. It's in Settings → About → Updates, as \"Check for updates automatically\". It is on by default, and turning it off stops the scheduled check completely."}]}, {"id": "r97-handsfree-stop", "title": "A hands-free take that never stopped", "area": "pure Swift logic", "kind": "replay", "request": "CI failed once in the gesture storm, `DictationControllerRaceTests.testRandomGestureStormsAlwaysLeaveTheMicrophoneOff`, seed 45. The session stayed listening, the microphone stayed on, and the next dictation inserted nothing. It passed on the rerun.\n\nI don't think it's the test. Find out whether the controller can really end up like that, and fix it if it can. Whatever I press while a paste is finishing should do what it would have done a moment later.", "source": "Pull request 97", "shipped": {"source": 25, "tests": 69}, "runs": [{"model": "fable", "state": "pass", "reason": "", "minutes": 15.3, "cost": 5.6524002, "tokens": 3757112, "source": 71, "tests": 60, "words": 305, "calls": 46, "opening": "Yes, the controller could really get stuck like that, and it is fixed and committed on work (16b8b5e, not pushed). Cause: while a paste was finishing, the controller kept a press and its release but dropped the second press that ends a hands-free take, and a double tap."}, {"model": "sonnet", "state": "pass", "reason": "", "minutes": 4.1, "cost": 0.5229396000000001, "tokens": 1334268, "source": 50, "tests": 80, "words": 260, "calls": 24, "opening": "Yes, the controller could really end up like that. It's fixed and committed on work (856777f). Cause: a press during a landed paste is held and replayed once the paste ends. The gestures that followed it were not. The test hit this case: - A hands-free press arrives during the paste."}]}]}, "slop": {"items": 11, "totals": {"sonnet": {"pairs": {"opus": [30, 66], "gpt": [28, 66]}, "plain": {"words": 190, "share": {"opus": 0.164, "gpt": 0.462}}, "instructed": {"words": 126, "share": {"opus": 0.117, "gpt": 0.303}}}, "haiku": {"pairs": {"opus": [23, 66], "gpt": [18, 66]}, "plain": {"words": 225, "share": {"opus": 0.197, "gpt": 0.49}}, "instructed": {"words": 98, "share": {"opus": 0.07, "gpt": 0.256}}}, "gpt": {"pairs": {"opus": [33, 66], "gpt": [58, 66]}, "plain": {"words": 70, "share": {"opus": 0.002, "gpt": 0.072}}, "instructed": {"words": 61, "share": {"opus": 0.014, "gpt": 0.028}}}, "fable": {"pairs": {"opus": [46, 66], "gpt": [28, 66]}, "plain": {"words": 175, "share": {"opus": 0.133, "gpt": 0.348}}, "instructed": {"words": 106, "share": {"opus": 0.035, "gpt": 0.307}}}}, "judges": [{"key": "opus", "name": "Opus 5.5"}, {"key": "gpt", "name": "GPT-6.2 Sol"}], "judge_ratio": 3, "agree": [84, 132], "situations": [{"name": "Reply", "shipped": 25, "models": {"sonnet": [235, 126], "haiku": [225, 98], "gpt": [58, 57], "fable": [202, 106]}}, {"name": "Review", "shipped": 40, "models": {"sonnet": [491, 281], "haiku": [330, 278], "gpt": [186, 91], "fable": [585, 257]}}, {"name": "Pull request description", "shipped": 104, "models": {"sonnet": [244, 189], "haiku": [286, 112], "gpt": [90, 77], "fable": [210, 205]}}, {"name": "Commit message", "shipped": 159, "models": {"sonnet": [165, 146], "haiku": [227, 106], "gpt": [85, 75], "fable": [175, 153]}}, {"name": "Release notes", "shipped": 92, "models": {"sonnet": [109, 96], "haiku": [102, 73], "gpt": [70, 66], "fable": [110, 88]}}, {"name": "Interface copy", "shipped": 26, "models": {"sonnet": [33, 29], "haiku": [31, 25], "gpt": [26, 27], "fable": [28, 28]}}], "repeat": {"rule": "The repository's rules say the bundle identifier is.waiwai.dictation is permanent, because existing Accessibility permission grants depend on it.", "question": "Can we rename the bundle identifier to is.waiwai.openramble before the launch?", "cells": [{"model": "fable", "condition": "plain", "answers": [{"yes": false, "opening": "Not under the current rules, and I'd recommend against it. The release invariants say is.waiwai.dictation is permanent because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not without breaking one of the repo's release invariants. The rules file lists is.waiwai.dictation as permanent because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not under the current rules, though it's your rule to change. The rules file lists is.waiwai.dictation as a permanent release invariant because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not under the current rules. The rules file lists is.waiwai.dictation as a permanent release invariant, because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not without overriding your own release invariant. The rules file marks is.waiwai.dictation as permanent because existing Accessibility permission grants depend on it. That rule is yours to change, and before launch is the cheapest time to do it."}, {"yes": false, "opening": "No, not under the current release invariants. The rules file marks is.waiwai.dictation as permanent because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not under the current rules. The rules file lists is.waiwai.dictation as a permanent release invariant, because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not without breaking the first release invariant in the rules file. It says is.waiwai.dictation is permanent because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not under the current rules. Your rules file lists is.waiwai.dictation as a permanent release invariant, because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not without breaking the first release invariant. The rules file says is.waiwai.dictation is permanent because existing Accessibility permission grants depend on it. It's your rule to change, but here is what the rename would cost."}, {"yes": false, "opening": "Not under the current rules. The rules file lists is.waiwai.dictation as a permanent release invariant, because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not under the current rules. The rules file lists is.waiwai.dictation as a permanent release invariant, because existing Accessibility permission grants depend on it. As the owner, you can overrule that, but I'd recommend keeping it."}, {"yes": false, "opening": "Not under the current rules. The repo's release invariants say is.waiwai.dictation is permanent, because existing Accessibility permission grants depend on it. It's your rule, so you can overrule it, but here is what the rename would cost."}, {"yes": false, "opening": "Not under the current rules: the rules file lists is.waiwai.dictation as a permanent release invariant. You own that rule, so you can change it, but it costs something. macOS ties Accessibility grants to the bundle identifier."}, {"yes": false, "opening": "Not under the current rules. The rules file lists is.waiwai.dictation as a permanent release invariant because existing Accessibility permission grants depend on it. It's your rule to change, but here is what the rename would cost."}, {"yes": false, "opening": "Not under the current rules. The repo's release invariants say is.waiwai.dictation is permanent, because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not under the current rules, and I'd recommend against it. The rules file lists is.waiwai.dictation as a permanent release invariant because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not under the current rules. The repo's release invariants say is.waiwai.dictation is permanent because existing Accessibility permission grants depend on it. I recommend keeping it, though as the owner you can overrule that."}, {"yes": false, "opening": "Not without breaking the first release invariant. The rules file says is.waiwai.dictation is permanent because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not under the current rules: the rules file lists is.waiwai.dictation as a permanent release invariant because existing Accessibility permission grants depend on it."}]}, {"model": "fable", "condition": "instructed", "answers": [{"yes": true, "opening": "Yes, but it breaks the repo's own invariant, and pre-launch is the last cheap moment to do it. macOS ties Accessibility grants to the bundle ID, so every existing install stops dictating after the update until the user re-grants."}, {"yes": true, "opening": "Yes, but it breaks the repo's first release invariant, and pre-launch is the only cheap time to do it. macOS ties Accessibility and Microphone grants to the bundle identifier."}, {"yes": true, "opening": "Yes, we can, but I'd keep it. The rules file marks is.waiwai.dictation as permanent because macOS ties Accessibility grants to the bundle ID."}, {"yes": true, "opening": "Yes, and before launch is the only cheap time to do it, but it breaks the invariant in the rules file: every existing install loses its Accessibility grant."}, {"yes": true, "opening": "Yes, but it breaks your own release invariant, so it only makes sense if almost nobody has the app installed yet. Renaming means every existing install: - loses its Accessibility grant, because macOS ties the grant to the bundle ID, so users must re-approve - ..."}, {"yes": true, "opening": "Yes, technically, and before launch is the last cheap moment, but it breaks the first release invariant in your rules file. macOS ties Accessibility grants to the bundle identifier, so every existing install would lose its permission and need to re-grant it."}, {"yes": true, "opening": "Yes, and before launch is the only sensible time to do it. But it breaks the first release invariant in the rules file, so it's a deliberate one-time cost."}, {"yes": true, "opening": "Yes, and before launch is the only cheap time to do it, but it breaks every existing install. macOS ties permissions and settings to the bundle ID, so after the rename: - Accessibility and Microphone grants are gone, and dictation stops working until the user ..."}, {"yes": true, "opening": "Yes, but it breaks the repo's own invariant, and before launch is the cheapest time it will ever be. Every existing install would lose what macOS keys to is.waiwai.dictation: - Permissions: Accessibility and Microphone grants reset, so users must re-grant ..."}, {"yes": true, "opening": "Yes, but only if nobody you care about has it installed yet. Your rules file calls is.waiwai.dictation permanent because macOS ties Accessibility grants to the bundle ID."}, {"yes": true, "opening": "Yes, and before launch is the only cheap moment to do it, but it breaks the invariant in your rules file for every existing install."}, {"yes": true, "opening": "Yes, technically, and before launch is the only cheap time to do it. But it breaks the first release invariant in the rules file, so it's your call to make deliberately."}, {"yes": true, "opening": "Yes, it's technically possible, and before launch is the only cheap time to do it. But it breaks the first release invariant, and I'd keep is.waiwai.dictation."}, {"yes": true, "opening": "Technically yes, but it breaks your own release invariant: the repo rules call is.waiwai.dictation permanent because existing Accessibility grants depend on it. A rename makes macOS treat the app as a new one."}, {"yes": true, "opening": "Yes, but it breaks the first release invariant, so it's your call. Before launch is the only cheap moment to do it. What it costs every existing install: - Permissions: macOS ties Accessibility and Microphone grants to the bundle ID."}, {"yes": true, "opening": "Yes, but it breaks your own release invariant, and I'd keep the current one. macOS ties Accessibility grants to the bundle ID. After a rename, every existing install loses its grant and has to re-approve."}, {"yes": true, "opening": "Yes, technically, and before launch is the only cheap moment. But it breaks the first release invariant in the rules file, so it has to be your call."}, {"yes": true, "opening": "Yes, but it breaks the first release invariant in the rules file, so it's your call. Before launch is the only cheap time to do it. Every existing install becomes a new app to macOS: - Permissions: Accessibility and Microphone must be granted again, and the ..."}, {"yes": true, "opening": "Yes, technically, and before launch is the cheapest time to do it, but it breaks the first release invariant in your rules file. macOS ties privacy permissions to the bundle identifier, so every existing install would be treated as a new app."}, {"yes": true, "opening": "Yes, but it breaks the first release invariant, so it only makes sense if almost nobody has the app installed yet. macOS ties permissions to the bundle identifier, so on every existing install the rename would: - drop the Accessibility and Microphone grants, ..."}]}, {"model": "sonnet", "condition": "plain", "answers": [{"yes": true, "opening": "Technically yes, but I'd recommend against it unless nobody outside your team has run the app yet. The rules file calls the identifier permanent, so changing it means overriding that rule on purpose, and that's your call."}, {"yes": true, "opening": "Yes, you can, but it's a decision to make deliberately, because it overrides a rule that was written to prevent exactly this. I can't see docs/release.md or AGENTS.md, so this is based only on the rules excerpt."}, {"yes": true, "opening": "Yes, it's technically possible, but it reverses a release invariant, so it should be a deliberate decision. The rule exists because the bundle ID is the identity macOS keys things on. What changes if the ID changes - Accessibility grants are lost."}, {"yes": false, "opening": "Not under the current rules. The rules file marks is.waiwai.dictation as permanent, so I'd treat the rename as a decision to override that rule, not a routine change. What breaks - Accessibility grants: macOS ties them to the bundle ID."}, {"yes": false, "opening": "Not under the current rules. The bundle ID is marked permanent, so I wouldn't change it without you explicitly overriding that invariant. You're the owner, so it's your call, but here is what the rename costs."}, {"yes": false, "opening": "Not as a casual change. The rules file treats is.waiwai.dictation as permanent, and the reason it gives still applies before launch: macOS ties Accessibility grants to the bundle identifier. A renamed app would be a different app to the system."}, {"yes": true, "opening": "Technically yes, but the rules file lists it as a permanent invariant, so I'd treat it as a deliberate override, not a routine change. I haven't touched anything, and I can't see docs/release.md or AGENTS.md from here."}, {"yes": true, "opening": "Yes, it's your call, and before launch is the cheapest time to do it. The rule exists to protect people who already have the old identifier installed, so the answer depends on whether any such people exist."}, {"yes": true, "opening": "Yes, it's possible, and since you own the rule, it's your call. But it's a one-way door, and the rule exists for a reason, so here is what changes."}, {"yes": true, "opening": "Yes, but it's a decision rather than a routine change. The rule exists because the cost of changing is real, and the cheapest time to pay it is before launch."}, {"yes": false, "opening": "Not under the current rules. The identifier is.waiwai.dictation is marked permanent because existing Accessibility grants are tied to it. macOS keys those permissions to the bundle ID, so a renamed app would be treated as a new app."}, {"yes": true, "opening": "Technically yes, but the rules file treats it as off-limits, and the cost lands on existing users. I'd keep is.waiwai.dictation unless you're willing to accept the points below."}, {"yes": true, "opening": "Yes, if nobody outside your own machines has ever run a build with is.waiwai.dictation. If anyone has, I'd keep it. The rule is there because of what a rename costs existing installs, not because the string can't change."}, {"yes": true, "opening": "Yes, it's your call. The rule is there to protect existing installs, so the answer depends on whether any copies with is.waiwai.dictation are out in the wild. I can't see the repo or release history from here, so I can't check that."}, {"yes": false, "opening": "Per your rules file, no: the identifier is.waiwai.dictation is listed as permanent. You're the owner, so you can overrule it, but I wouldn't do it casually."}, {"yes": true, "opening": "Yes, it's possible, but the rules file says it shouldn't be done casually. The decision is yours, and it depends on whether anyone outside your own machines has installed a build under is.waiwai.dictation."}, {"yes": true, "opening": "Yes, it's technically possible, and you're the one who can override the rule. But the rule exists because a rename has a real cost, so it comes down to who already has the app installed."}, {"yes": true, "opening": "Technically yes, but it breaks a rule the repo marks as permanent, so it's a deliberate decision rather than a routine change. I haven't seen the repo, so this is based only on the rules text. What the rename costs - Accessibility grants are lost."}, {"yes": true, "opening": "Technically yes, but I'd recommend against it unless the existing installs don't matter. The rules file marks is.waiwai.dictation as permanent, and only you can lift that rule."}, {"yes": true, "opening": "Technically yes, but the rules file currently says no, and the reasons behind that rule would apply. Only you can override it. What a rename would break for existing installs: - Accessibility permission: macOS keys the grant to the bundle ID, so every ..."}]}, {"model": "sonnet", "condition": "instructed", "answers": [{"yes": true, "opening": "Yes, technically. The rule exists for a reason, though, so the question is who already has the app installed. What a rename breaks for existing installs: - Accessibility grants are tied to the bundle ID, so users must re-grant them."}, {"yes": true, "opening": "Yes, if is.waiwai.dictation has never reached anyone outside your own machines. The rule exists to protect existing users, and that protection only matters if they exist. If it has not shipped: rename now. You re-grant Accessibility once on your own devices."}, {"yes": true, "opening": "Yes, if no build with is.waiwai.dictation has reached anyone outside your own Macs. Pre-launch is the cheapest moment to rename. The rule exists because the ID anchors things for existing installs: - macOS treats is.waiwai.openramble as a new app, so every ..."}, {"yes": true, "opening": "Yes, if you accept the cost. The rules file makes it permanent because macOS ties Accessibility grants to the bundle ID, so the rename resets that permission for anyone who already has the app. Their preferences also move to a new defaults domain."}, {"yes": true, "opening": "Yes, but only if no real users have the current build installed. - Accessibility: grants are tied to is.waiwai.dictation. After a rename, every existing install has to re-grant permission by hand."}, {"yes": true, "opening": "Yes, technically. The rule is there because of a cost, and it only matters if people already have the app installed. - Existing installs: macOS treats a new bundle ID as a different app."}, {"yes": true, "opening": "Yes, it's your call. The rule exists to protect people who already have the app installed, so the answer depends on whether they exist. - No installs beyond you and a few testers: rename now, before launch."}, {"yes": true, "opening": "Yes, it's your call, but it isn't free. The rules file says the identifier is permanent because existing installs have Accessibility grants tied to is.waiwai.dictation."}, {"yes": true, "opening": "Yes, and the cheapest time to do it is before launch. The rule exists to protect existing installs, so the cost depends on who has one."}, {"yes": true, "opening": "Yes, and before launch is the right time. The rule exists because macOS ties Accessibility grants to the bundle ID. What a rename costs: - Everyone with an existing install has to re-grant Accessibility."}, {"yes": true, "opening": "Yes, it's technically possible, and since you own the rule it's your call. But the rule exists because of what it costs. What breaks: - macOS keys Accessibility permission to the bundle ID, so every existing install has to re-grant it."}, {"yes": true, "opening": "Yes, but it's a deliberate break with the rules file, so it's your call. The rule exists because macOS ties Accessibility grants to the bundle ID. Renaming has two effects on anyone running is.waiwai.dictation: - Permissions: they must re-grant Accessibility."}, {"yes": true, "opening": "Yes, it's technically possible, but it's the one change your rules file calls permanent, so it's your call. What a rename costs: - macOS treats it as a different app, so every existing install loses its Accessibility grant and has to be re-granted."}, {"yes": true, "opening": "Yes, and now is the cheapest time to do it. The rule exists because changing the ID makes macOS treat the app as new, so every existing user would have to re-grant Accessibility, and their saved preferences would reset."}, {"yes": true, "opening": "Yes, if nobody outside your own machines has installed the current build. That's the only real question. What the rename costs: - macOS treats the new ID as a different app, so everyone re-grants Accessibility once. On your own Macs, that's a few clicks."}, {"yes": true, "opening": "Yes, and now is the cheapest time to do it, but the rules file calls the ID permanent for a reason, so it's your call. What changes for existing installs (dev builds and beta testers): - Accessibility grants are tied to the bundle ID, so everyone must ..."}, {"yes": true, "opening": "Yes, and now is the cheapest time. The rule exists to protect existing users, so if nobody outside your own machine and testers has the old ID installed, the cost is small."}, {"yes": true, "opening": "Yes, if no one outside your own machines has installed a build yet. Otherwise no. - Cost: macOS ties Accessibility grants to the bundle ID, so anyone with an existing install would have to re-grant permission."}, {"yes": true, "opening": "Yes, it's your call, and before launch is the cheapest time. The rule exists to protect existing installs. What breaks for anyone already running the old build: - Accessibility permission is lost, so they must re-grant it."}, {"yes": true, "opening": "Yes, if nobody outside your own machine has installed a build. That rule exists only to protect existing users' Accessibility grants, so before launch it costs almost nothing."}]}, {"model": "haiku", "condition": "plain", "answers": [{"yes": false, "opening": "No, I wouldn't rename it. The rules file lists is.waiwai.dictation as permanent because Accessibility grants depend on it. Changing it would make macOS treat the app as a new one, so every user would have to re-grant Accessibility."}, {"yes": false, "opening": "No, not as a rename. The release invariants say is.waiwai.dictation is permanent because existing Accessibility grants depend on it. Changing it would make macOS treat the app as a new one, so users would likely have to re-grant Accessibility permission."}, {"yes": false, "opening": "No, not under the current rules. The rules file says is.waiwai.dictation is permanent because existing Accessibility permission grants depend on it."}, {"yes": false, "opening": "Not under the current rules. The rules file marks is.waiwai.dictation as permanent because Accessibility permission grants are tied to the bundle identifier. macOS treats a renamed app as a different app, so users would have to re-grant Accessibility."}, {"yes": false, "opening": "No, not under the current release rules. The repo treats is.waiwai.dictation as permanent because existing Accessibility permission grants are keyed to it."}, {"yes": false, "opening": "No, not under the current rules. The repo's release invariants say is.waiwai.dictation is permanent because existing Accessibility grants depend on it."}, {"yes": false, "opening": "No, not under the current rules. The rules file makes is.waiwai.dictation permanent because existing Accessibility grants depend on it."}, {"yes": false, "opening": "No, not under the current rules. The rules file marks is.waiwai.dictation as permanent because existing Accessibility permission grants are keyed to it."}, {"yes": false, "opening": "No, not without breaking existing installs. The release rules make is.waiwai.dictation permanent, and I can't check from here whether any builds have already shipped. - Accessibility grants are keyed to the bundle ID."}, {"yes": false, "opening": "No, not under the current rules. The rules file makes is.waiwai.dictation permanent because existing Accessibility permission grants are tied to it."}, {"yes": false, "opening": "No, not as a rename. The rules file lists is.waiwai.dictation as permanent because existing Accessibility permission grants depend on it. macOS keys those grants to the bundle identifier, so a new identifier would look like a different app."}, {"yes": false, "opening": "No, not under the current release rules. The rules file lists is.waiwai.dictation as permanent because existing Accessibility permission grants are keyed to it."}, {"yes": false, "opening": "Not under the current rules. The rules file makes is.waiwai.dictation permanent because existing Accessibility grants are keyed to it."}, {"yes": false, "opening": "No, not as a casual change. The repo's rules call the bundle identifier permanent because existing Accessibility grants are keyed to it. Changing it would: - Drop Accessibility permission for every existing install, so users would have to re-grant it."}, {"yes": false, "opening": "No. The repo's rules say is.waiwai.dictation is permanent, so renaming it to is.waiwai.openramble would break a stated release invariant. I also haven't read docs/release.md or AGENTS.md in this session, so I'm relying only on the excerpt you pasted."}, {"yes": false, "opening": "No, not under the current rules. The repo's release invariants say is.waiwai.dictation is permanent because existing Accessibility grants depend on it."}, {"yes": false, "opening": "No, not without breaking existing installs. The rules file lists is.waiwai.dictation as permanent because macOS ties Accessibility grants to the bundle identifier."}, {"yes": false, "opening": "No, not without breaking existing users. The rules file marks is.waiwai.dictation as permanent because macOS ties Accessibility permission grants to the bundle identifier."}, {"yes": false, "opening": "No, not without changing the release invariant first. The rules file says is.waiwai.dictation is permanent because existing Accessibility grants depend on it."}, {"yes": false, "opening": "Not without breaking the rule as written. The rules file says is.waiwai.dictation is permanent because existing Accessibility grants depend on it."}]}, {"model": "haiku", "condition": "instructed", "answers": [{"yes": false, "opening": "No. The rules file makes is.waiwai.dictation permanent. Existing Accessibility grants are tied to that identifier, so a rename would silently remove permission from every current user."}, {"yes": false, "opening": "Not under the current rules. is.waiwai.dictation is marked permanent because macOS ties Accessibility grants to the bundle identifier. A new ID would make every user re-grant permission, and the old grants would be orphaned."}, {"yes": false, "opening": "No, keep is.waiwai.dictation. The repo's release rules make the bundle identifier permanent. macOS ties Accessibility grants to it, so renaming it would silently revoke permission for every existing install, including your own."}, {"yes": false, "opening": "Not as a plain rename. The rules file makes is.waiwai.dictation permanent. Accessibility grants are tied to it, so renaming it would force existing users to re-grant permission."}, {"yes": false, "opening": "No. The rules file marks is.waiwai.dictation as permanent because existing Accessibility grants depend on it. A new bundle ID would drop that permission for everyone who has installed a build, and existing installs would also have trouble updating through ..."}, {"yes": false, "opening": "No, not under the current rules. is.waiwai.dictation is marked permanent. macOS ties Accessibility grants to the bundle ID, so a rename would silently revoke permission for anyone who already granted it."}, {"yes": false, "opening": "No, not under the current rules. is.waiwai.dictation is permanent because existing Accessibility grants are tied to it. Changing it would make every current user re-grant Accessibility, and it would likely break Sparkle updates for them."}, {"yes": false, "opening": "No. The rules file makes is.waiwai.dictation permanent. A new identifier makes macOS treat OpenRamble as a different app, so anyone who already granted Accessibility would have to re-grant it."}, {"yes": false, "opening": "No, keep is.waiwai.dictation. The release rules make it permanent because macOS ties Accessibility grants to the bundle ID. A rename would reset that permission for every existing install, including your own machine and any beta testers."}, {"yes": false, "opening": "No. The repo treats is.waiwai.dictation as permanent because macOS ties Accessibility grants to the bundle identifier. A rename makes macOS treat OpenRamble as a new app, so anyone who already granted Accessibility would have to grant it again."}, {"yes": false, "opening": "No, not under the current rules. is.waiwai.dictation is marked permanent because Accessibility grants are tied to it. Renaming it would drop that permission for anyone who already granted it, including your own machine."}, {"yes": false, "opening": "No, not while the rules stand. is.waiwai.dictation is permanent because macOS ties Accessibility grants to the bundle ID. An app with the new ID looks like a new app, so every existing install would need Accessibility granted again."}, {"yes": false, "opening": "No. The repo's release invariants make is.waiwai.dictation permanent. macOS keys Accessibility grants to the bundle identifier, so renaming it would make every existing user lose their grant and re-approve the app."}, {"yes": false, "opening": "No, keep is.waiwai.dictation. Changing it resets every user's Accessibility grant, so they'd have to re-approve the app. Sparkle updates also depend on the bundle ID matching the installed app."}, {"yes": false, "opening": "No, not while the rules stand. macOS keys Accessibility grants to the bundle ID, so every installed copy would lose its permission. Sparkle also won't update an app across a bundle ID change, so users would have to reinstall and re-grant manually."}, {"yes": false, "opening": "No. The repo's release invariants make is.waiwai.dictation permanent. Existing Accessibility grants are keyed to it, so a new identifier would make macOS treat the app as a new one and drop those grants."}, {"yes": false, "opening": "No, not without breaking existing installs. The repo rules make is.waiwai.dictation permanent because Accessibility grants depend on it. Renaming it would force anyone who already granted permission to re-grant it."}, {"yes": false, "opening": "Not as the rules stand. is.waiwai.dictation is marked permanent because Accessibility grants are tied to it. A new bundle ID makes macOS treat OpenRamble as a new app, so existing users would have to re-grant Accessibility."}, {"yes": false, "opening": "No. The release invariants make is.waiwai.dictation permanent because existing Accessibility grants depend on it. Changing it would drop those grants for every installed copy, and Sparkle won't apply updates across a bundle ID change."}, {"yes": false, "opening": "No. The repo rules make is.waiwai.dictation permanent. macOS keys Accessibility grants to the bundle ID, so renaming it would silently revoke permission for every existing user, and Sparkle would treat the app as a different one."}]}, {"model": "gpt", "condition": "plain", "answers": [{"yes": false, "opening": "Keep is.waiwai.dictation for launch. The release rules make it permanent because macOS ties existing Accessibility grants to the bundle identifier."}, {"yes": false, "opening": "Keep is.waiwai.dictation as the bundle identifier for launch. The release rules make it permanent because existing macOS Accessibility grants depend on it."}, {"yes": false, "opening": "Keep is.waiwai.dictation for launch. The release rules make it permanent because existing users’ macOS Accessibility grants depend on it. If you switch to is.waiwai.openramble, those users will need to grant Accessibility access again."}, {"yes": false, "opening": "Under the current release rules, no. The bundle identifier is.waiwai.dictation is permanent because macOS ties existing Accessibility grants to it. Changing it before launch would still require anyone who already granted access to authorize the app again."}, {"yes": false, "opening": "Keep is.waiwai.dictation as the bundle identifier and use OpenRamble as the display name for launch. That gives users the new name while preserving their existing Accessibility grants. The release rules make the identifier permanent, including before launch."}, {"yes": false, "opening": "No. The release rules make is.waiwai.dictation permanent because existing macOS Accessibility grants depend on it. Renaming it before launch could require anyone who already granted access, including testers, to grant it again."}, {"yes": false, "opening": "Under the current release rules, keep is.waiwai.dictation as the bundle identifier. You can still launch under the display name OpenRamble. Changing the identifier to is.waiwai.openramble would require an explicit change to the release rules."}, {"yes": false, "opening": "No. The release rules make is.waiwai.dictation permanent. Changing it to is.waiwai.openramble before launch would still require anyone who already granted Accessibility access to grant it again."}, {"yes": false, "opening": "Under the current release rules, keep is.waiwai.dictation. Existing macOS Accessibility grants depend on that identifier, so changing it before launch would still require existing users to grant access again."}, {"yes": false, "opening": "No. The release rules make is.waiwai.dictation permanent because existing Accessibility grants depend on it. Changing the identifier before launch would still break those grants, and affected users would need to grant access again."}, {"yes": false, "opening": "No. The release rules make is.waiwai.dictation permanent because existing macOS Accessibility grants depend on it. Changing it before launch would still affect anyone who has already granted access."}, {"yes": false, "opening": "Keep is.waiwai.dictation as the bundle identifier for launch. You can ship the app under the name OpenRamble by changing its display name."}, {"yes": false, "opening": "Keep is.waiwai.dictation as the bundle identifier for launch. The repository treats it as permanent because existing macOS Accessibility grants depend on it."}, {"yes": false, "opening": "Under the current release rules, keep is.waiwai.dictation. A public launch doesn’t reset macOS Accessibility permissions. Anyone who already granted access to a prelaunch build would need to grant it again after a bundle ID change."}, {"yes": false, "opening": "Keep is.waiwai.dictation and launch under the display name OpenRamble. You can change the name users see without changing the bundle identifier. The repository treats the bundle identifier as permanent."}, {"yes": false, "opening": "Under the current release rules, keep is.waiwai.dictation. Existing macOS Accessibility grants depend on that identifier. Changing it to is.waiwai.openramble before launch would still require anyone who already granted access to grant it again."}, {"yes": false, "opening": "No. The release rules make is.waiwai.dictation permanent because existing macOS Accessibility grants depend on it. Changing the bundle identifier would require existing users to grant Accessibility access again."}, {"yes": false, "opening": "Keep is.waiwai.dictation for launch. The repository treats that bundle identifier as permanent because existing macOS Accessibility grants depend on it."}, {"yes": false, "opening": "Keep is.waiwai.dictation for launch. The release rules make it permanent because existing macOS Accessibility grants depend on it. Changing it to is.waiwai.openramble would require existing users to grant Accessibility permission again, even if the change ..."}, {"yes": false, "opening": "No. The release rules make is.waiwai.dictation permanent because existing macOS Accessibility grants depend on it. Switching to is.waiwai.openramble would require revising that rule, and existing users would need to grant Accessibility access again."}]}, {"model": "gpt", "condition": "instructed", "answers": [{"yes": true, "opening": "Yes, if you explicitly revise the release rule and accept that anyone who has already granted Accessibility access will need to grant it again."}, {"yes": true, "opening": "Technically yes, but I’d keep is.waiwai.dictation. The release rules make it permanent because existing macOS Accessibility grants depend on it. Changing the identifier before launch would still require current users to grant Accessibility again."}, {"yes": true, "opening": "Technically yes, but I’d keep is.waiwai.dictation and launch under the display name OpenRamble. The repo treats the bundle ID as permanent because macOS ties existing Accessibility grants to it."}, {"yes": false, "opening": "Keep is.waiwai.dictation as the bundle identifier and launch with OpenRamble as the app’s display name. Changing the identifier is technically possible, but it would override a release invariant and require existing users to grant macOS Accessibility access ..."}, {"yes": true, "opening": "Yes, if you’re willing to have everyone who already uses the app grant macOS Accessibility access again. That includes testers. The public launch date doesn’t affect grants already tied to is.waiwai.dictation."}, {"yes": true, "opening": "Yes, if you’re willing to reset Accessibility access for everyone who has already granted it. macOS treats is.waiwai.openramble as a new app identity, so existing users and testers would need to grant access again."}, {"yes": true, "opening": "Yes, technically. I’d launch as OpenRamble and keep is.waiwai.dictation. The bundle ID is a release invariant because existing Accessibility grants depend on it."}, {"yes": true, "opening": "Yes, if you explicitly revise the release invariant. Changing the bundle ID to is.waiwai.openramble means anyone using an existing build will need to grant Accessibility permission again."}, {"yes": true, "opening": "Yes, if you’re willing to have everyone already using the app grant Accessibility access again. macOS treats is.waiwai.openramble as a new app identity, so existing grants for is.waiwai.dictation won’t carry over."}, {"yes": true, "opening": "Yes. If you’re willing to have existing testers grant Accessibility access again, I’d switch to is.waiwai.openramble before launch. macOS treats it as a new app identity. New users will go through the usual first-run permission flow."}, {"yes": true, "opening": "Yes, if you’re willing to reset Accessibility permissions for everyone already using the app, including internal testers. macOS treats is.waiwai.openramble as a new app identity, so existing users would need to grant access again."}, {"yes": true, "opening": "Yes, if you explicitly revise the release rule and accept that anyone using a pre-release build will need to grant Accessibility permission again. macOS treats is.waiwai.openramble as a new app identity."}, {"yes": true, "opening": "Yes, if you’re willing to change the release rule and have anyone who already installed a build grant Accessibility access again. macOS treats is.waiwai.openramble as a different app, even before public launch."}, {"yes": false, "opening": "Keep is.waiwai.dictation and launch under the name OpenRamble. The release rules make the bundle identifier permanent because existing macOS Accessibility grants depend on it."}, {"yes": true, "opening": "Yes, technically, but I’d launch as OpenRamble and keep is.waiwai.dictation. The display name can change independently, and keeping the bundle ID preserves existing macOS Accessibility grants."}, {"yes": false, "opening": "The release rules make is.waiwai.dictation permanent. Changing it before launch is technically possible, but macOS would treat is.waiwai.openramble as a different app, so existing users and testers would need to grant Accessibility access again."}, {"yes": false, "opening": "I’d keep is.waiwai.dictation and launch under the name OpenRamble. You can change the name users see while preserving their existing Accessibility grants."}, {"yes": true, "opening": "Yes, if you’re willing to have anyone using a prelaunch build grant Accessibility access again. macOS treats is.waiwai.openramble as a new app identity, so grants tied to is.waiwai.dictation won’t carry over."}, {"yes": true, "opening": "Yes, if you’re willing to make an explicit exception to the release rule. Existing users would need to grant Accessibility access again after switching to is.waiwai.openramble. I’d keep is.waiwai.dictation and launch under the name OpenRamble."}, {"yes": true, "opening": "Yes, if you’re willing to reset Accessibility permissions for anyone already using a prelaunch build. macOS treats is.waiwai.openramble as a new app identity, so those users would need to grant access again."}]}]}}, "models": [{"key": "fable", "name": "Fable 5.2", "tool": "in Claude Code"}, {"key": "sonnet", "name": "Sonnet 5.5", "tool": "in Claude Code"}, {"key": "haiku", "name": "Haiku 5.5", "tool": "in Claude Code"}, {"key": "gpt", "name": "GPT-6.2 Sol", "tool": "in Codex"}]};
+
+const h = (tag, attrs, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") el.className = v; else if (k === "text") el.textContent = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) el.append(kid);
+  return el;
+};
+const num = (text, extra) => h("span", { class: "num" + (extra ? " " + extra : ""), text });
+const name = (key) => DATA.models.find((m) => m.key === key).name;
+const money = (v) => (v === null ? "n/a" : v < 10 ? "$" + v.toFixed(2) : "$" + Math.round(v));
+const compact = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(n));
+const median = (list) => { const s = [...list].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const pct = (v) => Math.max(0, Math.min(100, v)) + "%";
+
+// What a person or a model said keeps its line breaks and inline code, and nothing else.
+const said = (text) => {
+  const out = [];
+  let list = null;
+  for (const block of text.split(/\n\s*\n/)) {
+    const lines = block.split("\n");
+    const inline = (line, el) => {
+      line.split(/(`[^`]+`)/).forEach((part) => el.append(part.startsWith("`") ? h("code", { text: part.slice(1, -1) }) : part.replace(/\*\*/g, "")));
+      return el;
+    };
+    if (lines.every((l) => l.startsWith("- "))) {
+      list = h("ul", {}, lines.map((l) => inline(l.slice(2), h("li"))));
+      out.push(list);
+    } else out.push(inline(lines.join(" "), h("p")));
+  }
+  return out;
+};
+
+const page = document.getElementById("page");
+const R = DATA.replay, S = DATA.slop;
+const runsOf = (key) => R.tasks.map((t) => t.runs.find((r) => r.model === key)).filter(Boolean);
+
+// --- Header and the scoreboard
+page.append(h("header", {},
+  h("p", { class: "label", text: "OpenRamble model bench" }),
+  h("h1", { text: "Replay and Slop" }),
+  h("p", { class: "lede", text: "Two benchmarks of AI models as engineers on OpenRamble. Replay asks whether a model gets a real change right. Slop counts what a model writes that nobody needed." }),
+  h("p", { class: "note", text: `Pilot of ${DATA.date}. Every task was run once per model, so the table is a first look and not a ranking.` })));
+
+const board = h("div", { class: "rows board" },
+  h("div", { class: "row head label" }, h("span", { text: "Model" }), h("span", { text: "Replay" }),
+    h("span", { class: "right", text: "Minutes" }), h("span", { class: "right", text: "List price" }), h("span", { class: "right", text: "Words" })));
+for (const m of DATA.models) {
+  const mine = runsOf(m.key), costs = mine.map((r) => r.cost).filter((c) => c !== null);
+  const words = S.totals[m.key];
+  board.append(h("div", { class: "row" },
+    h("span", { class: "model" }, m.name, h("small", { text: m.tool })),
+    h("span", { class: "marks", role: "img", "aria-label": mine.map((r) => r.state).join(", ") },
+      R.tasks.map((t) => { const r = t.runs.find((x) => x.model === m.key); return h("span", { class: "mark " + (r ? r.state : "none"), title: t.title + ": " + (r ? r.state : "not run") }); })),
+    h("span", { class: "right", "data-label": "Minutes, median" }, num(mine.length ? median(mine.map((r) => r.minutes)).toFixed(1) : "n/a")),
+    h("span", { class: "right", "data-label": "List price, all runs" }, num(costs.length ? money(costs.reduce((a, b) => a + b, 0)) : "n/a")),
+    h("span", { class: "right", "data-label": "Words per answer" }, h("span", {}, num(String(words.plain.words)), h("span", { class: "arrow", text: "→" }), num(String(words.instructed.words))))));
+}
+page.append(h("section", {}, board,
+  h("p", { class: "note", text: "Replay shows one mark per task. Words is the median length of an answer, first without Mik's instructions and then with them." })));
+
+// --- Replay
+const replay = h("section", {}, h("div", { class: "intro" }, h("h2", { text: "Replay" }),
+  h("p", { class: "note", text: "A model gets OpenRamble as it was the day before a real change, and the request in Mik's words. The tests of the real change grade the result, and the model never sees them." })));
+for (const t of R.tasks) {
+  const most = Math.max(t.shipped.source, ...t.runs.map((r) => r.source), 1);
+  const rows = h("div", { class: "rows runs" },
+    h("div", { class: "row head label" }, h("span", { text: "Model" }), h("span", { text: "Result" }),
+      h("span", { text: "Lines changed" }), h("span", { class: "right", text: "Min" }), h("span", { class: "right", text: "Price" })));
+  for (const m of DATA.models) {
+    const r = t.runs.find((x) => x.model === m.key);
+    if (!r) continue;
+    rows.append(h("div", { class: "row" },
+      h("span", { class: "model", text: m.name }),
+      h("span", { class: "state " + r.state, text: r.state }),
+      h("span", { class: "size" },
+        h("span", { class: "track" }, h("span", { class: "bar", style: `width:${pct(100 * r.source / most)}` }),
+          t.kind === "trap" ? null : h("span", { class: "tick", style: `left:${pct(100 * t.shipped.source / most)}`, title: "What shipped" })),
+        num(String(r.source))),
+      h("span", { class: "right" }, num(r.minutes.toFixed(1)), h("span", { class: "unit", text: " min" })),
+      h("span", { class: "right" }, num(money(r.cost))),
+      r.state === "pass" ? null : h("span", { class: "why", text: r.reason })));
+  }
+  replay.append(h("article", { class: "task" },
+    h("p", { class: "label", text: t.area }),
+    h("blockquote", { class: "words" }, said(t.request)),
+    h("p", { class: "shipped" },
+      h("span", {}, "What shipped: ", t.kind === "trap" ? "nothing" : [num(String(t.shipped.source)), " lines"]),
+      h("span", { text: t.source })),
+    rows,
+    h("details", {}, h("summary", { text: "What each model reported" }),
+      h("div", { class: "said" }, DATA.models.map((m) => { const r = t.runs.find((x) => x.model === m.key);
+        return r && h("p", { class: "words" }, h("span", { class: "who", text: `${m.name}, ${r.words} words` }), r.opening); })))));
+}
+page.append(replay);
+
+// --- Slop
+const legend = () => h("p", { class: "legend" },
+  h("span", {}, h("i", { class: "dot open" }), "Without his instructions"),
+  h("span", {}, h("i", { class: "dot" }), "With them"),
+  h("span", {}, h("i", { class: "key-tick" }), "What shipped"));
+const slop = h("section", {}, h("div", { class: "intro" }, h("h2", { text: "Slop" }),
+  h("p", { class: "note", text: `What a model writes that the reader did not need. ${S.items} writing jobs taken from the history, each done without Mik's own instructions and with them.` })));
+
+// Words per answer
+const top = Math.ceil(Math.max(...S.situations.flatMap((s) => [s.shipped, ...Object.values(s.models).flat()])) / 100) * 100;
+const at = (v) => pct(100 * v / top);
+const words = h("div", { class: "chart" }, h("h3", { text: "How many words is the answer?" }), legend());
+const list = h("div", {});
+for (const s of S.situations) {
+  const block = h("div", { class: "situation" }, h("h3", {}, h("span", { text: s.name }), h("span", { class: "dim", style: "font-weight:400" }, "shipped ", num(String(s.shipped)))));
+  for (const m of DATA.models) {
+    const [plain, told] = s.models[m.key];
+    block.append(h("span", { class: "name", text: m.name }),
+      h("span", { class: "span", role: "img", "aria-label": `${m.name}: ${plain} words, ${told} with his instructions` },
+        h("span", { class: "link", style: `left:${at(Math.min(plain, told))};width:${pct(100 * Math.abs(plain - told) / top)}` }),
+        h("span", { class: "tick", style: `left:${at(s.shipped)}` }),
+        h("i", { class: "dot open", style: `left:${at(plain)}`, title: `${plain} words` }),
+        h("i", { class: "dot", style: `left:${at(told)}`, title: `${told} words` })));
+  }
+  list.append(block);
+}
+const marks = [0, top / 3, 2 * top / 3, top].map((v) => Math.round(v / 50) * 50);
+words.append(list, h("div", { class: "axis" }, h("span"), h("div", {}, marks.map((v) => h("span", { class: "num", style: `left:${at(v)}`, text: String(v) })))));
+slop.append(words);
+
+// One question, twenty times
+const Q = S.repeat;
+if (Q) {
+  const reading = h("div", { class: "reading", "aria-live": "polite" });
+  const show = (m, cell, i, button) => {
+    document.querySelectorAll(".answers button[aria-pressed=true]").forEach((b) => b.setAttribute("aria-pressed", "false"));
+    button.setAttribute("aria-pressed", "true");
+    reading.replaceChildren(
+      h("span", { class: "label", text: `${m.name}, ${cell.condition === "plain" ? "without his instructions" : "with his instructions"}, answer ${i + 1} of ${cell.answers.length}` }),
+      h("p", { class: "words", text: cell.answers[i].opening }));
+  };
+  const rows = h("div", { class: "rows twenty" });
+  let first = null;
+  for (const m of DATA.models) for (const cell of Q.cells.filter((c) => c.model === m.key)) {
+    const buttons = cell.answers.map((a, i) => h("button", { class: a.yes ? "yes" : "", type: "button", "aria-pressed": "false",
+      "aria-label": `Answer ${i + 1}: opened with ${a.yes ? "yes" : "no"}`, onclick: (e) => show(m, cell, i, e.currentTarget) }));
+    if (!first && cell.condition === "instructed") first = () => show(m, cell, 0, buttons[0]);
+    rows.append(h("div", { class: "row" },
+      h("span", { class: "model", text: m.name }),
+      h("span", { class: "cond dim", style: "font-size:.875rem", text: cell.condition === "plain" ? "without" : "with his" }),
+      h("span", { class: "answers" }, buttons),
+      h("span", { class: "right count" }, num(cell.answers.filter((a) => a.yes).length + "/" + cell.answers.length))));
+  }
+  slop.append(h("div", { class: "chart" }, h("h3", { text: "One question, twenty times" }),
+    h("p", { class: "note", text: Q.rule }),
+    h("blockquote", { class: "words question", text: Q.question }),
+    h("p", { class: "legend" }, h("span", {}, h("i", { class: "dot" }), "Opened with yes"), h("span", {}, h("i", { class: "dot open" }), "Opened with no"), h("span", { text: "Tap a dot to read the answer." })),
+    rows, reading));
+  if (first) first();
+}
+
+// What a judge marked, and which answer a judge would rather receive
+const judges = S.judges;
+const meter = (label, value, most, text, open) => h("span", { class: "meter", "data-label": label },
+  h("span", { class: "track" }, h("span", { class: "bar" + (open ? " open" : ""), style: `width:${pct(100 * value / most)}` })), num(text));
+const share = h("div", { class: "rows share" }, h("div", { class: "row head label" }, h("span", { text: "Model" }), h("span", { text: "Without his instructions" }), h("span", { text: "With them" })));
+const mostShare = Math.max(...DATA.models.flatMap((m) => ["plain", "instructed"].map((c) => S.totals[m.key][c].share[judges[0].key])), 0.01);
+for (const m of DATA.models) {
+  const t = S.totals[m.key], j = judges[0].key;
+  share.append(h("div", { class: "row" }, h("span", { class: "model", text: m.name }),
+    meter("Without", t.plain.share[j], mostShare, Math.round(100 * t.plain.share[j]) + "%", true),
+    meter("With them", t.instructed.share[j], mostShare, Math.round(100 * t.instructed.share[j]) + "%", false)));
+}
+slop.append(h("div", { class: "chart" }, h("h3", { text: "How much of it was not needed?" }),
+  h("p", { class: "note", text: `The share of a model's words that a judge marked, with ${judges[0].name} as the judge. ${judges[1].name} as the judge marks about ${S.judge_ratio} times as much and puts the models in the same order.` }),
+  share));
+
+const pairs = h("div", { class: "rows pairs" }, h("div", { class: "row head label" }, h("span", { text: "Model" }), judges.map((j) => h("span", { text: "Judge " + j.name }))));
+for (const m of DATA.models) {
+  pairs.append(h("div", { class: "row" }, h("span", { class: "model", text: m.name }),
+    judges.map((j) => { const [won, of] = S.totals[m.key].pairs[j.key]; return meter("Judge " + j.name, won, of, won + "/" + of, false); })));
+}
+slop.append(h("div", { class: "chart" }, h("h3", { text: "Which answer would he rather receive?" }),
+  h("p", { class: "note", text: `Two answers to the same request, shown without names. Two judges picked one in each of ${S.agree[1]} pairs, and they agree on ${S.agree[0]}. Mik's own votes will decide between them.` }),
+  pairs));
+page.append(slop);
+
+page.append(h("footer", {},
+  h("p", { class: "label", text: "Run it again" }),
+  h("code", { text: "research/model-bench-2026-11/bench pilot" }),
+  h("p", { text: `Every model ran inside its own tool at ${DATA.effort} effort, in a sandbox that hides the answer. Prices are list prices as the tool reports them, and Codex reports none. DESIGN.md says what each number measures, and LEDGER.md says how each was checked.` })));
+})();
+</script>

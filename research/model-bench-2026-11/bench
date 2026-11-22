@@ -1204,6 +1204,97 @@ def report():
         lines.append("")
     (RESULTS / "REPORT.md").write_text("\n".join(lines))
     say(f"wrote {RESULTS / 'REPORT.md'}")
+    if scores_path.exists():
+        site()
+
+
+NAMES = {"fable": "Fable 5.2", "opus": "Opus 5.5", "sonnet": "Sonnet 5.5", "haiku": "Haiku 5.5", "gpt": "GPT-6.2 Sol"}
+SITUATIONS = ["reply", "review", "pull request description", "commit message", "release notes", "interface copy"]
+
+
+def opening(text, limit=300):
+    """The first sentences of what a model wrote, as plain text."""
+    plain = " ".join(re.sub(r"[*_`#>|]", "", text).split())
+    if len(plain) <= limit:
+        return plain
+    cut = plain[:limit]
+    end = max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! "))
+    return cut[:end + 1] if end > limit // 2 else cut.rsplit(" ", 1)[0] + " ..."
+
+
+def site():
+    """results/index.html: the same numbers as REPORT.md, as a page to look at."""
+    key_of = {model: key for key, (_, model) in MODELS.items()}
+    data = {"date": time.strftime("%-d %B %Y"), "effort": EFFORT, "replay": {"tasks": []}}
+    used = set()
+    by_task = {}
+    for path in sorted((RESULTS / "replay").glob("*/grade.json")):
+        meta, grade = json.loads((path.parent / "meta.json").read_text()), json.loads(path.read_text())
+        if grade["state"] == "void":
+            continue
+        size = grade.get("size") or {}
+        used.add(key_of[meta["model"]])
+        by_task.setdefault(meta["task"], []).append({
+            "model": key_of[meta["model"]], "state": grade["state"], "reason": grade.get("reason", ""),
+            "minutes": round(meta["seconds"] / 60, 1), "cost": meta["cost_usd"], "tokens": meta["tokens"],
+            "source": size.get("source", 0), "tests": size.get("tests", 0), "words": meta["final_words"],
+            "calls": meta["tool_calls"], "opening": opening((path.parent / "final.md").read_text())})
+    for name in sorted(by_task, key=lambda t: (PILOT_TASKS + [t]).index(t)):
+        task = Task(name)
+        shipped = patch_stats(task.reference_patch())["lines"]
+        number = re.match(r"#(\d+)", task.source)
+        data["replay"]["tasks"].append({
+            "id": name, "title": task.title, "area": task.area, "kind": task.kind, "request": task.request,
+            "source": getattr(task, "note", None) or (f"Pull request {number.group(1)}" if number else ""),
+            "shipped": {"source": shipped["source"], "tests": shipped["tests"]}, "runs": by_task[name]})
+
+    scores = json.loads((RESULTS / "slop/scores.json").read_text())
+    rows, pairs = scores["outputs"], json.loads((RESULTS / "slop/pairs.json").read_text())
+    used |= {r["model"] for r in rows}
+    items = slop_items()
+    judges = [JUDGE] + [j for j in PAIR_JUDGES if j != JUDGE]
+    marked_words = lambda mine, who: sum((r["slop_share_by_judge"].get(who) or 0) * r["words"] for r in mine)
+    totals = {}
+    for model in used & {r["model"] for r in rows}:
+        totals[model] = {"pairs": {}}
+        for condition in CONDITIONS:
+            mine = [r for r in rows if r["model"] == model and r["condition"] == condition]
+            words = sum(r["words"] for r in mine)
+            totals[model][condition] = {"words": round(median([r["words"] for r in mine])),
+                                        "share": {who: round(marked_words(mine, who) / max(words, 1), 3) for who in judges}}
+        for who in judges:
+            played = [pair for pair in pairs if model in (pair["a"], pair["b"]) and pair["picks"].get(who)]
+            totals[model]["pairs"][who] = [sum(1 for pair in played if pair["picks"][who] == model), len(played)]
+    both = [pair for pair in pairs if all(pair["picks"].get(who) for who in judges)]
+    data["slop"] = {
+        "items": len(items), "totals": totals,
+        "judges": [{"key": who, "name": NAMES[who]} for who in judges],
+        "judge_ratio": round(marked_words(rows, judges[1]) / max(marked_words(rows, judges[0]), 1)) if len(judges) > 1 else 1,
+        "agree": [sum(1 for pair in both if len(set(pair["picks"].values())) == 1), len(both)],
+        "situations": [{"name": situation.capitalize(),
+                        "shipped": round(median([len(i["reference"].split()) for i in items if i["situation"] == situation])),
+                        "models": {model: [round(median([r["words"] for r in rows if r["model"] == model
+                                                         and r["condition"] == c and r["situation"] == situation]))
+                                           for c in CONDITIONS] for model in totals}}
+                       for situation in SITUATIONS if any(i["situation"] == situation for i in items)],
+        "repeat": None}
+    for path in sorted((RESULTS / "slop").glob("repeat-*.json"))[:1]:
+        rep = json.loads(path.read_text())
+        probe = next(i for i in items if i["id"] == rep["item"])["probe"]
+        cells = []
+        for model in [m for m in MODELS if m in totals]:
+            for condition in CONDITIONS:
+                answers = sorted((r for r in rep["rows"] if r["model"] == model and r["condition"] == condition),
+                                 key=lambda r: r["n"])
+                read = lambda r: json.loads((RESULTS / "slop/repeats" / f"{rep['item']}.{condition}.{model}.{r['n']:02d}.json").read_text())["output"]
+                cells.append({"model": model, "condition": condition,
+                              "answers": [{"yes": r["first_words"], "opening": opening(read(r), 260)} for r in answers]})
+        data["slop"]["repeat"] = {**probe["shown"], "cells": cells}
+    data["models"] = [{"key": key, "name": NAMES[key], "tool": "in Claude Code" if MODELS[key][0] == "claude" else "in Codex"}
+                      for key in MODELS if key in used]
+    page = (HERE / "site/page.html").read_text().replace("/*DATA*/null", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
+    (RESULTS / "index.html").write_text(page)
+    say(f"wrote {RESULTS / 'index.html'}")
 
 
 def pilot(effort):
