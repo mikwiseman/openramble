@@ -24,9 +24,9 @@ env:
   # The file the Windows and Linux app ships (apps/desktop/src-tauri/model-manifest.json).
   Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
   Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
-  # A finished run of desktop-release.yml on the branch with the change. Empty
-  # until that run exists.
-  PACKAGES_RUN: ""
+  # A finished run of desktop-release.yml on the branch with the change.
+  PACKAGES_RUN: "45049805547"
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
 
 jobs:
   runtime:
@@ -82,6 +82,24 @@ jobs:
           CARGO_TARGET_DIR=target-fixed TRANSCRIBE_CMAKE_ARGS="$FIXED_ARGS" cargo build --release -p ramble-engine --example clock --locked
           grep -rh "Adding CPU backend variant" target-fixed/release/build/transcribe-cpp-sys-*/output | head -3 | tee -a "$GITHUB_STEP_SUMMARY"
 
+      # The build the research measured: transcribe.cpp configured by hand with
+      # the same switches, as engine-bench.yml does it, and this same program
+      # linked against it. Position-independent only because Rust links one
+      # that way.
+      - name: Build the measured AVX2 reference
+        run: |
+          here=$(pwd -W 2> /dev/null || pwd)
+          git clone --quiet https://github.com/mikwiseman/transcribe.cpp tcpp
+          git -C tcpp checkout --quiet "$TCPP_COMMIT"
+          cmake -S tcpp -B tcpp/build -DCMAKE_BUILD_TYPE=Release \
+            -DTRANSCRIBE_BUILD_TESTS=OFF -DTRANSCRIBE_BUILD_EXAMPLES=OFF \
+            -DTRANSCRIBE_BUILD_SHARED=OFF -DTRANSCRIBE_METAL=OFF -DTRANSCRIBE_INSTALL=ON \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON $FIXED_ARGS > tcpp-configure.log
+          grep "Adding CPU backend variant" tcpp-configure.log | tee -a "$GITHUB_STEP_SUMMARY"
+          cmake --build tcpp/build --config Release --parallel 4 > tcpp-build.log 2>&1 || { tail -50 tcpp-build.log; exit 1; }
+          cmake --install tcpp/build --config Release --prefix "$here/tcpp-prefix" > /dev/null
+          TRANSCRIBE_DIR="$here/tcpp-prefix" CARGO_TARGET_DIR=target-reference cargo build --release -p ramble-engine --example clock --locked
+
       - name: Instruction sets in the runtime's libraries
         run: |
           {
@@ -122,7 +140,7 @@ jobs:
             echo '```'
             for round in 1 2; do
               for model in q8 q4; do
-                for variant in shipped fixed; do
+                for variant in shipped fixed reference; do
                   target-$variant/release/examples/clock $model dots.wav 3 2 8 16 30 2> heard-$variant-$model.txt \
                     | sed "s/^/round $round | $model | $variant | /"
                 done
@@ -130,7 +148,7 @@ jobs:
             done
             echo "--- words"
             for model in q8 q4; do
-              if cmp -s heard-shipped-$model.txt heard-fixed-$model.txt; then echo "$model: text identical in both builds"; else echo "$model: text DIFFERENT"; fi
+              if cmp -s heard-shipped-$model.txt heard-fixed-$model.txt && cmp -s heard-reference-$model.txt heard-fixed-$model.txt; then echo "$model: text identical in all three builds"; else echo "$model: text DIFFERENT"; fi
             done
             cat heard-fixed-q8.txt
             echo '```'
