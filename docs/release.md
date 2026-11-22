@@ -25,10 +25,17 @@ requires the matching private key. Recover the permanent key described in
 
 ## Release-machine setup
 
-Use an Apple Silicon Mac with Rosetta installed. The universal artifact check
-launches both CLI architectures and requires offline recognition from each.
-Rosetta verifies Intel executable compatibility, not native Intel performance
-or microphone behavior. Intel support remains experimental pending those checks.
+Use an Apple Silicon Mac. The universal artifact check verifies both halves of
+every binary without running them (slices, minimum system version, signature)
+and runs this Mac's own half, including offline recognition. The Intel half is
+built and run on an Intel Mac by CI's "Intel Mac" job, which a release requires
+to be green on the commit it ships.
+
+Do not run the Intel half on the release Mac. Until 0.42.1 the check did, under
+Rosetta, and macOS 27 lists that under Legacy Software against OpenRamble's own
+bundle identifier and warns the person at that Mac that OpenRamble "includes a
+component that will not open in macOS 28". Intel support remains experimental:
+native speed and microphone behavior on Intel hardware are not measured.
 
 Run once on a trusted Mac:
 
