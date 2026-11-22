@@ -116,7 +116,9 @@ def base_env(folder):
     (support / "bin").mkdir(exist_ok=True)
     gitconfig = support / "gitconfig"
     gitconfig.write_text("[user]\n\tname = Bench\n\temail = bench@localhost\n"
-                         "[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = work\n")
+                         "[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = work\n"
+                         # No housekeeping in the background while a model works or a folder is removed.
+                         "[gc]\n\tauto = 0\n[maintenance]\n\tauto = false\n")
     shim = support / "bin/swift"
     # SwiftPM applies its own seatbelt profile, which a process already inside
     # one may not do. Every model gets the same wrapper.
@@ -200,7 +202,13 @@ def export(commit, folder):
         # One fast check grows a checkout to 2.5 GB, and a full disk would
         # stop every other session on this Mac.
         sys.exit(f"only {free:.1f} GB free; a run needs 4")
-    shutil.rmtree(folder, ignore_errors=True)
+    # A folder from a stopped run can still be in use for a moment. A stale
+    # one must never be reused, so mkdir fails loudly if it is still there.
+    for _ in range(10):
+        shutil.rmtree(folder, ignore_errors=True)
+        if not folder.exists():
+            break
+        time.sleep(1)
     folder.mkdir(parents=True)
     archive = subprocess.Popen(["git", "-C", str(REPO), "archive", commit], stdout=subprocess.PIPE)
     subprocess.run(["tar", "-x", "-C", str(folder)], stdin=archive.stdout, check=True)
