@@ -337,8 +337,9 @@ was needed. A judge reads two things that cannot be counted, which facts an
 answer states and what a report claims. The harness went from 1,375 lines to
 1,097.
 
-**The page** now shows three figures per model, and below them the change or
-the answer at its real length next to what shipped.
+**The page** then showed three figures per model, and below them the change
+or the answer at its real length next to what shipped. L19 says why that page
+was rejected too.
 
 ## L16. Two copies of this session worked at once
 
@@ -375,3 +376,32 @@ scripts/`, a search for text inside two scripts.
 **Decision.** The audit now reads the program at the start of a command and
 ignores quoted arguments. The run was graded again from its saved change.
 Every void run in this pilot was read before it was run again.
+
+## L19. The second page was slop too, and what the best pages do
+
+**What happened.** At 22:30 Mik looked at the second page, a question in a
+serif and a table of three ratios per model, and wrote "still so sloped bench,
+check best examples please". I had read the code of Theo's benchmarks and had
+never opened the pages.
+
+**Looked at.** snitchbench.t3.gg, skatebench.t3.gg, eqbench.com/slop-score.html,
+nextjs.org/evals and artificialanalysis.ai, on 22 November.
+
+| Page | What it is |
+|---|---|
+| SnitchBench | A wordmark, five filter buttons and one bar chart. Nothing else. |
+| SkateBench | A wordmark, four tabs (accuracy, cost, speed, matrix), and one ranked list of bars per tab. The top three keep their colours across tabs. |
+| EQ-Bench slop score | A ranked list of bars with a row for the human baseline. Clicking a model shows the words it overuses. |
+| Next.js evals | A title, a date and one table that sorts. A row opens to its tasks. |
+| Artificial Analysis | Small bar charts, one figure each, all in the same order. |
+
+**Result.** None of them explains itself in prose. Each is a ranked board that
+is read in a second, with a name and one colour, and the detail is one click
+away. My two pages were a report and a table.
+
+**Decision.** The page is a scoreboard with two names, slopbench and
+replaybench. It shows one ranked board at a time, with tabs for the question.
+Every figure is drawn in blocks, where the first block is what was needed and
+pink is extra. "Needed" is a row of its own. Under the board, one model's
+answer or change stands next to what was needed.
+

@@ -1,11 +1,11 @@
 # Pilot results
 
-Written by `bench report` on 2026-11-22 21:01. One run per model and task, so read each line as "this happened once". `index.html` is the same as a page.
+Written by `bench report` on 2026-11-22 22:39. One run per model and task, so read each line as "this happened once". `index.html` is the same as a page.
 
 | Model | Passed | Code, × what shipped | Words, × what was needed | The same without his instructions |
 |---|---|---|---|---|
 | Fable 5.2 in Claude Code | 3 of 3 | 5.6× | 2.0× | 2.7× |
-| Sonnet 5.5 in Claude Code | 2 of 3 | 3.5× | 2.1× | 2.9× |
+| Sonnet 5.5 in Claude Code | 3 of 4 | 2.0× | 2.1× | 2.9× |
 | Haiku 5.5 in Claude Code | 2 of 3 | 1.8× | 1.6× | 2.9× |
 | GPT-6.2 Sol in Codex | 2 of 3 | 3.3× | 1.0× | 1.2× |
 
@@ -53,7 +53,7 @@ What shipped: 189 lines of code.
 | Model | Result | Lines of code | Lines of tests | Minutes | Load | Tokens | List price | Noticed |
 |---|---|---|---|---|---|---|---|---|
 | Fable 5.2 | void | | | | | | | the tool reported a problem |
-| Sonnet 5.5 | void | | | | | | | the tool reported a problem |
+| Sonnet 5.5 | pass | 117 | 34 | 11.9 | 117.2 | 1.76M | $0.68 |  |
 | Haiku 5.5 | void | | | | | | | the tool reported a problem |
 | GPT-6.2 Sol | void | | | | | | | the tool reported a problem |
 

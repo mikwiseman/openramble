@@ -3,129 +3,142 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>OpenRamble Model Bench</title>
 <style>
-/* Layout: what was needed stands on the left, and what each model made stands
-   beside it at true size. An answer is drawn as its own words and a change as
-   its own lines. OpenRamble's language: air, a hairline, words in the serif. */
+/* Layout: a scoreboard. One ranked board at a time, and every figure is drawn
+   in blocks. The first block is what was needed, and pink is what a model made
+   on top of it. A model's own words are set in the serif, as in the app. */
 :root {
-  --paper: #fbfbfd;
-  --ink: #1d1d1f;
-  --soft: rgba(29, 29, 31, 0.5);
-  --wall: rgba(29, 29, 31, 0.7);
-  --faint: rgba(29, 29, 31, 0.26);
-  --hairline: rgba(29, 29, 31, 0.12);
-  --tile: rgba(29, 29, 31, 0.05);
-  --good: #1f9d47;
-  --attention: #d9730b;
-  --words: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --paper: #f5f5f7;
+  --panel: #ffffff;
+  --ink: #111113;
+  --soft: #6e6e73;
+  --faint: #d2d2d7;
+  --tile: rgba(17, 17, 19, 0.05);
+  --extra: #ff2d78;
+  --pass: #1faa4b;
+  --unsure: #f59f00;
+  --fail: #ff3b30;
+  --round: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --app: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --words: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #111114; --ink: #f2f2f5; --soft: rgba(242, 242, 245, 0.55); --wall: rgba(242, 242, 245, 0.72); --faint: rgba(242, 242, 245, 0.3);
-    --hairline: rgba(242, 242, 245, 0.15); --tile: rgba(242, 242, 245, 0.08); --good: #36c964; --attention: #ff9f2e;
-    color-scheme: dark;
+    --paper: #000000; --panel: #141416; --ink: #f5f5f7; --soft: #98989f; --faint: #3a3a3e; --tile: rgba(245, 245, 247, 0.08);
+    --extra: #ff3f86; --pass: #30d158; --unsure: #ffb020; --fail: #ff453a; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #111114; --ink: #f2f2f5; --soft: rgba(242, 242, 245, 0.55); --wall: rgba(242, 242, 245, 0.72); --faint: rgba(242, 242, 245, 0.3);
-  --hairline: rgba(242, 242, 245, 0.15); --tile: rgba(242, 242, 245, 0.08); --good: #36c964; --attention: #ff9f2e;
-  color-scheme: dark;
+  --paper: #000000; --panel: #141416; --ink: #f5f5f7; --soft: #98989f; --faint: #3a3a3e; --tile: rgba(245, 245, 247, 0.08);
+  --extra: #ff3f86; --pass: #30d158; --unsure: #ffb020; --fail: #ff453a; color-scheme: dark;
 }
 
-body { background: var(--paper); color: var(--ink); font: 400 1rem/1.45 var(--app); -webkit-font-smoothing: antialiased; }
+body { background: var(--paper); color: var(--ink); font: 400 1rem/1.4 var(--app); -webkit-font-smoothing: antialiased; }
 .page {
-  max-width: 66rem; margin: 0 auto; padding-block: 4rem 5rem;
-  padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
-  display: flex; flex-direction: column; gap: 7.5rem;
+  max-width: 62rem; margin: 0 auto; padding-block: 2rem 4rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 1.25rem;
 }
-h1, h2, p, blockquote { margin: 0; }
-h1 { font: 400 clamp(2.4rem, 7.2vw, 4.5rem)/1.03 var(--words); letter-spacing: -0.02em; text-wrap: balance; max-width: 14em; }
-h2 { font: 400 clamp(2rem, 5vw, 3rem)/1.05 var(--words); letter-spacing: -0.015em; }
-.label { font: 500 0.75rem/1.3 var(--app); letter-spacing: 0.07em; text-transform: uppercase; color: var(--soft); }
-.quiet { color: var(--soft); font-size: 0.875rem; }
-.figure { font: 400 1em/1 var(--words); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-header, section { display: flex; flex-direction: column; gap: 2.25rem; min-width: 0; }
+button { font: inherit; color: inherit; }
+h1, h2, p, ol, blockquote { margin: 0; padding: 0; }
+.mono { font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; color: var(--soft); }
 
-/* The board: three figures a model */
-.board { display: grid; grid-template-columns: minmax(7rem, 1.5fr) repeat(3, minmax(0, 1fr)); }
-.board > * { padding: 1.1rem 0; border-top: 1px solid var(--hairline); display: flex; flex-direction: column; justify-content: center; }
-.board > .top { border-top: 0; padding: 0 0 0.7rem; justify-content: flex-end; }
-.board .n { align-items: flex-end; text-align: right; }
-.board .figure { font-size: clamp(1.6rem, 5.4vw, 2.75rem); }
-.board .name { font-weight: 500; font-size: 1.0625rem; }
-.board small, .top small { font: 400 0.8125rem/1.3 var(--app); color: var(--soft); letter-spacing: 0; text-transform: none; }
+/* The two benches are the two wordmarks. */
+.marks { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.75rem; }
+.mark { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 0.55rem; font: 800 clamp(1.5rem, 5.4vw, 2.25rem)/1 var(--round); letter-spacing: -0.02em; color: var(--faint); transition: color 150ms; }
+.mark b { font-weight: 800; }
+.mark svg { width: 1.15em; height: 1.15em; flex: none; }
+.mark:hover { color: var(--soft); }
+.mark[aria-pressed="true"] { color: var(--ink); }
+.mark[aria-pressed="true"] b, .mark[aria-pressed="true"] svg { color: var(--extra); }
+.mark.replay[aria-pressed="true"] b, .mark.replay[aria-pressed="true"] svg { color: var(--pass); }
+.top { display: flex; flex-direction: column; gap: 0.6rem; padding-bottom: 0.5rem; }
+button:focus-visible, .row:focus-visible, .block:focus-visible, .switch input:focus-visible + i { outline: 2px solid var(--ink); outline-offset: 3px; }
 
-/* A section's controls */
-.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem 2rem; }
-.tabs { display: flex; gap: 0.25rem 1.5rem; flex-wrap: wrap; }
-.tabs button, .steps button { all: unset; cursor: pointer; color: var(--soft); font-size: 0.9375rem; padding: 0.3rem 0; border-bottom: 1.5px solid transparent; }
-.tabs button:hover, .steps button:hover { color: var(--ink); }
-.tabs button[aria-pressed="true"], .steps button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
-.steps { display: inline-flex; gap: 0.9rem; margin-left: 1rem; vertical-align: 0.35em; }
-.steps button { font: 400 0.875rem var(--app); padding: 0 0.15rem 0.1rem; }
-button:focus-visible, .wall:focus-visible, .map:focus-visible, .switch input:focus-visible + i { outline: 2px solid var(--ink); outline-offset: 3px; }
-.ask { font: 400 clamp(1.4rem, 3.6vw, 2.125rem)/1.25 var(--words); max-width: 26em; text-wrap: pretty; }
-.ask p + p { margin-top: 0.55em; }
-.ask ul { margin: 0.5em 0; padding-left: 1.1em; font-size: 0.8em; }
-.ask code { font: 0.74em ui-monospace, "SF Mono", Menlo, monospace; overflow-wrap: anywhere; }
-
-.switch { display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.9375rem; user-select: none; }
+/* A board */
+.panel { background: var(--panel); border-radius: 24px; padding: clamp(1.1rem, 3.6vw, 2rem); display: flex; flex-direction: column; gap: 1.4rem; min-width: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; justify-content: space-between; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.tabs button { all: unset; cursor: pointer; font: 600 0.875rem/1 var(--round); padding: 0.55rem 0.85rem; border-radius: 999px; color: var(--soft); }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.switch { display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer; font: 600 0.875rem/1 var(--round); user-select: none; }
 .switch input { position: absolute; opacity: 0; pointer-events: none; }
-.switch i { width: 40px; height: 24px; border-radius: 12px; background: var(--faint); position: relative; transition: background-color 150ms; flex: none; }
-.switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--paper); transition: transform 150ms; }
-.switch input:checked + i { background: var(--good); }
-.switch input:checked + i::after { transform: translateX(16px); }
+.switch i { width: 42px; height: 26px; border-radius: 13px; background: var(--faint); position: relative; transition: background-color 150ms; flex: none; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 150ms; }
+.switch input:checked + i { background: var(--ink); }
+.switch input:checked + i::after { transform: translateX(16px); background: var(--panel); }
+.title { display: flex; flex-direction: column; gap: 0.35rem; }
+h1 { font: 800 clamp(1.35rem, 4.4vw, 2rem)/1.08 var(--round); letter-spacing: -0.015em; text-wrap: balance; }
 
-/* The stage: five columns hang from one line */
-.stage { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0 clamp(0.5rem, 2.4vw, 2rem); align-items: start; border-top: 1px solid var(--hairline); padding-top: 1.1rem; }
-.col { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
-.col .who { font: 500 clamp(0.6875rem, 1.9vw, 0.9375rem)/1.25 var(--app); min-height: 2.5em; }
-.col .figure { font-size: clamp(1.5rem, 5.6vw, 3.25rem); }
-.col .facts { font: 400 clamp(0.625rem, 1.7vw, 0.8125rem)/1.35 var(--app); color: var(--soft); min-height: 2.9em; margin-bottom: 0.9rem; }
-.replay .col .facts { min-height: 4.3em; }
-.col .facts b { font-weight: 400; display: block; }
-.col .facts .bad { color: var(--attention); }
-.pass { color: var(--good); }
-.fail { color: var(--attention); }
+.board { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+.row { display: grid; grid-template-columns: 1.6rem minmax(7.5rem, 11rem) minmax(0, 1fr) minmax(4.4rem, auto); align-items: center; gap: 0.3rem 1rem; padding: 0.7rem 0.75rem; margin: 0 -0.75rem; border-radius: 14px; }
+.row.pick { cursor: pointer; }
+.row.pick:hover, .row.on { background: var(--tile); }
+.rank { font: 700 0.9375rem/1 var(--round); color: var(--soft); font-variant-numeric: tabular-nums; }
+.row.best .rank { color: var(--ink); }
+.who { display: flex; flex-direction: column; min-width: 0; }
+.who b { font: 700 1.0625rem/1.2 var(--round); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.who small { font: 400 0.75rem/1.3 var(--app); color: var(--soft); }
+.row.ref .who b { font-weight: 600; color: var(--soft); }
+.num { font: 800 clamp(1.5rem, 5vw, 2.25rem)/1 var(--round); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.num small { display: block; font: 500 0.6875rem/1.4 var(--app); letter-spacing: 0; color: var(--soft); white-space: normal; }
+.row.ref .num { color: var(--soft); font-weight: 700; }
 
-.wall { cursor: pointer; overflow: hidden; border-radius: 3px; }
-.wall > div { transform-origin: 0 0; font: 400 16px/1.32 var(--words); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--wall); }
-.col.needed .wall > div { color: var(--ink); }
-.wall:hover > div { color: var(--ink); }
-.map { display: flex; flex-direction: column; gap: 5px; cursor: pointer; border-radius: 3px; }
-.map.still { cursor: default; }
-.map i { display: block; height: 1px; margin-bottom: 1px; background: var(--ink); }
+/* Blocks: one block is one unit, named under the board's title. */
+.strip { display: flex; gap: 4px; min-width: 0; height: 30px; --n: 3; }
+.block { all: unset; box-sizing: border-box; flex: 0 0 calc((100% - (var(--n) - 1) * 4px) / var(--n) * var(--w, 1)); height: 100%; border-radius: 7px; background: var(--extra); transform-origin: left center; animation: pop 340ms cubic-bezier(.2, .9, .25, 1) both; animation-delay: calc(var(--i, 0) * 26ms); }
+.block.first { background: var(--ink); }
+.block.plain { background: var(--ink); }
+.block.pass { background: var(--pass); }
+.block.partial { background: var(--unsure); }
+.block.fail { background: var(--fail); }
+.block.none { background: transparent; box-shadow: inset 0 0 0 2px var(--faint); }
+.block.task { cursor: pointer; }
+.block.task.on { box-shadow: 0 0 0 3px var(--panel), 0 0 0 5px var(--ink); }
+.block.task.none.on { box-shadow: inset 0 0 0 2px var(--faint), 0 0 0 3px var(--panel), 0 0 0 5px var(--ink); }
+@keyframes pop { from { opacity: 0; transform: scaleX(0.2); } to { opacity: 1; transform: none; } }
+
+/* Read one */
+.read { display: flex; flex-direction: column; gap: 1.25rem; }
+.picker { display: flex; align-items: center; gap: 0.6rem; }
+.picker button { all: unset; cursor: pointer; width: 2rem; height: 2rem; border-radius: 50%; background: var(--tile); display: grid; place-items: center; font: 700 1rem/1 var(--round); }
+.picker button:hover { background: var(--faint); }
+.ask { font: 400 clamp(1.25rem, 3.4vw, 1.75rem)/1.28 var(--words); text-wrap: pretty; max-width: 34em; }
+.ask p + p { margin-top: 0.5em; }
+.ask ul { margin: 0.45em 0; padding-left: 1.1em; font-size: 0.82em; }
+.ask code { font: 0.74em var(--mono); overflow-wrap: anywhere; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 1.5rem 2.5rem; align-items: start; }
+.side { display: flex; flex-direction: column; gap: 0.7rem; min-width: 0; }
+.side .said { font: 400 1.0625rem/1.5 var(--words); white-space: pre-wrap; overflow-wrap: anywhere; }
+.side.got .said { color: var(--ink); }
+.map { display: flex; flex-direction: column; gap: 4px; max-width: 16rem; }
+.map i { display: block; height: 2px; margin-bottom: 1px; background: var(--ink); border-radius: 1px; }
 .map .tests i { background: var(--faint); }
-.key { display: flex; gap: 1.25rem; align-items: center; }
-.key span { display: inline-flex; align-items: center; gap: 0.45rem; }
-.key i { width: 18px; height: 2px; background: var(--ink); }
-.key i.light { background: var(--faint); }
+.state.pass { color: var(--pass); } .state.partial { color: var(--unsure); } .state.fail { color: var(--fail); }
 
-dialog { border: 0; padding: 0; background: var(--paper); color: var(--ink); border-radius: 24px; max-width: min(42rem, calc(100vw - 2rem)); max-height: min(85vh, 48rem); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28); }
-dialog::backdrop { background: rgba(0, 0, 0, 0.42); }
-dialog article { padding: 1.75rem 2rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
-dialog .said { font: 400 1.125rem/1.5 var(--words); white-space: pre-wrap; overflow-wrap: anywhere; }
-dialog header { flex-direction: row; justify-content: space-between; align-items: baseline; gap: 1rem; }
-dialog button { all: unset; cursor: pointer; color: var(--soft); font-size: 0.9375rem; padding: 0.2rem 0.4rem; border-radius: 7px; }
-dialog button:hover { color: var(--ink); }
-
-footer { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; align-items: center; justify-content: space-between; }
-footer code { font: 0.8125rem ui-monospace, "SF Mono", Menlo, monospace; background: var(--tile); padding: 0.5rem 0.75rem; border-radius: 10px; max-width: 100%; overflow-x: auto; white-space: nowrap; }
-
-@media (max-width: 44rem) {
-  .page { gap: 5rem; padding-block: 2.5rem 3.5rem; }
-  .board { grid-template-columns: minmax(5.5rem, 1.3fr) repeat(3, minmax(0, 1fr)); }
-  .board .name { font-size: 0.9375rem; }
-  .board small { font-size: 0.6875rem; }
-  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -20px; padding-right: 20px; width: 100%; }
+@media (max-width: 42rem) {
+  .row { grid-template-columns: 1.3rem minmax(0, 1fr) auto; }
+  .row .strip { grid-column: 1 / -1; grid-row: 2; height: 22px; }
+  .pair { grid-template-columns: minmax(0, 1fr); }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -1.1rem; padding: 0 1.1rem; max-width: calc(100% + 2.2rem); }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs button { white-space: nowrap; }
 }
-@media (prefers-reduced-motion: reduce) { .switch i, .switch i::after { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .block { animation: none; } .switch i, .switch i::after, .mark { transition: none; } }
 </style>
 
-<div class="page" id="page"></div>
-<dialog id="reader"><article><header><span class="label" id="reader-who"></span><button type="button" id="reader-close">Close</button></header><div class="said" id="reader-text"></div></article></dialog>
+<div class="page">
+  <header class="top">
+    <nav class="marks" aria-label="Benchmark">
+      <button class="mark slop" type="button" data-mode="slop"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="7" width="28" height="18" rx="9" fill="currentColor"/><ellipse cx="11.5" cy="16" rx="2.6" ry="3.6" fill="var(--paper)"/><ellipse cx="20.5" cy="16" rx="2.6" ry="3.6" fill="var(--paper)"/></svg><span>slop<b>bench</b></span></button>
+      <button class="mark replay" type="button" data-mode="replay"><svg viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16a9 9 0 1 0 3-6.7"/><path d="M6 5v6h6"/></svg><span>replay<b>bench</b></span></button>
+    </nav>
+    <p class="mono" id="meta"></p>
+  </header>
+  <main class="panel" id="board"></main>
+  <section class="panel read" id="read"></section>
+</div>
 
 <script>
 // In a function, so that its names cannot collide with the window's own (top, name).
@@ -142,135 +155,146 @@ const h = (tag, attrs, ...kids) => {
   for (const kid of kids.flat(Infinity)) if (kid !== null && kid !== undefined && kid !== false) el.append(kid);
   return el;
 };
-const times = (x) => (x === null || x === undefined ? "–" : (x >= 9.95 ? Math.round(x) : x.toFixed(1)) + "×");
-const money = (v) => (v === null ? null : v < 10 ? "$" + v.toFixed(2) : "$" + Math.round(v));
+const mean = (xs) => (xs.length ? Math.exp(xs.reduce((a, x) => a + Math.log(x), 0) / xs.length) : null);
+const sum = (xs) => xs.reduce((a, b) => a + b, 0);
+const times = (x) => (x >= 9.95 ? Math.round(x) : x.toFixed(1)) + "×";
 const plain = (text) => text.replace(/^```\w*\n?|```\s*$/gm, "").replace(/\*\*|`/g, "").replace(/^#+ /gm, "").trim();
-const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-// What Mik said keeps its paragraphs, its lists and its inline code.
 const said = (text) => text.split(/\n\s*\n/).map((block) => {
   const lines = block.split("\n");
   const inline = (line, el) => { line.split(/(`[^`]+`)/).forEach((part) => el.append(part.startsWith("`") ? h("code", { text: part.slice(1, -1) }) : part)); return el; };
   return lines.every((l) => l.startsWith("- ")) ? h("ul", {}, lines.map((l) => inline(l.slice(2), h("li")))) : inline(lines.join(" "), h("p"));
 });
+const tabs = (names, current, pick) => h("div", { class: "tabs" }, names.map(([key, label]) =>
+  h("button", { type: "button", "aria-pressed": String(key === current), text: label, onclick: () => pick(key) })));
 
-const reader = document.getElementById("reader");
-document.getElementById("reader-close").addEventListener("click", () => reader.close());
-reader.addEventListener("click", (e) => { if (e.target === reader) reader.close(); });
-const read = (who, text) => {
-  document.getElementById("reader-who").textContent = who;
-  document.getElementById("reader-text").textContent = plain(text);
-  reader.showModal();
+// A value as blocks. The first block is the unit that was needed.
+const strip = (value, most, kinds) => {
+  const blocks = [];
+  for (let i = 0; i < Math.ceil(value - 1e-9); i++) {
+    const w = Math.min(1, value - i);
+    blocks.push(h("span", { class: "block " + kinds(i), style: `--i:${i};--w:${Math.max(w, 0.06).toFixed(3)}` }));
+  }
+  return h("div", { class: "strip", style: `--n:${Math.max(3, Math.ceil(most))}` }, blocks);
 };
-const opens = (el, who, text) => {
-  el.setAttribute("role", "button"); el.setAttribute("tabindex", "0"); el.setAttribute("aria-label", "Read: " + who);
-  el.addEventListener("click", () => read(who, text));
-  el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); read(who, text); } });
-  return el;
+const row = (rank, m, body, figure, note, opts = {}) => h("li", {
+  class: "row" + (opts.best ? " best" : "") + (opts.on ? " on" : "") + (opts.pick ? " pick" : "") + (opts.ref ? " ref" : ""),
+  tabindex: opts.pick ? "0" : null, role: opts.pick ? "button" : null, onclick: opts.pick,
+  onkeydown: opts.pick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.pick(); } } : null },
+  h("span", { class: "rank", text: rank }),
+  h("span", { class: "who" }, h("b", { text: m.name }), m.tool ? h("small", { text: m.tool }) : null),
+  body, h("span", { class: "num" }, figure, note ? h("small", { text: note }) : null));
+
+const board = document.getElementById("board"), read = document.getElementById("read");
+const S = { mode: location.hash === "#replay" ? "replay" : "slop", kind: "all", told: true, model: null, job: 0, tab: "passed", task: 0 };
+const KINDS = [["all", "All"], ["reply", "Reply"], ["review", "Review"], ["commit message", "Commit"], ["pull request description", "Pull request"], ["release notes", "Release notes"], ["interface copy", "Interface copy"]];
+
+// --- slopbench
+const slopJobs = () => DATA.slop.filter((j) => S.kind === "all" || j.situation === S.kind);
+const slop = () => {
+  const cond = S.told ? "instructed" : "plain", jobs = slopJobs();
+  const rows = DATA.models.map((m) => {
+    const mine = jobs.map((j) => j.answers[m.key] && j.answers[m.key][cond] && { a: j.answers[m.key][cond], j }).filter(Boolean);
+    return { m, value: mean(mine.map((x) => x.a.words / x.j.needed.words)), holes: mine.filter((x) => x.a.missing).length, n: mine.length };
+  }).filter((r) => r.value !== null).sort((a, b) => a.value - b.value);
+  const most = Math.max(...rows.map((r) => r.value), 1);
+  if (!rows.some((r) => r.m.key === S.model)) S.model = rows[rows.length - 1].m.key;
+  board.replaceChildren(
+    h("div", { class: "controls" },
+      tabs(KINDS.filter(([k]) => k === "all" || DATA.slop.some((j) => j.situation === k)), S.kind, (k) => { S.kind = k; S.job = 0; show(); }),
+      h("label", { class: "switch" }, h("input", { type: "checkbox", id: "told", checked: S.told ? "" : null, onchange: (e) => { S.told = e.target.checked; show(); } }), h("i"), "Mik's instructions")),
+    h("div", { class: "title" }, h("h1", { text: "Words written for every word needed" }),
+      h("p", { class: "mono", text: `${jobs.length} writing ${jobs.length === 1 ? "job" : "jobs"} from OpenRamble's history / less is better / the first block is what was needed, pink is extra` })),
+    h("ol", { class: "board" },
+      row("", { name: "Needed" }, strip(1, most, () => "first"), "1×", null, { ref: true }),
+      rows.map((r, i) => row(String(i + 1), r.m, strip(r.value, most, (b) => (b ? "extra" : "first")), times(r.value),
+        r.holes ? `left a fact out in ${r.holes} of ${r.n}` : null,
+        { best: i === 0, on: r.m.key === S.model, pick: () => { S.model = r.m.key; show(); } }))));
+
+  const job = jobs[Math.min(S.job, jobs.length - 1)], m = DATA.models.find((x) => x.key === S.model);
+  const a = job.answers[m.key] && job.answers[m.key][cond];
+  const step = (d) => { S.job = (Math.min(S.job, jobs.length - 1) + d + jobs.length) % jobs.length; show(); };
+  read.replaceChildren(
+    h("div", { class: "picker" }, jobs.length > 1 ? h("button", { type: "button", "aria-label": "Previous job", text: "‹", onclick: () => step(-1) }) : null,
+      jobs.length > 1 ? h("button", { type: "button", "aria-label": "Next job", text: "›", onclick: () => step(1) }) : null,
+      h("span", { class: "mono", text: `${job.situation} / ${Math.min(S.job, jobs.length - 1) + 1} of ${jobs.length}` })),
+    h("blockquote", { class: "ask", text: job.ask }),
+    h("div", { class: "pair" },
+      h("div", { class: "side" }, h("span", { class: "mono", text: `${job.label} / ${job.needed.words} words` }), h("div", { class: "said", text: plain(job.needed.text) })),
+      h("div", { class: "side got" }, a ? [h("span", { class: "mono", text: `${m.name} / ${a.words} words / ${times(a.words / job.needed.words)}` + (a.missing ? " / left a fact out" : "") }),
+        h("div", { class: "said", text: plain(a.text) })] : h("span", { class: "mono", text: `${m.name} / no answer` }))));
 };
 
-const page = document.getElementById("page");
-const column = (cls, who, figure, facts, body) => h("div", { class: "col " + cls },
-  h("div", { class: "who" }, who), h("div", { class: "figure", text: figure }), h("div", { class: "facts" }, facts), body);
-const tabs = (names, current, pick) => h("div", { class: "tabs" }, names.map((n, i) =>
-  h("button", { type: "button", "aria-pressed": String(i === current), text: n, onclick: () => pick(i) })));
+// --- replaybench
+const TABS = [["passed", "Passed"], ["code", "Overbuilt"], ["tokens", "Tokens"], ["cost", "Cost"]];
+const drawMap = (files) => h("div", { class: "map" }, files.map((f) => h("div", { class: f.kind },
+  f.lines.map(([indent, length]) => h("i", { style: `margin-left:${indent}%;width:${Math.max(length, 2)}%` })))));
+const replay = () => {
+  const tasks = DATA.replay, done = (m, t) => t.runs[m.key] && t.runs[m.key].state !== "void" ? t.runs[m.key] : null;
+  const shared = tasks.filter((t) => DATA.models.every((m) => done(m, t)));
+  let rows, title, caption, body, figure, note = () => null, order;
+  if (S.tab === "passed") {
+    title = "Changes that passed the real change's tests";
+    caption = "one block is one task / green passed, amber changed code nothing built, red failed, empty has no result yet";
+    rows = DATA.models.map((m) => ({ m, value: tasks.filter((t) => done(m, t) && done(m, t).state === "pass").length, of: tasks.filter((t) => done(m, t)).length }));
+    order = (a, b) => b.value - a.value || (a.of - a.value) - (b.of - b.value);
+    body = (r) => h("div", { class: "strip", style: `--n:${Math.max(3, tasks.length)}` }, tasks.map((t, i) => { const x = done(r.m, t);
+      return h("button", { class: `block task ${x ? x.state : "none"}` + (r.m.key === S.model && i === S.task ? " on" : ""), type: "button", style: `--i:${i}`,
+        title: t.title, "aria-label": `${t.title}: ${x ? x.state : "no result"}`, onclick: (e) => { e.stopPropagation(); S.model = r.m.key; S.task = i; show(); } }); }));
+    figure = (r) => r.value + "/" + r.of;
+  } else if (S.tab === "code") {
+    title = "Lines of code written for every line that shipped";
+    caption = "less is better / the first block is what shipped, pink is extra / tests are not counted";
+    rows = DATA.models.map((m) => ({ m, value: mean(tasks.filter((t) => t.shipped.source && done(m, t)).map((t) => done(m, t).source / t.shipped.source)) }));
+    order = (a, b) => a.value - b.value;
+    figure = (r) => times(r.value);
+  } else if (S.tab === "tokens") {
+    title = "Tokens spent on the same tasks";
+    caption = `${shared.length} tasks every model finished / one block is a million tokens`;
+    rows = DATA.models.map((m) => ({ m, value: sum(shared.map((t) => t.runs[m.key].tokens)) / 1e6 }));
+    order = (a, b) => a.value - b.value;
+    figure = (r) => r.value.toFixed(1) + "M";
+  } else {
+    title = "List price of the same tasks";
+    caption = `${shared.length} tasks every model finished / one block is a dollar / Codex reports no price`;
+    rows = DATA.models.map((m) => ({ m, value: shared.every((t) => t.runs[m.key].cost !== null) ? sum(shared.map((t) => t.runs[m.key].cost)) : null }));
+    order = (a, b) => (a.value === null) - (b.value === null) || a.value - b.value;
+    figure = (r) => (r.value === null ? "–" : "$" + r.value.toFixed(2));
+  }
+  rows = rows.filter((r) => r.value !== null || S.tab === "cost").sort(order);
+  const most = Math.max(...rows.map((r) => r.value || 0), 1);
+  if (!rows.some((r) => r.m.key === S.model)) S.model = rows[0].m.key;
+  if (!body) body = (r) => (r.value === null ? h("div", { class: "strip" }) : strip(r.value, most, (b) => (S.tab === "code" ? (b ? "extra" : "first") : "plain")));
+  board.replaceChildren(
+    h("div", { class: "controls" }, tabs(TABS, S.tab, (k) => { S.tab = k; show(); })),
+    h("div", { class: "title" }, h("h1", { text: title }), h("p", { class: "mono", text: caption })),
+    h("ol", { class: "board" },
+      S.tab === "code" ? row("", { name: "Shipped" }, strip(1, most, () => "first"), "1×", null, { ref: true }) : null,
+      rows.map((r, i) => row(String(i + 1), r.m, body(r), figure(r), note(r), { best: i === 0, on: r.m.key === S.model, pick: () => { S.model = r.m.key; show(); } }))));
 
-// --- The answer to the page's question
-page.append(h("header", {},
-  h("p", { class: "label", text: "OpenRamble model bench" }),
-  h("h1", { text: "Which model should change OpenRamble?" }),
-  h("div", { class: "board" },
-    h("div", { class: "top" }),
-    h("div", { class: "top n label" }, "Passed"),
-    h("div", { class: "top n label" }, "Code", h("small", { text: "× what shipped" })),
-    h("div", { class: "top n label" }, "Words", h("small", { text: "× what was needed" })),
-    DATA.models.map((m) => { const b = DATA.board[m.key]; return [
-      h("div", {}, h("span", { class: "name", text: m.name }), h("small", { text: m.tool })),
-      h("div", { class: "n" }, h("span", { class: "figure", text: b.passed[0] + "/" + b.passed[1] })),
-      h("div", { class: "n" }, h("span", { class: "figure", text: times(b.code) })),
-      h("div", { class: "n" }, h("span", { class: "figure", text: times(b.words) }))]; })),
-  h("p", { class: "quiet", text: `Pilot of ${DATA.date}. One run per task, so a first look and not a ranking.` })));
-
-// --- Replay: the same request, and every change at its own length
-const replay = h("section", { class: "replay" });
-let task = 0;
-const drawMap = (files, who, report) => {
-  const map = h("div", { class: "map" + (report ? "" : " still") }, files.map((f) => h("div", { class: f.kind },
-    f.lines.map(([indent, length]) => h("i", { style: `margin-left:${indent}%;width:${Math.max(length, 2)}%` })))));
-  return report ? opens(map, who, report) : map;
-};
-const showTask = () => {
-  const t = DATA.replay[task];
-  replay.replaceChildren(
-    h("div", { class: "head" }, h("h2", { text: "Replay" }), tabs(DATA.replay.map((x) => x.title), task, (i) => { task = i; showTask(); })),
+  const t = tasks[S.task], m = DATA.models.find((x) => x.key === S.model), r = t.runs[m.key];
+  const step = (d) => { S.task = (S.task + d + tasks.length) % tasks.length; show(); };
+  const words = { pass: "passed", partial: "changed code that nothing built", fail: "failed the real tests", void: "no result" };
+  read.replaceChildren(
+    h("div", { class: "picker" }, h("button", { type: "button", "aria-label": "Previous task", text: "‹", onclick: () => step(-1) }),
+      h("button", { type: "button", "aria-label": "Next task", text: "›", onclick: () => step(1) }),
+      h("span", { class: "mono", text: `${t.title} / ${S.task + 1} of ${tasks.length}` })),
     h("blockquote", { class: "ask" }, said(t.request)),
-    h("div", { class: "stage" },
-      column("needed", "Shipped", String(t.shipped.source), [h("b", { text: t.shipped.source === 1 ? "line of code" : "lines of code" }), t.note && h("b", { text: t.note })], drawMap(t.shipped.files, "", null)),
-      DATA.models.map((m) => {
-        const r = t.runs[m.key];
-        if (!r) return column("", m.name, "–", [h("b", { text: "not run yet" })], null);
-        if (r.state === "void") return column("", m.name, "–", [h("b", { text: "no result" })], null);
-        const mark = h("span", { class: r.state === "pass" ? "pass" : "fail", text: { pass: " ✓", partial: " ?" }[r.state] || " ✗" });
-        const figure = t.shipped.source ? times(r.source / t.shipped.source) : String(r.source);
-        return column("", [m.name, mark], figure, [
-          h("b", { text: t.shipped.source ? `${r.source} lines` : (r.source === 1 ? "line of code" : "lines of code") }),
-          r.state === "pass" ? null : h("b", { class: "bad", text: r.reason === "hidden tests" ? "failed the real tests" : r.reason }),
-          h("b", { text: r.minutes.toFixed(1) + " min" }), money(r.cost) && h("b", { text: money(r.cost) })],
-          drawMap(r.files, `${m.name}, its report`, r.report));
-      })),
-    h("p", { class: "quiet key" }, h("span", {}, h("i"), "code"), h("span", {}, h("i", { class: "light" }), "tests")));
+    h("div", { class: "pair" },
+      h("div", { class: "side" }, h("span", { class: "mono", text: t.shipped.source ? `Shipped / ${t.shipped.source} lines of code` : "Shipped / nothing" }),
+        t.shipped.source ? drawMap(t.shipped.files) : h("div", { class: "said", text: t.note || "" })),
+      h("div", { class: "side got" }, !r ? h("span", { class: "mono", text: `${m.name} / not run yet` }) : [
+        h("span", { class: "mono" }, `${m.name} / `, h("span", { class: "state " + r.state, text: words[r.state] }),
+          r.state === "void" ? "" : ` / ${r.source} lines of code / ${(r.tokens / 1e6).toFixed(1)}M tokens` + (r.cost === null ? "" : ` / $${r.cost.toFixed(2)}`)),
+        r.state === "void" ? null : (r.files.length ? drawMap(r.files) : null),
+        r.state === "void" ? null : h("div", { class: "said", text: plain(r.report) })])));
 };
-showTask();
-page.append(replay);
 
-// --- Slop: the same job, and every answer at its own length
-const slop = h("section", {});
-let job = 0, told = true;
-const kinds = [...new Set(DATA.slop.map((j) => j.situation))];
-const scale = () => (innerWidth < 704 ? 230 : 300);
-const drawWall = (text, who) => {
-  const inner = h("div", { text: plain(text) });
-  const wall = opens(h("div", { class: "wall" }, inner), who, text);
-  wall.fit = () => {
-    const z = wall.clientWidth / scale();
-    inner.style.width = scale() + "px"; inner.style.transform = `scale(${z})`;
-    wall.style.height = Math.ceil(inner.offsetHeight * z) + "px";
-    return Math.ceil(inner.offsetHeight * z);
-  };
-  return wall;
+const show = () => {
+  document.querySelectorAll(".mark").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)));
+  (S.mode === "slop" ? slop : replay)();
 };
-const showJob = (animate) => {
-  const j = DATA.slop[job], before = animate ? [...slop.querySelectorAll(".col")].map((c) => { const w = c.querySelector(".wall"); return w ? w.offsetHeight : 0; }) : [];
-  const same = DATA.slop.map((x, i) => [x, i]).filter(([x]) => x.situation === j.situation);
-  const walls = [];
-  const stage = h("div", { class: "stage" },
-    column("needed", j.label, String(j.needed.words), [h("b", { text: "words" })], walls[0] = drawWall(j.needed.text, j.label)),
-    DATA.models.map((m, i) => {
-      const a = j.answers[m.key] && j.answers[m.key][told ? "instructed" : "plain"];
-      if (!a) return column("", m.name, "–", [h("b", { text: "no answer" })], null);
-      return column("", m.name, times(a.words / j.needed.words), [h("b", { text: a.words + " words" }),
-        a.missing ? h("b", { class: "bad", text: a.missing === 1 ? "1 fact left out" : a.missing + " facts left out" }) : null],
-        walls[i + 1] = drawWall(a.text, `${m.name}, ${a.words} words`));
-    }));
-  slop.replaceChildren(
-    h("div", { class: "head" }, h("h2", { text: "Slop" }),
-      h("label", { class: "switch" }, h("input", { type: "checkbox", id: "told", checked: told ? "" : null, onchange: (e) => { told = e.target.checked; showJob(true); } }), h("i"), "Mik's instructions")),
-    tabs(kinds.map((k) => k[0].toUpperCase() + k.slice(1)), kinds.indexOf(j.situation), (i) => { job = DATA.slop.findIndex((x) => x.situation === kinds[i]); showJob(false); }),
-    h("blockquote", { class: "ask" }, j.ask, same.length > 1 ? h("span", { class: "steps" }, same.map(([x, i], n) =>
-      h("button", { type: "button", "aria-pressed": String(i === job), "aria-label": `Job ${n + 1} of ${same.length}`, text: String(n + 1), onclick: () => { job = i; showJob(false); } }))) : null),
-    stage);
-  walls.forEach((w, i) => {
-    if (!w) return;
-    const to = w.fit();
-    if (animate && !calm && before[i] && w.animate) w.animate([{ height: before[i] + "px" }, { height: to + "px" }], { duration: 380, easing: "cubic-bezier(.2,.8,.2,1)" });
-  });
-};
-page.append(slop);
-showJob(false);
-addEventListener("resize", () => slop.querySelectorAll(".wall").forEach((w) => w.fit && w.fit()));
-
-page.append(h("footer", { class: "quiet" },
-  h("span", { text: `Each model ran inside its own tool at ${DATA.effort} effort. Tap any answer or change to read it.` }),
-  h("code", { text: "research/model-bench-2026-11/bench pilot" })));
+document.querySelectorAll(".mark").forEach((b) => b.addEventListener("click", () => { S.mode = b.dataset.mode; S.model = null; history.replaceState(null, "", "#" + S.mode); show(); }));
+document.getElementById("meta").textContent = `OpenRamble / pilot of ${DATA.date} / one run each, so a first look and not a ranking`;
+show();
 })();
 </script>

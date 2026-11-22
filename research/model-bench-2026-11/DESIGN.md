@@ -23,8 +23,10 @@ shipped, or for a question the short right answer. A model gets these figures.
   added.
 - **Words.** How many times more words it wrote than was needed.
 
-The results page, `results/index.html`, draws both sides at their real length.
-A change is drawn as the lines it added, and an answer as its own words.
+The results page, `results/index.html`, is a scoreboard. It shows one ranked
+board at a time, and it draws every figure in blocks. The first block is what
+was needed, and a pink block is what a model made on top of it. Under the
+board, the answer or the change of one model stands next to what was needed.
 
 ## What we take from Theo's benchmarks
 
@@ -32,11 +34,16 @@ Theo Browne (t3.gg) publishes SnitchBench, SkateBench and Quipslop. I read
 their repositories on 22 November 2026, and we copy these habits.
 
 - One question per benchmark, and the name is the question.
+- The page is one ranked board with a name on it, and nothing else. Tabs
+  change the question.
 - The result is something a reader can open and read, e.g., the email a model
   sent, and not only a score.
 - The author's own subject is the answer key. Here it is this repository's
   history and Mik's written instructions.
 - Every cell is run many times, 20 to 30 in his benchmarks.
+
+EQ-Bench's slop score adds one more habit, a row for the human baseline. Here
+the baseline is the row "Needed", which is one block.
 
 ## Replay
 
