@@ -1,15 +1,15 @@
 {
  "task": "r88-conjunction",
- "checked_at": "2026-11-22 16:53",
- "load": "28.9",
+ "checked_at": "2026-11-23 00:00",
+ "load": "4.5",
  "leaked": [],
  "parent": {
   "task": "r88-conjunction",
-  "load": "28.9",
+  "load": "4.5",
   "check": {
    "ok": true,
    "code": 0,
-   "seconds": 55
+   "seconds": 30
   },
   "network_gate": {
    "ok": true,
@@ -23,25 +23,20 @@
   "hidden": {
    "ok": false,
    "code": 1,
-   "seconds": 17
+   "seconds": 2,
+   "failed": [
+    "DictationCoreTests.CleanVerbatimTests testAWordSaidAgainAfterAConjunctionAndAHesitationStays"
+   ],
+   "tries": 2
   },
   "suite": {
    "ok": false,
    "code": 1,
-   "seconds": 5
-  },
-  "suite_first_try": {
-   "ok": false,
-   "code": 1,
-   "seconds": 6
-  },
-  "size": {
-   "source": 0,
-   "tests": 0,
-   "fixtures": 0,
-   "other": 0,
-   "reference_source": 198,
-   "ratio": 0.0
+   "seconds": 4,
+   "failed": [
+    "DictationCoreTests.CleanVerbatimTests testAWordSaidAgainAfterAConjunctionAndAHesitationStays"
+   ],
+   "tries": 2
   },
   "unasked_files": [],
   "weakened_tests": {
@@ -50,21 +45,22 @@
   },
   "fixtures_touched": false,
   "rules_broken": [],
+  "not_built": [],
   "state": "fail",
   "reason": "hidden tests"
  },
  "reference": {
   "task": "r88-conjunction",
-  "load": "26.3",
+  "load": "5.3",
   "check": {
    "ok": true,
    "code": 0,
-   "seconds": 36
+   "seconds": 24
   },
   "network_gate": {
    "ok": true,
    "code": 0,
-   "seconds": 2
+   "seconds": 1
   },
   "own_tests": {
    "files": 1,
@@ -73,20 +69,22 @@
   "hidden": {
    "ok": true,
    "code": 0,
-   "seconds": 11
+   "seconds": 8,
+   "failed": [],
+   "tries": 1
   },
   "suite": {
    "ok": true,
    "code": 0,
-   "seconds": 7
+   "seconds": 5,
+   "failed": [],
+   "tries": 1
   },
-  "size": {
-   "source": 198,
-   "tests": 32,
-   "fixtures": 231,
-   "other": 0,
-   "reference_source": 198,
-   "ratio": 1.0
+  "unseen": {
+   "ok": true,
+   "code": 0,
+   "seconds": 47,
+   "said": "no real word lost in 54,840 unseen sentences"
   },
   "unasked_files": [],
   "weakened_tests": {
@@ -95,6 +93,7 @@
   },
   "fixtures_touched": true,
   "rules_broken": [],
+  "not_built": [],
   "state": "pass",
   "reason": ""
  },

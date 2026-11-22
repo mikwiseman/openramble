@@ -1,10 +1,10 @@
 {
  "task": "r88-conjunction",
- "load": "29.1",
+ "load": "3.9",
  "check": {
   "ok": true,
   "code": 0,
-  "seconds": 35
+  "seconds": 28
  },
  "network_gate": {
   "ok": true,
@@ -18,25 +18,20 @@
  "hidden": {
   "ok": false,
   "code": 101,
-  "seconds": 9
+  "seconds": 4,
+  "failed": [
+   "the_rust_pipeline_matches_what_macos_produced"
+  ],
+  "tries": 2
  },
  "suite": {
   "ok": false,
   "code": 101,
-  "seconds": 5
- },
- "suite_first_try": {
-  "ok": false,
-  "code": 101,
-  "seconds": 6
- },
- "size": {
-  "source": 25,
-  "tests": 32,
-  "fixtures": 0,
-  "other": 0,
-  "reference_source": 198,
-  "ratio": 0.13
+  "seconds": 4,
+  "failed": [
+   "the_rust_pipeline_matches_what_macos_produced"
+  ],
+  "tries": 2
  },
  "unasked_files": [],
  "weakened_tests": {
@@ -45,6 +40,7 @@
  },
  "fixtures_touched": false,
  "rules_broken": [],
+ "not_built": [],
  "state": "fail",
  "reason": "hidden tests"
 }

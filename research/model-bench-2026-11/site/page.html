@@ -230,12 +230,15 @@ const drawMap = (files) => h("div", { class: "map" }, files.map((f) => h("div", 
   f.lines.map(([indent, length]) => h("i", { style: `margin-left:${indent}%;width:${Math.max(length, 2)}%` })))));
 const replay = () => {
   const tasks = DATA.replay, done = (m, t) => t.runs[m.key] && t.runs[m.key].state !== "void" ? t.runs[m.key] : null;
-  const shared = tasks.filter((t) => DATA.models.every((m) => done(m, t)));
+  const models = DATA.models.filter((m) => tasks.some((t) => t.runs[m.key]));
+  const shared = tasks.filter((t) => models.every((m) => done(m, t)));
+  // A small change that is not right is not a tidy one, so size is compared only where every model was right.
+  const right = tasks.filter((t) => t.shipped.source && models.every((m) => done(m, t) && done(m, t).state === "pass"));
   let rows, title, caption, body, figure, note = () => null, order;
   if (S.tab === "passed") {
-    title = "Changes that passed the real change's tests";
-    caption = `${tasks.length} real changes / green passed, amber changed code that nothing built, red failed`;
-    rows = DATA.models.map((m) => ({ m, value: tasks.filter((t) => done(m, t) && done(m, t).state === "pass").length, of: tasks.filter((t) => done(m, t)).length }));
+    title = "Real changes each model got right";
+    caption = `${tasks.length} real changes / green passed / amber passed the tests but not every check / red failed`;
+    rows = models.map((m) => ({ m, value: tasks.filter((t) => done(m, t) && done(m, t).state === "pass").length, of: tasks.filter((t) => done(m, t)).length }));
     order = (a, b) => b.value - a.value || (a.of - a.value) - (b.of - b.value);
     body = (r) => h("div", { class: "strip", style: `--n:${Math.max(3, tasks.length)}` }, tasks.map((t, i) => { const x = done(r.m, t);
       return h("button", { class: `block task ${x ? x.state : "none"}` + (r.m.key === S.model && i === S.task ? " on" : ""), type: "button", style: `--i:${i}`,
@@ -243,26 +246,26 @@ const replay = () => {
     figure = (r) => r.value + "/" + r.of;
   } else if (S.tab === "code") {
     title = "Lines of code written for every line that shipped";
-    caption = "less is better / tests are not counted";
-    rows = DATA.models.map((m) => ({ m, value: mean(tasks.filter((t) => t.shipped.source && done(m, t)).map((t) => done(m, t).source / t.shipped.source)) }));
+    caption = `${right.length} ${right.length === 1 ? "change" : "changes"} that every model got right / tests are not counted`;
+    rows = models.map((m) => ({ m, value: mean(right.map((t) => t.runs[m.key].source / t.shipped.source)) }));
     order = (a, b) => a.value - b.value;
     figure = (r) => times(r.value);
   } else if (S.tab === "tokens") {
     title = "Tokens spent on the same tasks";
     caption = `${shared.length} tasks every model finished / one block is a million tokens`;
-    rows = DATA.models.map((m) => ({ m, value: sum(shared.map((t) => t.runs[m.key].tokens)) / 1e6 }));
+    rows = models.map((m) => ({ m, value: sum(shared.map((t) => t.runs[m.key].tokens)) / 1e6 }));
     order = (a, b) => a.value - b.value;
     figure = (r) => r.value.toFixed(1) + "M";
   } else {
     title = "List price of the same tasks";
     caption = `${shared.length} tasks every model finished / one block is a dollar / Codex reports no price`;
-    rows = DATA.models.map((m) => ({ m, value: shared.every((t) => t.runs[m.key].cost !== null) ? sum(shared.map((t) => t.runs[m.key].cost)) : null }));
+    rows = models.map((m) => ({ m, value: shared.every((t) => t.runs[m.key].cost !== null) ? sum(shared.map((t) => t.runs[m.key].cost)) : null }));
     order = (a, b) => (a.value === null) - (b.value === null) || a.value - b.value;
     figure = (r) => (r.value === null ? "–" : "$" + r.value.toFixed(2));
   }
   rows = rows.filter((r) => r.value !== null || S.tab === "cost").sort(order);
   const most = Math.max(...rows.map((r) => r.value || 0), 1);
-  if (!rows.some((r) => r.m.key === S.model)) S.model = rows[0].m.key;
+  if (!rows.some((r) => r.m.key === S.model)) S.model = (rows[0] ? rows[0].m : models[0]).key;
   if (!body) body = (r) => (r.value === null ? h("div", { class: "strip" }) : strip(r.value, most, (b) => (S.tab === "code" ? (b ? "extra" : "first") : "plain")));
   board.replaceChildren(
     h("div", { class: "controls" }, tabs(TABS, S.tab, (k) => { S.tab = k; show(); })),
@@ -273,7 +276,7 @@ const replay = () => {
 
   const t = tasks[S.task], m = DATA.models.find((x) => x.key === S.model), r = t.runs[m.key];
   const step = (d) => { S.task = (S.task + d + tasks.length) % tasks.length; show(); };
-  const words = { pass: "passed", partial: "changed code that nothing built", fail: "failed the real tests", void: "no result" };
+  const words = { pass: "passed", partial: r && r.reason, fail: "failed the real tests", void: "no result" };
   read.replaceChildren(
     h("div", { class: "picker" }, h("button", { type: "button", "aria-label": "Previous task", text: "‹", onclick: () => step(-1) }),
       h("button", { type: "button", "aria-label": "Next task", text: "›", onclick: () => step(1) }),

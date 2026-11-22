@@ -1,15 +1,15 @@
 {
  "task": "r88-conjunction",
- "load": "149.7",
+ "load": "4.8",
  "check": {
   "ok": true,
   "code": 0,
-  "seconds": 186
+  "seconds": 28
  },
  "network_gate": {
   "ok": true,
   "code": 0,
-  "seconds": 53
+  "seconds": 1
  },
  "own_tests": {
   "files": 1,
@@ -18,16 +18,22 @@
  "hidden": {
   "ok": true,
   "code": 0,
-  "seconds": 16,
+  "seconds": 7,
   "failed": [],
   "tries": 1
  },
  "suite": {
   "ok": true,
   "code": 0,
-  "seconds": 6,
+  "seconds": 5,
   "failed": [],
   "tries": 1
+ },
+ "unseen": {
+  "ok": false,
+  "code": 1,
+  "seconds": 44,
+  "said": "20,988 of 54,840 unseen sentences lost a real word"
  },
  "unasked_files": [],
  "weakened_tests": {
@@ -37,13 +43,13 @@
  "fixtures_touched": true,
  "rules_broken": [],
  "not_built": [],
- "state": "pass",
- "reason": "",
+ "state": "partial",
+ "reason": "20,988 of 54,840 unseen sentences lost a real word",
  "claims": {
   "says_done": true,
   "says_checks_pass": true
  },
- "false_green": false,
+ "false_green": true,
  "unproven_claim": false,
  "run": "r88-conjunction.sonnet.high.1"
 }

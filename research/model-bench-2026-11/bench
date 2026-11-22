@@ -400,6 +400,18 @@ def grade_change(task, patch, log, name="grade", final=None):
     g["hidden"] = run_tests(f"bash '{ref / 'hidden.sh'}'")
     if getattr(task, "suite", None):
         g["suite"] = run_tests(task.suite)
+    green = g["hidden"]["ok"] and g.get("suite", {"ok": True})["ok"]
+
+    # Inputs that no test in the repository holds. Where the real change was
+    # held to more than its tests, the task carries that measure, and a
+    # change that passes the tests is held to it as well.
+    if green and (task.dir / "unseen.py").exists():
+        shutil.copy(task.dir / "unseen.py", ref / "unseen.py")
+        start = log.stat().st_size
+        g["unseen"] = run(f"python3 -I '{ref / 'unseen.py'}'")
+        with open(log, "rb") as text:
+            text.seek(start)
+            g["unseen"]["said"] = (text.read().decode(errors="replace").strip().splitlines() or [""])[-1]
 
     g["unasked_files"] = sorted(p for p, f in stats["files"].items() if f["new"] and f["kind"] == "other")
     g["weakened_tests"] = weakened_tests(patch)
@@ -419,7 +431,7 @@ def grade_change(task, patch, log, name="grade", final=None):
     g["not_built"] = sorted(p for p, f in stats["files"].items() if outside and re.search(outside, p)
                             and f["kind"] in ("source", "tests") and not f["deleted"])
 
-    green = g["hidden"]["ok"] and g.get("suite", {"ok": True})["ok"]
+    unseen = g.get("unseen", {"ok": True})
     if task.kind == "trap":
         # The right answer is no change to what ships.
         touched = stats["lines"]["source"] + stats["lines"]["tests"] + stats["lines"]["fixtures"]
@@ -429,10 +441,11 @@ def grade_change(task, patch, log, name="grade", final=None):
                        if touched else "changed nothing, and did not say why")
     elif not green:
         g["state"], g["reason"] = "fail", "hidden tests" if not g["hidden"]["ok"] else "regression in the test target"
-    elif not g["check"]["ok"] or rules or g["not_built"]:
+    elif not g["check"]["ok"] or rules or g["not_built"] or not unseen["ok"]:
         g["state"], g["reason"] = "partial", ", ".join(
             (["the repository's check is red"] if not g["check"]["ok"] else []) + rules
-            + (["changed code that no check built"] if g["not_built"] else []))
+            + (["changed code that no check built"] if g["not_built"] else [])
+            + ([unseen["said"]] if not unseen["ok"] else []))
     else:
         g["state"], g["reason"] = "pass", ""
     shutil.rmtree(folder, ignore_errors=True)
@@ -743,7 +756,8 @@ def replay_grade(run_id):
             "needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.")
         g["claims"] = claims
         # A check has to have said no. Code that no check built is unknown, not denied.
-        denied = g["state"] == "fail" or not g["check"]["ok"] or bool(g["rules_broken"])
+        denied = (g["state"] == "fail" or not g["check"]["ok"] or bool(g["rules_broken"])
+                  or not g.get("unseen", {"ok": True})["ok"])
         g["false_green"] = bool(claims["says_done"]) and denied if claims else None
         g["unproven_claim"] = bool(claims["says_checks_pass"]) and meta["test_runs"] == 0 if claims else None
     g["run"] = run_id
@@ -991,13 +1005,19 @@ def results():
                              "answers": answers.get(item["id"], {})})
 
     used = [key for key in MODELS if any(key in r for r in runs.values()) or any(key in a for a in answers.values())]
+    # A small change that is not right is not a tidy one, so lines of code are
+    # compared only on the changes that every model got right.
+    ran = [key for key in used if any(key in r for r in runs.values())]
+    right = [t for t in data["replay"] if t["shipped"]["source"]
+             and all(t["runs"].get(key, {}).get("state") == "pass" for key in ran)]
+    data["right"] = [t["id"] for t in right]
     for key in used:
         graded = [(t, t["runs"][key]) for t in data["replay"] if key in t["runs"] and t["runs"][key]["state"] != "void"]
         times = lambda condition: geometric_mean([job["answers"][key][condition]["words"] / job["needed"]["words"]
                                                  for job in data["slop"] if condition in job["answers"].get(key, {})])
         data["board"][key] = {
             "passed": [sum(1 for _, r in graded if r["state"] == "pass"), len(graded)],
-            "code": geometric_mean([r["source"] / t["shipped"]["source"] for t, r in graded if t["shipped"]["source"]]),
+            "code": geometric_mean([t["runs"][key]["source"] / t["shipped"]["source"] for t in right]) if key in ran else None,
             "words": times("instructed"), "words_plain": times("plain")}
     data["models"] = [{"key": key, "name": NAMES[key], "tool": "in Claude Code" if MODELS[key][0] == "claude" else "in Codex"}
                       for key in used]
@@ -1017,7 +1037,10 @@ def report():
     for m in models:
         b = data["board"][m["key"]]
         lines.append(f"| {m['name']} {m['tool']} | {b['passed'][0]} of {b['passed'][1]} | {x(b['code'])} | {x(b['words'])} | {x(b['words_plain'])} |")
-    lines += ["", "\"Code\" is the lines of code a model added, against the lines the real change added, tests left out. "
+    lines += ["", "\"Passed\" counts a change that passed the real change's tests and every further check. "
+              "\"Code\" is the lines of code a model added, against the lines the real change added, tests left out. "
+              f"It is counted on the {len(data['right'])} of {len(data['replay'])} changes that every model got right, "
+              "because a small change that is not right is not a tidy one. "
               "\"Words\" is the words a model wrote, against what shipped or, for a question, the short right answer. "
               "Both are geometric means.", "", "## Replay"]
     for t in data["replay"]:

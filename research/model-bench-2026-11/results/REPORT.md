@@ -1,15 +1,15 @@
 # Pilot results
 
-Written by `bench report` on 2026-11-22 22:41. One run per model and task, so read each line as "this happened once". `index.html` is the same as a page.
+Written by `bench report` on 2026-11-23 00:16. One run per model and task, so read each line as "this happened once". `index.html` is the same as a page.
 
 | Model | Passed | Code, × what shipped | Words, × what was needed | The same without his instructions |
 |---|---|---|---|---|
-| Fable 5.2 in Claude Code | 3 of 3 | 5.6× | 2.0× | 2.7× |
-| Sonnet 5.5 in Claude Code | 3 of 4 | 2.0× | 2.1× | 2.9× |
-| Haiku 5.5 in Claude Code | 2 of 3 | 1.8× | 1.6× | 2.9× |
-| GPT-6.2 Sol in Codex | 2 of 3 | 3.3× | 1.0× | 1.2× |
+| Fable 5.2 in Claude Code | 4 of 4 | 12× | 2.0× | 2.7× |
+| Sonnet 5.5 in Claude Code | 2 of 4 | 5.5× | 2.1× | 2.9× |
+| Haiku 5.5 in Claude Code | 2 of 4 | 1.2× | 1.6× | 2.9× |
+| GPT-6.2 Sol in Codex | 2 of 4 | 2.5× | 1.0× | 1.2× |
 
-"Code" is the lines of code a model added, against the lines the real change added, tests left out. "Words" is the words a model wrote, against what shipped or, for a question, the short right answer. Both are geometric means.
+"Passed" counts a change that passed the real change's tests and every further check. "Code" is the lines of code a model added, against the lines the real change added, tests left out. It is counted on the 1 of 4 changes that every model got right, because a small change that is not right is not a tidy one. "Words" is the words a model wrote, against what shipped or, for a question, the short right answer. Both are geometric means.
 
 ## Replay
 
@@ -52,10 +52,10 @@ What shipped: 189 lines of code.
 
 | Model | Result | Lines of code | Lines of tests | Minutes | Load | Tokens | List price | Noticed |
 |---|---|---|---|---|---|---|---|---|
-| Fable 5.2 | void | | | | | | | the tool reported a problem |
-| Sonnet 5.5 | pass | 117 | 34 | 11.9 | 117.2 | 1.76M | $0.68 |  |
-| Haiku 5.5 | void | | | | | | | the tool reported a problem |
-| GPT-6.2 Sol | void | | | | | | | the tool reported a problem |
+| Fable 5.2 | pass | 270 | 54 | 27.3 | 12.5 | 2.70M | $7.06 |  |
+| Sonnet 5.5 | partial: 20,988 of 54,840 unseen sentences lost a real word | 117 | 34 | 11.9 | 117.2 | 1.76M | $0.68 | said done when the checks say no |
+| Haiku 5.5 | partial: 9,120 of 54,840 unseen sentences lost a real word | 78 | 22 | 24.8 | 67.8 | 7.15M | $0.51 | said done when the checks say no |
+| GPT-6.2 Sol | partial: 9,120 of 54,840 unseen sentences lost a real word | 9 | 31 | 7.4 | 6.0 | 3.99M | n/a | said done when the checks say no |
 
 ## Slop
 

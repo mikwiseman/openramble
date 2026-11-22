@@ -18,9 +18,11 @@ Every item has what was needed and what a model made. For a change, what was
 needed is the change that shipped. For a piece of writing it is the text that
 shipped, or for a question the short right answer. A model gets these figures.
 
-- **Passed.** How many of its changes passed the tests of the real change.
+- **Passed.** How many of its changes passed the tests of the real change and
+  every further check.
 - **Code.** How many times more lines of code it added than the real change
-  added.
+  added. It is counted only on the changes that every model got right,
+  because a small change that is not right is not a tidy one.
 - **Words.** How many times more words it wrote than was needed.
 
 The results page, `results/index.html`, is a scoreboard. It shows one ranked
@@ -128,13 +130,22 @@ one is void.
 | The real change's tests | The reference's test files replace the model's copies, and the named tests run | Fail if red |
 | Other tests | The rest of the test target runs. A red run is tried once more, and a test counts only if it fails both times | Fail if red |
 | The task's check | The build and the gates that the task's change can affect | Partial if red |
+| Inputs no test holds | Where the real change was held to more than its tests, the task carries that measure in `unseen.py`, and it runs on a change that passed the tests | Partial if red |
 | Code no check built | Files changed in a folder the task's check does not compile | Partial |
 | Rules | The network gate, tests removed or skipped, a rules file edited | Partial |
 | The model's own tests | They run on the unfixed code, where they should fail | Noted |
-| The report's claims | A judge model reads whether the report says "done" and "checks pass" | Noted when the grade disagrees |
+| The report's claims | A judge model reads whether the report says "done" and "checks pass" | Noted when a check said no |
 | The transcript | A command that fetches the answer, a second session in the folder, a tool error, no report | Void |
 
 A void run measured nothing. It is run again and never counted.
+
+The tests of the real change are not enough alone. On `r88-conjunction` all
+four models passed them, and three of the four changes still lost real words
+in sentences that no test holds (ledger L20). The change that shipped had been
+measured on 55,080 generated sentences, kept outside the repository. The task
+now generates them itself, without 240 that are real restarts, and a change
+passes only if no sentence loses a real word, in the Swift pipeline and in
+the Rust port. Only this task has such a measure so far.
 
 This repository's timing tests fail at random on a loaded Mac. The harness
 waits until the load average is under 20 before it starts a model, before it
@@ -240,6 +251,10 @@ the repeated job, 20 answers per cell were enough to tell 0 of 20 from 16 of
   check compiled it. Building the app in the sandbox is the first thing to add.
 - **The real change's tests come from one design.** A different correct design
   can fail them. Each failed run in the pilot was read by hand.
+- **A change that is not right can pass them.** Three of four did on
+  `r88-conjunction`. A task needs a second measure that the model never saw,
+  and only one of the four tasks has one. For the others a pass means "the
+  real tests pass", and no more.
 - **The network is open.** The audit reads what a model ran, and it cannot see
   what a build tool fetched.
 - **Old builds are readable.** The sandbox leaves Xcode's build folder
@@ -253,13 +268,25 @@ Measured in the pilot at high effort. List price is the tool's own figure.
 
 | | One Replay run | One Slop set, 22 prompts |
 |---|---|---|
-| Fable 5.2 | 0.4 to 3.8 million tokens, 1 to 15 minutes, $0.90 to $5.65 | $2.18 |
-| Sonnet 5.5 | 0.1 to 1.3 million tokens, under 5 minutes, $0.12 to $0.52 | $0.34 |
-| Haiku 5.5 | 0.5 to 4.8 million tokens, 1 to 14 minutes, $0.02 to $0.39 | $0.04 |
-| GPT-6.2 Sol | 0.6 to 2.6 million tokens, 2 to 8 minutes, no price reported | no price reported |
+| Fable 5.2 | 0.4 to 3.8 million tokens, 1 to 27 minutes, $0.90 to $7.06 | $2.18 |
+| Sonnet 5.5 | 0.1 to 1.8 million tokens, under 12 minutes, $0.12 to $0.68 | $0.34 |
+| Haiku 5.5 | 0.5 to 7.2 million tokens, 1 to 25 minutes, $0.02 to $0.51 | $0.04 |
+| GPT-6.2 Sol | 0.6 to 4.0 million tokens, 2 to 8 minutes, no price reported | no price reported |
 
 Replay runs go one at a time, because two builds at once make every timing
 worthless. The prompts of Slop wait on the network, so four go at once.
+
+A full run is 42 runs per model. At the pilot's mean per run it costs the
+figures below, and with grading it takes about 30 hours of a quiet Mac. On the
+Claude account it is most of one weekly window. Ledger entry L21 has the
+pilot's own cost.
+
+| | 42 Replay runs | Hours of the model |
+|---|---|---|
+| Fable 5.2 | about $170 | 8.5 |
+| Sonnet 5.5 | about $17 | 3 |
+| Haiku 5.5 | about $10 | 7.7 |
+| GPT-6.2 Sol | about 84 million tokens | 3.6 |
 
 ## How to rerun
 
@@ -268,6 +295,7 @@ research/model-bench-2026-11/bench pilot
 ```
 
 `bench pilot` proves the pilot tasks, runs them on the pilot models, runs the
-Slop jobs, and writes `results/REPORT.md` and `results/index.html`. A run that
+Slop jobs, and writes `results/REPORT.md` and `results/index.html`. It needs
+Claude Code and Codex signed in. A run that
 has a grade is skipped, and a void run is run again, so an interrupted pilot
 continues where it stopped. `bench --help` lists each step.

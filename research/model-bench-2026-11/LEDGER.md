@@ -408,3 +408,130 @@ Every figure is drawn in blocks, where the first block is what was needed and
 pink is extra. "Needed" is a row of its own. Under the board, one model's
 answer or change stands next to what was needed.
 
+
+## L20. A pass that was not a fix
+
+**Hypothesis.** The tests of the real change tell a right change from one that
+is not right.
+
+**What happened.** All four models passed `r88-conjunction`. Each change passed
+the real change's unit tests, wrote the reference's recording byte for byte
+from the reference's corpus, and passed the Rust conformance test. GPT-6.2 Sol
+did it in 9 lines of code where 189 shipped. A 9-line pass of a 189-line change
+is either the find of the pilot or a hole in the grader, so I looked for a
+measure that no model had seen.
+
+**Looked at.** The change that shipped was measured on a kit outside the
+repository, in `cv-notes`: 720 judged sentences, 62 traps, a probe of 28, and
+`conj/sweep.py`, which generates 55,080 sentences of the shape "We shipped it
+and, um, it works." and counts those that lose a word.
+`replay/tasks/r88-conjunction/kit.py` ran the whole kit on the parent, the
+change that shipped and the four changes, in Swift and in Rust. The result is
+`results/replay/_tasks/r88-conjunction/kit.json`.
+
+| | Judged, of 720 | Traps, of 62 | Probe, of 28 | Sweep: lost a word, of 55,080 |
+|---|---|---|---|---|
+| Parent | 704 | 62 | 9 | 49,020 |
+| Shipped | 704 | 62 | 26 | 240 |
+| Fable 5.2, 270 lines | 704 | 62 | 26 | 240 |
+| GPT-6.2 Sol, 9 lines | 704 | 62 | 26 | 9,360 |
+| Haiku 5.5, 78 lines | 704 | 62 | 26 | 9,360 |
+| Sonnet 5.5, 117 lines | 704 | 62 | 26 | 21,228 |
+
+**Result.**
+
+- The run reproduces what the authors recorded on 26 October for the parent
+  and the shipped change: 49,020 and 240, 9 and 26, 704.
+- The judged sentences, the traps and the probe cannot tell one change from
+  another. Only the sweep can.
+- Fable's change writes the same text as the shipped change for all 55,918
+  sentences. The 240 it loses are the ones the shipped change loses, where the
+  object is the joining word ("shipped that that, um, that works"), which is a
+  restart.
+- GPT's and Haiku's changes still lose a word in 17% of the sweep, and Sonnet's
+  in 39%. GPT and Haiku fixed the repeat of one word and left the repeat of
+  two: "We shipped the server because, um, the server works." still becomes
+  "We shipped the server works." Sonnet's list of joining words holds the
+  conjunctions and "about", and no other preposition: "We shipped it to, um,
+  it works." still becomes "We shipped it works."
+- In every change the Rust port wrote the same as Swift for every sentence.
+- The reports of GPT, Haiku and Sonnet present the bug as fixed. Fable's report
+  names what it left alone and what its rule costs.
+
+**Decision.**
+
+- A task can carry `unseen.py`. The grader runs it on a change that passed the
+  tests, and a change that fails it is "partial" with the count as the reason.
+  For this task it is the sweep without the 240 restarts, so the bar is no
+  lost word in 54,840 sentences, and the Rust port must agree on all of them.
+  The judged sets stay outside the repository and outside the grade.
+- Graded again: Fable passes. GPT and Haiku lose a word in 9,120 sentences,
+  Sonnet in 20,988, and the parent in 48,780. The three reports are noted as
+  "said done when the checks say no".
+- Lines of code are compared only on the changes that every model got right.
+  Before this the board put GPT first on "Code" at 0.8 times what shipped,
+  because 9 lines against 189 pulled its mean down.
+- For a full run every task needs a second measure that the model never saw.
+  One of the four pilot tasks has one.
+
+## L21. The pilot, complete
+
+**Runs.** 16 of 16 Replay runs are graded, one per model and task, at high
+effort. 88 of 88 Slop answers are scored. No run is void, and no run looked up
+the answer.
+
+| | Passed | Clipboard gate, 6 lines | A switch that exists | Hands-free stop, 18 lines | Clean Verbatim, 189 lines |
+|---|---|---|---|---|---|
+| Fable 5.2 | 4 of 4 | pass, 73 lines | pass | pass, 47 lines | pass, 270 lines |
+| Sonnet 5.5 | 2 of 4 | pass, 33 lines | pass | partial, app code not built | partial, 20,988 sentences lose a word |
+| Haiku 5.5 | 2 of 4 | pass, 7 lines | pass | fail, the real tests | partial, 9,120 sentences lose a word |
+| GPT-6.2 Sol | 2 of 4 | pass, 15 lines | pass | partial, app code not built | partial, 9,120 sentences lose a word |
+
+| | Words, × what was needed | Without Mik's instructions |
+|---|---|---|
+| GPT-6.2 Sol | 1.0× | 1.2× |
+| Haiku 5.5 | 1.6× | 2.9× |
+| Fable 5.2 | 2.0× | 2.7× |
+| Sonnet 5.5 | 2.1× | 2.9× |
+
+**What it shows.**
+
+- The harness works end to end on four tasks and two tools, and it can say no:
+  to a wrong change, to code that no check built, and to a fix that passes the
+  tests and still loses words.
+- Every model left the trap alone and said why.
+- On the one change that all four got right, Fable wrote 12 times the lines
+  that shipped, Sonnet 5.5, GPT 2.5 and Haiku 1.2.
+- On the one task with a measure no model saw, only Fable's change was the fix
+  that shipped.
+- With Mik's instructions every model writes less. GPT writes about what was
+  needed in both conditions.
+
+**What it does not show.**
+
+- A ranking. With 4 tasks a pass rate has a 95% interval of about 45 points
+  each way, so 4 of 4 against 2 of 4 is a hint.
+- That a green block is right. Three of the four tasks have no second measure,
+  so there a pass means the real tests pass.
+- Minutes. Half of the runs of the last task ran while the Mac was loaded.
+
+**Cost of the pilot.** The tool's own list price, where it reports one.
+
+| | 4 Replay runs | Tokens | Minutes of the model |
+|---|---|---|---|
+| Fable 5.2 | $16.10 | 8.2 million | 49 |
+| Sonnet 5.5 | $1.61 | 3.7 million | 17 |
+| Haiku 5.5 | $0.94 | 13.3 million | 44 |
+| GPT-6.2 Sol | no price | 8.0 million | 20 |
+
+The Slop set cost $2.56 at list price for the three Claude models, and the
+repeated job $5.19. The weekly window of the Claude account went from 99% to
+84% left during the pilot, and the Codex account from 65% to 58%. Both
+accounts are shared with other sessions, and the Claude figure includes more
+than a thousand judge calls from the first way of scoring Slop.
+
+**A full run.** 14 tasks, three runs each, is 42 runs per model. At the
+pilot's mean per run that is about $170 for Fable, $17 for Sonnet, $10 for
+Haiku and 84 million tokens for GPT, and about 30 hours of a quiet Mac with
+one run at a time. On the Claude account it is most of one weekly window, and
+Fable is 86% of it. It needs Mik's yes.

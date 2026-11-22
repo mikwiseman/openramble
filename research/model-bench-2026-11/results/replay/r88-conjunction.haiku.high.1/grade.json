@@ -1,6 +1,55 @@
 {
  "task": "r88-conjunction",
- "state": "void",
- "reason": "the tool reported a problem: provider: API Error: Can't reach the API server \u2014 check your internet or DNS (ENOTFOUND); result: success API Error: Can't reach the API server \u2014 check your internet or DNS (ENOTFOUND)",
+ "load": "4.8",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 29
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 1
+ },
+ "own_tests": {
+  "files": 1,
+  "fail_on_base": true
+ },
+ "hidden": {
+  "ok": true,
+  "code": 0,
+  "seconds": 8,
+  "failed": [],
+  "tries": 1
+ },
+ "suite": {
+  "ok": true,
+  "code": 0,
+  "seconds": 6,
+  "failed": [],
+  "tries": 1
+ },
+ "unseen": {
+  "ok": false,
+  "code": 1,
+  "seconds": 45,
+  "said": "9,120 of 54,840 unseen sentences lost a real word"
+ },
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": true,
+ "rules_broken": [],
+ "not_built": [],
+ "state": "partial",
+ "reason": "9,120 of 54,840 unseen sentences lost a real word",
+ "claims": {
+  "says_done": true,
+  "says_checks_pass": true
+ },
+ "false_green": true,
+ "unproven_claim": false,
  "run": "r88-conjunction.haiku.high.1"
 }
