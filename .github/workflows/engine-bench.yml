@@ -21,6 +21,9 @@ env:
   TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
   MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
   MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+  # The file the Windows and Linux app ships (apps/desktop/src-tauri/model-manifest.json).
+  Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
+  Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
 
 jobs:
   bench:
@@ -35,20 +38,25 @@ jobs:
           - name: Linux x86_64
             os: ubuntu-latest
             tcpp_args: ""
+            q8: true
           - name: Windows x86_64
             os: windows-latest
             tcpp_args: ""
+            q8: true
           # A build of transcribe.cpp that could be given to everyone with a
           # processor from 2013 on: AVX2, not whatever the build machine has.
           - name: Linux x86_64 (transcribe.cpp built for AVX2)
             os: ubuntu-latest
             tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON"
+            q8: true
           - name: Windows x86_64 (transcribe.cpp built for AVX2)
             os: windows-latest
             tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON"
+            q8: true
           - name: Linux arm64
             os: ubuntu-24.04-arm
             tcpp_args: ""
+            q8: true
           # The oldest Apple silicon a hosted runner has. The app uses Metal
           # there; this shows what the processor alone does.
           - name: Apple silicon (M1 runner)
@@ -200,6 +208,37 @@ jobs:
             done
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Windows and Linux ship the Q8_0 file, which transcribe.cpp runs faster
+      # than Q4_K_M on a processor. So what a person has today is
+      # transcribe.cpp with Q8_0, and that is the baseline here; the engine is
+      # timed with the same file. Lines are prefixed so the tables above stay
+      # the Q4_K_M ones.
+      - name: The model Windows and Linux ship (Q8_0)
+        if: matrix.q8
+        run: |
+          bin=engine/build; [ -d engine/build/Release ] && bin=engine/build/Release
+          curl -L --fail --retry 3 -o q8.gguf "$Q8_URL"
+          if command -v sha256sum > /dev/null; then
+            echo "$Q8_SHA256  q8.gguf" | sha256sum -c -
+          else
+            echo "$Q8_SHA256  q8.gguf" | shasum -a 256 -c -
+          fi
+          "$bin/ore-cli" dump q8.gguf clips.txt 4 > ore-q8.tsv
+          "$bin/tcpp-probe" dump q8.gguf clips.txt 4 > tcpp-q8.tsv
+          {
+            echo "### The Q8_0 file"
+            echo '```'
+            if cmp -s <(cut -f1,2 ore-q8.tsv) <(cut -f1,2 tcpp-q8.tsv); then echo "Q8_0 | text: identical"; else echo "Q8_0 | text: DIFFERENT"; fi
+            for threads in 1 2 4; do
+              "$bin/tcpp-probe" time q8.gguf tcpp/samples/dots.wav "$threads" 3 2 8 30 | sed 's/^/Q8_0 | /'
+              "$bin/ore-cli" time q8.gguf tcpp/samples/dots.wav "$threads" 3 2 8 30 | sed 's/^/Q8_0 | /'
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          if ! cmp -s <(cut -f1,2 ore-q8.tsv) <(cut -f1,2 tcpp-q8.tsv); then
+            diff <(cut -f1,2 ore-q8.tsv) <(cut -f1,2 tcpp-q8.tsv) | head -20 || true
+          fi
 
   # transcribe.cpp is built for whatever processor the build machine has
   # (ggml's GGML_NATIVE default), so a package can end up needing instructions
