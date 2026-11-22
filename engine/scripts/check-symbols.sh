@@ -19,9 +19,9 @@ lib="${1:?usage: check-symbols.sh path/to/libore.a}"
 allowed='^(
 ore_[a-z0-9_]+
 |malloc|calloc|realloc|free|posix_memalign|aligned_alloc
-|mem(cpy|move|set|cmp)|memset_pattern16|bzero|str(len|cmp)
+|mem(cpy|move|set|cmp)|memset_pattern16|bzero|__bzero|str(len|cmp)
 |__(mem(cpy|move|set)|snprintf|vsnprintf)_chk|snprintf
-|open|open64|close|fstat|fstat64|__fstat|__fxstat|__fxstat64|mmap|mmap64|munmap
+|open|open64|close|fstat|fstat64|fstat\$INODE64|__fstat|__fxstat|__fxstat64|mmap|mmap64|munmap
 |clock_gettime|sysconf|getauxval
 |pthread_(create|join|mutex_(init|destroy|lock|unlock)|cond_(init|destroy|wait|broadcast)|set_qos_class_self_np)
 |(sin|cos|exp|log|tanh|sqrt|fma|fabs|floor|ceil)f?|llround|lround|__sincosf?_stret|sincosf?

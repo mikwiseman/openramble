@@ -121,55 +121,285 @@ static void quantize_q80_neon(const float * x, size_t xstride, int tb0, int tb1,
 
 // ---- Q4_K product -----------------------------------------------------------
 
-// One 16-frame block against two weight rows, `nv` vectors of four frames.
-// Four weights are broadcast and dotted with four columns of every frame, so
-// each lane of the accumulator is one frame's sum; the group scale is applied
-// once per group, and nothing is ever added across a register.
-ORE_DOTPROD ORE_INLINE void q4k_block_neon(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
-                                           const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G,
-                                           const float * D, float * o0, float * o1, const int nv) {
-    float32x4_t s0[4], s1[4];
-    for (int v = 0; v < 4; ++v) s0[v] = s1[v] = vdupq_n_f32(0.0f);
+// One 16-frame block against two weight rows, in vectors of four frames (one
+// function per number of vectors, so the last block of a clip does no more
+// than it must). Four weights are broadcast and dotted with four columns of
+// every frame, so each lane of the accumulator is one frame's sum; the group
+// scale is applied once per group, and nothing is ever added across a
+// register. Every register has its own named variable, because GCC keeps
+// small arrays of vectors in memory.
+ORE_DOTPROD
+static void q4k_block_neon_1(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+        const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
+        float * o1) {
+    float32x4_t s00 = vdupq_n_f32(0.0f);
+    float32x4_t s10 = vdupq_n_f32(0.0f);
     for (int b = 0; b < nb; ++b) {
-        int32x4_t S0[4], S1[4], M0[4], M1[4];
-        for (int v = 0; v < 4; ++v) S0[v] = S1[v] = M0[v] = M1[v] = vdupq_n_s32(0);
+        int32x4_t S00 = vdupq_n_s32(0);
+        int32x4_t S10 = vdupq_n_s32(0);
+        int32x4_t M00 = vdupq_n_s32(0);
+        int32x4_t M10 = vdupq_n_s32(0);
         for (int g = 0; g < 8; ++g) {
-            int32x4_t a0[4], a1[4];
-            for (int v = 0; v < 4; ++v) a0[v] = a1[v] = vdupq_n_s32(0);
+            int32x4_t a00 = vdupq_n_s32(0);
+            int32x4_t a10 = vdupq_n_s32(0);
             const uint32_t * p0 = u0 + b * 64 + g * 8;
             const uint32_t * p1 = u1 + b * 64 + g * 8;
             const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
             for (int c = 0; c < 8; ++c) {
-                const int8x16_t wb0 = vreinterpretq_s8_u32(vld1q_dup_u32(p0 + c));
-                const int8x16_t wb1 = vreinterpretq_s8_u32(vld1q_dup_u32(p1 + c));
-                for (int v = 0; v < nv; ++v) {
-                    const int8x16_t xv = vld1q_s8(Ag + c * 64 + v * 16);
-                    a0[v]              = vdotq_s32(a0[v], wb0, xv);
-                    a1[v]              = vdotq_s32(a1[v], wb1, xv);
-                }
+                const int8x16_t wb0 = vreinterpretq_s8_u32(vld1q_dup_u32(&p0[c]));
+                const int8x16_t wb1 = vreinterpretq_s8_u32(vld1q_dup_u32(&p1[c]));
+                const int8x16_t x0 = vld1q_s8(Ag + c * 64);
+                a00 = vdotq_s32(a00, wb0, x0);
+                a10 = vdotq_s32(a10, wb1, x0);
             }
-            const int32x4_t sc0 = vld1q_dup_s32(&h0[b].sc[g]), sc1 = vld1q_dup_s32(&h1[b].sc[g]);
-            const int32x4_t m0 = vld1q_dup_s32(&h0[b].mn[g]), m1 = vld1q_dup_s32(&h1[b].mn[g]);
-            for (int v = 0; v < nv; ++v) {
-                S0[v] = vmlaq_s32(S0[v], a0[v], sc0);
-                S1[v] = vmlaq_s32(S1[v], a1[v], sc1);
-                const int32x4_t gv = vld1q_s32(G + ((size_t) b * 8 + g) * ORE_FB + v * 4);
-                M0[v]              = vmlaq_s32(M0[v], gv, m0);
-                M1[v]              = vmlaq_s32(M1[v], gv, m1);
+            const int32x4_t sc0 = vld1q_dup_s32(&h0[b].sc[g]);
+            const int32x4_t mn0 = vld1q_dup_s32(&h0[b].mn[g]);
+            const int32x4_t sc1 = vld1q_dup_s32(&h1[b].sc[g]);
+            const int32x4_t mn1 = vld1q_dup_s32(&h1[b].mn[g]);
+            const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
+            const int32x4_t g0 = vld1q_s32(Gg);
+            S00 = vmlaq_s32(S00, a00, sc0);
+            M00 = vmlaq_s32(M00, g0, mn0);
+            S10 = vmlaq_s32(S10, a10, sc1);
+            M10 = vmlaq_s32(M10, g0, mn1);
+        }
+        const float * Db = D + (size_t) b * ORE_FB;
+        const float32x4_t dx0 = vld1q_f32(Db);
+        s00 = vfmsq_f32(s00, vmulq_n_f32(dx0, h0[b].dmin), vcvtq_f32_s32(M00));
+        s00 = vfmaq_f32(s00, vmulq_n_f32(dx0, h0[b].d), vcvtq_f32_s32(S00));
+        s10 = vfmsq_f32(s10, vmulq_n_f32(dx0, h1[b].dmin), vcvtq_f32_s32(M10));
+        s10 = vfmaq_f32(s10, vmulq_n_f32(dx0, h1[b].d), vcvtq_f32_s32(S10));
+    }
+    vst1q_f32(o0, s00);
+    vst1q_f32(o1, s10);
+}
+
+ORE_DOTPROD
+static void q4k_block_neon_2(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+        const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
+        float * o1) {
+    float32x4_t s00 = vdupq_n_f32(0.0f), s01 = vdupq_n_f32(0.0f);
+    float32x4_t s10 = vdupq_n_f32(0.0f), s11 = vdupq_n_f32(0.0f);
+    for (int b = 0; b < nb; ++b) {
+        int32x4_t S00 = vdupq_n_s32(0), S01 = vdupq_n_s32(0);
+        int32x4_t S10 = vdupq_n_s32(0), S11 = vdupq_n_s32(0);
+        int32x4_t M00 = vdupq_n_s32(0), M01 = vdupq_n_s32(0);
+        int32x4_t M10 = vdupq_n_s32(0), M11 = vdupq_n_s32(0);
+        for (int g = 0; g < 8; ++g) {
+            int32x4_t a00 = vdupq_n_s32(0), a01 = vdupq_n_s32(0);
+            int32x4_t a10 = vdupq_n_s32(0), a11 = vdupq_n_s32(0);
+            const uint32_t * p0 = u0 + b * 64 + g * 8;
+            const uint32_t * p1 = u1 + b * 64 + g * 8;
+            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            for (int c = 0; c < 8; ++c) {
+                const int8x16_t wb0 = vreinterpretq_s8_u32(vld1q_dup_u32(&p0[c]));
+                const int8x16_t wb1 = vreinterpretq_s8_u32(vld1q_dup_u32(&p1[c]));
+                const int8x16_t x0 = vld1q_s8(Ag + c * 64);
+                a00 = vdotq_s32(a00, wb0, x0);
+                a10 = vdotq_s32(a10, wb1, x0);
+                const int8x16_t x1 = vld1q_s8(Ag + c * 64 + 16);
+                a01 = vdotq_s32(a01, wb0, x1);
+                a11 = vdotq_s32(a11, wb1, x1);
             }
+            const int32x4_t sc0 = vld1q_dup_s32(&h0[b].sc[g]);
+            const int32x4_t mn0 = vld1q_dup_s32(&h0[b].mn[g]);
+            const int32x4_t sc1 = vld1q_dup_s32(&h1[b].sc[g]);
+            const int32x4_t mn1 = vld1q_dup_s32(&h1[b].mn[g]);
+            const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
+            const int32x4_t g0 = vld1q_s32(Gg);
+            S00 = vmlaq_s32(S00, a00, sc0);
+            M00 = vmlaq_s32(M00, g0, mn0);
+            S10 = vmlaq_s32(S10, a10, sc1);
+            M10 = vmlaq_s32(M10, g0, mn1);
+            const int32x4_t g1 = vld1q_s32(Gg + 4);
+            S01 = vmlaq_s32(S01, a01, sc0);
+            M01 = vmlaq_s32(M01, g1, mn0);
+            S11 = vmlaq_s32(S11, a11, sc1);
+            M11 = vmlaq_s32(M11, g1, mn1);
         }
-        for (int v = 0; v < nv; ++v) {
-            const float32x4_t dx = vld1q_f32(D + (size_t) b * ORE_FB + v * 4);
-            s0[v] = vfmsq_f32(s0[v], vmulq_n_f32(dx, h0[b].dmin), vcvtq_f32_s32(M0[v]));
-            s0[v] = vfmaq_f32(s0[v], vmulq_n_f32(dx, h0[b].d), vcvtq_f32_s32(S0[v]));
-            s1[v] = vfmsq_f32(s1[v], vmulq_n_f32(dx, h1[b].dmin), vcvtq_f32_s32(M1[v]));
-            s1[v] = vfmaq_f32(s1[v], vmulq_n_f32(dx, h1[b].d), vcvtq_f32_s32(S1[v]));
+        const float * Db = D + (size_t) b * ORE_FB;
+        const float32x4_t dx0 = vld1q_f32(Db);
+        s00 = vfmsq_f32(s00, vmulq_n_f32(dx0, h0[b].dmin), vcvtq_f32_s32(M00));
+        s00 = vfmaq_f32(s00, vmulq_n_f32(dx0, h0[b].d), vcvtq_f32_s32(S00));
+        s10 = vfmsq_f32(s10, vmulq_n_f32(dx0, h1[b].dmin), vcvtq_f32_s32(M10));
+        s10 = vfmaq_f32(s10, vmulq_n_f32(dx0, h1[b].d), vcvtq_f32_s32(S10));
+        const float32x4_t dx1 = vld1q_f32(Db + 4);
+        s01 = vfmsq_f32(s01, vmulq_n_f32(dx1, h0[b].dmin), vcvtq_f32_s32(M01));
+        s01 = vfmaq_f32(s01, vmulq_n_f32(dx1, h0[b].d), vcvtq_f32_s32(S01));
+        s11 = vfmsq_f32(s11, vmulq_n_f32(dx1, h1[b].dmin), vcvtq_f32_s32(M11));
+        s11 = vfmaq_f32(s11, vmulq_n_f32(dx1, h1[b].d), vcvtq_f32_s32(S11));
+    }
+    vst1q_f32(o0, s00);
+    vst1q_f32(o1, s10);
+    vst1q_f32(o0 + 4, s01);
+    vst1q_f32(o1 + 4, s11);
+}
+
+ORE_DOTPROD
+static void q4k_block_neon_3(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+        const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
+        float * o1) {
+    float32x4_t s00 = vdupq_n_f32(0.0f), s01 = vdupq_n_f32(0.0f), s02 = vdupq_n_f32(0.0f);
+    float32x4_t s10 = vdupq_n_f32(0.0f), s11 = vdupq_n_f32(0.0f), s12 = vdupq_n_f32(0.0f);
+    for (int b = 0; b < nb; ++b) {
+        int32x4_t S00 = vdupq_n_s32(0), S01 = vdupq_n_s32(0), S02 = vdupq_n_s32(0);
+        int32x4_t S10 = vdupq_n_s32(0), S11 = vdupq_n_s32(0), S12 = vdupq_n_s32(0);
+        int32x4_t M00 = vdupq_n_s32(0), M01 = vdupq_n_s32(0), M02 = vdupq_n_s32(0);
+        int32x4_t M10 = vdupq_n_s32(0), M11 = vdupq_n_s32(0), M12 = vdupq_n_s32(0);
+        for (int g = 0; g < 8; ++g) {
+            int32x4_t a00 = vdupq_n_s32(0), a01 = vdupq_n_s32(0), a02 = vdupq_n_s32(0);
+            int32x4_t a10 = vdupq_n_s32(0), a11 = vdupq_n_s32(0), a12 = vdupq_n_s32(0);
+            const uint32_t * p0 = u0 + b * 64 + g * 8;
+            const uint32_t * p1 = u1 + b * 64 + g * 8;
+            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            for (int c = 0; c < 8; ++c) {
+                const int8x16_t wb0 = vreinterpretq_s8_u32(vld1q_dup_u32(&p0[c]));
+                const int8x16_t wb1 = vreinterpretq_s8_u32(vld1q_dup_u32(&p1[c]));
+                const int8x16_t x0 = vld1q_s8(Ag + c * 64);
+                a00 = vdotq_s32(a00, wb0, x0);
+                a10 = vdotq_s32(a10, wb1, x0);
+                const int8x16_t x1 = vld1q_s8(Ag + c * 64 + 16);
+                a01 = vdotq_s32(a01, wb0, x1);
+                a11 = vdotq_s32(a11, wb1, x1);
+                const int8x16_t x2 = vld1q_s8(Ag + c * 64 + 32);
+                a02 = vdotq_s32(a02, wb0, x2);
+                a12 = vdotq_s32(a12, wb1, x2);
+            }
+            const int32x4_t sc0 = vld1q_dup_s32(&h0[b].sc[g]);
+            const int32x4_t mn0 = vld1q_dup_s32(&h0[b].mn[g]);
+            const int32x4_t sc1 = vld1q_dup_s32(&h1[b].sc[g]);
+            const int32x4_t mn1 = vld1q_dup_s32(&h1[b].mn[g]);
+            const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
+            const int32x4_t g0 = vld1q_s32(Gg);
+            S00 = vmlaq_s32(S00, a00, sc0);
+            M00 = vmlaq_s32(M00, g0, mn0);
+            S10 = vmlaq_s32(S10, a10, sc1);
+            M10 = vmlaq_s32(M10, g0, mn1);
+            const int32x4_t g1 = vld1q_s32(Gg + 4);
+            S01 = vmlaq_s32(S01, a01, sc0);
+            M01 = vmlaq_s32(M01, g1, mn0);
+            S11 = vmlaq_s32(S11, a11, sc1);
+            M11 = vmlaq_s32(M11, g1, mn1);
+            const int32x4_t g2 = vld1q_s32(Gg + 8);
+            S02 = vmlaq_s32(S02, a02, sc0);
+            M02 = vmlaq_s32(M02, g2, mn0);
+            S12 = vmlaq_s32(S12, a12, sc1);
+            M12 = vmlaq_s32(M12, g2, mn1);
         }
+        const float * Db = D + (size_t) b * ORE_FB;
+        const float32x4_t dx0 = vld1q_f32(Db);
+        s00 = vfmsq_f32(s00, vmulq_n_f32(dx0, h0[b].dmin), vcvtq_f32_s32(M00));
+        s00 = vfmaq_f32(s00, vmulq_n_f32(dx0, h0[b].d), vcvtq_f32_s32(S00));
+        s10 = vfmsq_f32(s10, vmulq_n_f32(dx0, h1[b].dmin), vcvtq_f32_s32(M10));
+        s10 = vfmaq_f32(s10, vmulq_n_f32(dx0, h1[b].d), vcvtq_f32_s32(S10));
+        const float32x4_t dx1 = vld1q_f32(Db + 4);
+        s01 = vfmsq_f32(s01, vmulq_n_f32(dx1, h0[b].dmin), vcvtq_f32_s32(M01));
+        s01 = vfmaq_f32(s01, vmulq_n_f32(dx1, h0[b].d), vcvtq_f32_s32(S01));
+        s11 = vfmsq_f32(s11, vmulq_n_f32(dx1, h1[b].dmin), vcvtq_f32_s32(M11));
+        s11 = vfmaq_f32(s11, vmulq_n_f32(dx1, h1[b].d), vcvtq_f32_s32(S11));
+        const float32x4_t dx2 = vld1q_f32(Db + 8);
+        s02 = vfmsq_f32(s02, vmulq_n_f32(dx2, h0[b].dmin), vcvtq_f32_s32(M02));
+        s02 = vfmaq_f32(s02, vmulq_n_f32(dx2, h0[b].d), vcvtq_f32_s32(S02));
+        s12 = vfmsq_f32(s12, vmulq_n_f32(dx2, h1[b].dmin), vcvtq_f32_s32(M12));
+        s12 = vfmaq_f32(s12, vmulq_n_f32(dx2, h1[b].d), vcvtq_f32_s32(S12));
     }
-    for (int v = 0; v < nv; ++v) {
-        vst1q_f32(o0 + v * 4, s0[v]);
-        vst1q_f32(o1 + v * 4, s1[v]);
+    vst1q_f32(o0, s00);
+    vst1q_f32(o1, s10);
+    vst1q_f32(o0 + 4, s01);
+    vst1q_f32(o1 + 4, s11);
+    vst1q_f32(o0 + 8, s02);
+    vst1q_f32(o1 + 8, s12);
+}
+
+ORE_DOTPROD
+static void q4k_block_neon_4(const uint32_t * u0, const uint32_t * u1, const ore_q4k_hdr * h0,
+        const ore_q4k_hdr * h1, int nb, const int8_t * A, const int32_t * G, const float * D, float * o0,
+        float * o1) {
+    float32x4_t s00 = vdupq_n_f32(0.0f), s01 = vdupq_n_f32(0.0f), s02 = vdupq_n_f32(0.0f), s03 = vdupq_n_f32(0.0f);
+    float32x4_t s10 = vdupq_n_f32(0.0f), s11 = vdupq_n_f32(0.0f), s12 = vdupq_n_f32(0.0f), s13 = vdupq_n_f32(0.0f);
+    for (int b = 0; b < nb; ++b) {
+        int32x4_t S00 = vdupq_n_s32(0), S01 = vdupq_n_s32(0), S02 = vdupq_n_s32(0), S03 = vdupq_n_s32(0);
+        int32x4_t S10 = vdupq_n_s32(0), S11 = vdupq_n_s32(0), S12 = vdupq_n_s32(0), S13 = vdupq_n_s32(0);
+        int32x4_t M00 = vdupq_n_s32(0), M01 = vdupq_n_s32(0), M02 = vdupq_n_s32(0), M03 = vdupq_n_s32(0);
+        int32x4_t M10 = vdupq_n_s32(0), M11 = vdupq_n_s32(0), M12 = vdupq_n_s32(0), M13 = vdupq_n_s32(0);
+        for (int g = 0; g < 8; ++g) {
+            int32x4_t a00 = vdupq_n_s32(0), a01 = vdupq_n_s32(0), a02 = vdupq_n_s32(0), a03 = vdupq_n_s32(0);
+            int32x4_t a10 = vdupq_n_s32(0), a11 = vdupq_n_s32(0), a12 = vdupq_n_s32(0), a13 = vdupq_n_s32(0);
+            const uint32_t * p0 = u0 + b * 64 + g * 8;
+            const uint32_t * p1 = u1 + b * 64 + g * 8;
+            const int8_t *   Ag = A + ((size_t) b * 64 + (size_t) g * 8) * 64;
+            for (int c = 0; c < 8; ++c) {
+                const int8x16_t wb0 = vreinterpretq_s8_u32(vld1q_dup_u32(&p0[c]));
+                const int8x16_t wb1 = vreinterpretq_s8_u32(vld1q_dup_u32(&p1[c]));
+                const int8x16_t x0 = vld1q_s8(Ag + c * 64);
+                a00 = vdotq_s32(a00, wb0, x0);
+                a10 = vdotq_s32(a10, wb1, x0);
+                const int8x16_t x1 = vld1q_s8(Ag + c * 64 + 16);
+                a01 = vdotq_s32(a01, wb0, x1);
+                a11 = vdotq_s32(a11, wb1, x1);
+                const int8x16_t x2 = vld1q_s8(Ag + c * 64 + 32);
+                a02 = vdotq_s32(a02, wb0, x2);
+                a12 = vdotq_s32(a12, wb1, x2);
+                const int8x16_t x3 = vld1q_s8(Ag + c * 64 + 48);
+                a03 = vdotq_s32(a03, wb0, x3);
+                a13 = vdotq_s32(a13, wb1, x3);
+            }
+            const int32x4_t sc0 = vld1q_dup_s32(&h0[b].sc[g]);
+            const int32x4_t mn0 = vld1q_dup_s32(&h0[b].mn[g]);
+            const int32x4_t sc1 = vld1q_dup_s32(&h1[b].sc[g]);
+            const int32x4_t mn1 = vld1q_dup_s32(&h1[b].mn[g]);
+            const int32_t * Gg = G + ((size_t) b * 8 + g) * ORE_FB;
+            const int32x4_t g0 = vld1q_s32(Gg);
+            S00 = vmlaq_s32(S00, a00, sc0);
+            M00 = vmlaq_s32(M00, g0, mn0);
+            S10 = vmlaq_s32(S10, a10, sc1);
+            M10 = vmlaq_s32(M10, g0, mn1);
+            const int32x4_t g1 = vld1q_s32(Gg + 4);
+            S01 = vmlaq_s32(S01, a01, sc0);
+            M01 = vmlaq_s32(M01, g1, mn0);
+            S11 = vmlaq_s32(S11, a11, sc1);
+            M11 = vmlaq_s32(M11, g1, mn1);
+            const int32x4_t g2 = vld1q_s32(Gg + 8);
+            S02 = vmlaq_s32(S02, a02, sc0);
+            M02 = vmlaq_s32(M02, g2, mn0);
+            S12 = vmlaq_s32(S12, a12, sc1);
+            M12 = vmlaq_s32(M12, g2, mn1);
+            const int32x4_t g3 = vld1q_s32(Gg + 12);
+            S03 = vmlaq_s32(S03, a03, sc0);
+            M03 = vmlaq_s32(M03, g3, mn0);
+            S13 = vmlaq_s32(S13, a13, sc1);
+            M13 = vmlaq_s32(M13, g3, mn1);
+        }
+        const float * Db = D + (size_t) b * ORE_FB;
+        const float32x4_t dx0 = vld1q_f32(Db);
+        s00 = vfmsq_f32(s00, vmulq_n_f32(dx0, h0[b].dmin), vcvtq_f32_s32(M00));
+        s00 = vfmaq_f32(s00, vmulq_n_f32(dx0, h0[b].d), vcvtq_f32_s32(S00));
+        s10 = vfmsq_f32(s10, vmulq_n_f32(dx0, h1[b].dmin), vcvtq_f32_s32(M10));
+        s10 = vfmaq_f32(s10, vmulq_n_f32(dx0, h1[b].d), vcvtq_f32_s32(S10));
+        const float32x4_t dx1 = vld1q_f32(Db + 4);
+        s01 = vfmsq_f32(s01, vmulq_n_f32(dx1, h0[b].dmin), vcvtq_f32_s32(M01));
+        s01 = vfmaq_f32(s01, vmulq_n_f32(dx1, h0[b].d), vcvtq_f32_s32(S01));
+        s11 = vfmsq_f32(s11, vmulq_n_f32(dx1, h1[b].dmin), vcvtq_f32_s32(M11));
+        s11 = vfmaq_f32(s11, vmulq_n_f32(dx1, h1[b].d), vcvtq_f32_s32(S11));
+        const float32x4_t dx2 = vld1q_f32(Db + 8);
+        s02 = vfmsq_f32(s02, vmulq_n_f32(dx2, h0[b].dmin), vcvtq_f32_s32(M02));
+        s02 = vfmaq_f32(s02, vmulq_n_f32(dx2, h0[b].d), vcvtq_f32_s32(S02));
+        s12 = vfmsq_f32(s12, vmulq_n_f32(dx2, h1[b].dmin), vcvtq_f32_s32(M12));
+        s12 = vfmaq_f32(s12, vmulq_n_f32(dx2, h1[b].d), vcvtq_f32_s32(S12));
+        const float32x4_t dx3 = vld1q_f32(Db + 12);
+        s03 = vfmsq_f32(s03, vmulq_n_f32(dx3, h0[b].dmin), vcvtq_f32_s32(M03));
+        s03 = vfmaq_f32(s03, vmulq_n_f32(dx3, h0[b].d), vcvtq_f32_s32(S03));
+        s13 = vfmsq_f32(s13, vmulq_n_f32(dx3, h1[b].dmin), vcvtq_f32_s32(M13));
+        s13 = vfmaq_f32(s13, vmulq_n_f32(dx3, h1[b].d), vcvtq_f32_s32(S13));
     }
+    vst1q_f32(o0, s00);
+    vst1q_f32(o1, s10);
+    vst1q_f32(o0 + 4, s01);
+    vst1q_f32(o1 + 4, s11);
+    vst1q_f32(o0 + 8, s02);
+    vst1q_f32(o1 + 8, s12);
+    vst1q_f32(o0 + 12, s03);
+    vst1q_f32(o1 + 12, s13);
 }
 
 ORE_DOTPROD
@@ -194,10 +424,10 @@ static void gemm_q4k_neon(const uint8_t * w, int n_in, int r0, int r1, const ore
             const float *   D     = x->d + (size_t) tb * nb * ORE_FB;
             float           o0[16], o1[16];
             switch ((valid + 3) / 4) {
-                case 1: q4k_block_neon(u0, u1, h0, h1, nb, A, G, D, o0, o1, 1); break;
-                case 2: q4k_block_neon(u0, u1, h0, h1, nb, A, G, D, o0, o1, 2); break;
-                case 3: q4k_block_neon(u0, u1, h0, h1, nb, A, G, D, o0, o1, 3); break;
-                default: q4k_block_neon(u0, u1, h0, h1, nb, A, G, D, o0, o1, 4); break;
+                case 1: q4k_block_neon_1(u0, u1, h0, h1, nb, A, G, D, o0, o1); break;
+                case 2: q4k_block_neon_2(u0, u1, h0, h1, nb, A, G, D, o0, o1); break;
+                case 3: q4k_block_neon_3(u0, u1, h0, h1, nb, A, G, D, o0, o1); break;
+                default: q4k_block_neon_4(u0, u1, h0, h1, nb, A, G, D, o0, o1); break;
             }
             float * yr = y + (size_t) tb * ORE_FB * ystride + r;
             for (int f = 0; f < valid; ++f) {
@@ -232,32 +462,51 @@ static void gemm_q80_neon(const uint8_t * w, int n_in, int r0, int r1, const ore
             const int      valid = ORE_MIN(ORE_FB, x->rows - tb * ORE_FB);
             const int8_t * A     = x->q + (size_t) tb * n4 * 64;
             const float *  D     = x->d + (size_t) tb * nb * ORE_FB;
-            float32x4_t    s0[4], s1[4];
-            for (int v = 0; v < 4; ++v) s0[v] = s1[v] = vdupq_n_f32(0.0f);
+            float32x4_t s00 = vdupq_n_f32(0.0f), s01 = vdupq_n_f32(0.0f), s02 = vdupq_n_f32(0.0f), s03 = vdupq_n_f32(0.0f);
+            float32x4_t s10 = vdupq_n_f32(0.0f), s11 = vdupq_n_f32(0.0f), s12 = vdupq_n_f32(0.0f), s13 = vdupq_n_f32(0.0f);
             for (int b = 0; b < nb; ++b) {
-                int32x4_t a0[4], a1[4];
-                for (int v = 0; v < 4; ++v) a0[v] = a1[v] = vdupq_n_s32(0);
+                int32x4_t a00 = vdupq_n_s32(0), a01 = vdupq_n_s32(0), a02 = vdupq_n_s32(0), a03 = vdupq_n_s32(0);
+                int32x4_t a10 = vdupq_n_s32(0), a11 = vdupq_n_s32(0), a12 = vdupq_n_s32(0), a13 = vdupq_n_s32(0);
                 for (int c = 0; c < 8; ++c) {
+                    const int8_t * Ac = A + ((size_t) b * 8 + c) * 64;
                     const int8x16_t wb0 = vreinterpretq_s8_u32(vld1q_dup_u32(u0 + b * 8 + c));
                     const int8x16_t wb1 = vreinterpretq_s8_u32(vld1q_dup_u32(u1 + b * 8 + c));
-                    const int8_t *  Ac  = A + ((size_t) b * 8 + c) * 64;
-                    for (int v = 0; v < 4; ++v) {
-                        const int8x16_t xv = vld1q_s8(Ac + v * 16);
-                        a0[v]              = vdotq_s32(a0[v], wb0, xv);
-                        a1[v]              = vdotq_s32(a1[v], wb1, xv);
-                    }
+                    const int8x16_t x0 = vld1q_s8(Ac);
+                    a00 = vdotq_s32(a00, wb0, x0);
+                    a10 = vdotq_s32(a10, wb1, x0);
+                    const int8x16_t x1 = vld1q_s8(Ac + 16);
+                    a01 = vdotq_s32(a01, wb0, x1);
+                    a11 = vdotq_s32(a11, wb1, x1);
+                    const int8x16_t x2 = vld1q_s8(Ac + 32);
+                    a02 = vdotq_s32(a02, wb0, x2);
+                    a12 = vdotq_s32(a12, wb1, x2);
+                    const int8x16_t x3 = vld1q_s8(Ac + 48);
+                    a03 = vdotq_s32(a03, wb0, x3);
+                    a13 = vdotq_s32(a13, wb1, x3);
                 }
-                for (int v = 0; v < 4; ++v) {
-                    const float32x4_t dx = vld1q_f32(D + (size_t) b * ORE_FB + v * 4);
-                    s0[v]                = vfmaq_f32(s0[v], vcvtq_f32_s32(a0[v]), vmulq_n_f32(dx, dw0[b]));
-                    s1[v]                = vfmaq_f32(s1[v], vcvtq_f32_s32(a1[v]), vmulq_n_f32(dx, dw1[b]));
-                }
+                const float * Db = D + (size_t) b * ORE_FB;
+                const float32x4_t dx0 = vld1q_f32(Db);
+                s00 = vfmaq_f32(s00, vcvtq_f32_s32(a00), vmulq_n_f32(dx0, dw0[b]));
+                s10 = vfmaq_f32(s10, vcvtq_f32_s32(a10), vmulq_n_f32(dx0, dw1[b]));
+                const float32x4_t dx1 = vld1q_f32(Db + 4);
+                s01 = vfmaq_f32(s01, vcvtq_f32_s32(a01), vmulq_n_f32(dx1, dw0[b]));
+                s11 = vfmaq_f32(s11, vcvtq_f32_s32(a11), vmulq_n_f32(dx1, dw1[b]));
+                const float32x4_t dx2 = vld1q_f32(Db + 8);
+                s02 = vfmaq_f32(s02, vcvtq_f32_s32(a02), vmulq_n_f32(dx2, dw0[b]));
+                s12 = vfmaq_f32(s12, vcvtq_f32_s32(a12), vmulq_n_f32(dx2, dw1[b]));
+                const float32x4_t dx3 = vld1q_f32(Db + 12);
+                s03 = vfmaq_f32(s03, vcvtq_f32_s32(a03), vmulq_n_f32(dx3, dw0[b]));
+                s13 = vfmaq_f32(s13, vcvtq_f32_s32(a13), vmulq_n_f32(dx3, dw1[b]));
             }
             float o0[16], o1[16];
-            for (int v = 0; v < 4; ++v) {
-                vst1q_f32(o0 + v * 4, s0[v]);
-                vst1q_f32(o1 + v * 4, s1[v]);
-            }
+            vst1q_f32(o0, s00);
+            vst1q_f32(o1, s10);
+            vst1q_f32(o0 + 4, s01);
+            vst1q_f32(o1 + 4, s11);
+            vst1q_f32(o0 + 8, s02);
+            vst1q_f32(o1 + 8, s12);
+            vst1q_f32(o0 + 12, s03);
+            vst1q_f32(o1 + 12, s13);
             float * yr = y + (size_t) tb * ORE_FB * ystride + r;
             for (int f = 0; f < valid; ++f) {
                 yr[(size_t) f * ystride] = o0[f];
@@ -298,39 +547,78 @@ static void gemm_f32_neon(const void * w, int w_is_f16, size_t wstride, int n_in
         const float * w0 = wr[0], *w1 = wr[1], *w2 = wr[2], *w3 = wr[3], *w4 = wr[4], *w5 = wr[5];
         for (int tb = 0; tb < ntb; ++tb) {
             const float * xb = xp + (size_t) tb * n_in * ORE_FB;
-            float32x4_t   c[ORE_F32_ROWS][4];
-            for (int i = 0; i < ORE_F32_ROWS; ++i) {
-                for (int j = 0; j < 4; ++j) c[i][j] = vdupq_n_f32(0.0f);
-            }
+            float32x4_t c00 = vdupq_n_f32(0.0f), c01 = vdupq_n_f32(0.0f), c02 = vdupq_n_f32(0.0f), c03 = vdupq_n_f32(0.0f);
+            float32x4_t c10 = vdupq_n_f32(0.0f), c11 = vdupq_n_f32(0.0f), c12 = vdupq_n_f32(0.0f), c13 = vdupq_n_f32(0.0f);
+            float32x4_t c20 = vdupq_n_f32(0.0f), c21 = vdupq_n_f32(0.0f), c22 = vdupq_n_f32(0.0f), c23 = vdupq_n_f32(0.0f);
+            float32x4_t c30 = vdupq_n_f32(0.0f), c31 = vdupq_n_f32(0.0f), c32 = vdupq_n_f32(0.0f), c33 = vdupq_n_f32(0.0f);
+            float32x4_t c40 = vdupq_n_f32(0.0f), c41 = vdupq_n_f32(0.0f), c42 = vdupq_n_f32(0.0f), c43 = vdupq_n_f32(0.0f);
+            float32x4_t c50 = vdupq_n_f32(0.0f), c51 = vdupq_n_f32(0.0f), c52 = vdupq_n_f32(0.0f), c53 = vdupq_n_f32(0.0f);
             for (int k = 0; k < n_in; ++k) {
-                const float *     xk = xb + (size_t) k * ORE_FB;
-                const float32x4_t x0 = vld1q_f32(xk), x1 = vld1q_f32(xk + 4);
-                const float32x4_t x2 = vld1q_f32(xk + 8), x3 = vld1q_f32(xk + 12);
-#define ORE_ROW(i, wp)                                \
-    {                                                 \
-        const float32x4_t wv = vld1q_dup_f32(wp + k); \
-        c[i][0]              = vfmaq_f32(c[i][0], wv, x0); \
-        c[i][1]              = vfmaq_f32(c[i][1], wv, x1); \
-        c[i][2]              = vfmaq_f32(c[i][2], wv, x2); \
-        c[i][3]              = vfmaq_f32(c[i][3], wv, x3); \
-    }
-                ORE_ROW(0, w0)
-                ORE_ROW(1, w1)
-                ORE_ROW(2, w2)
-                ORE_ROW(3, w3)
-                ORE_ROW(4, w4)
-                ORE_ROW(5, w5)
-#undef ORE_ROW
+                const float * xk = xb + (size_t) k * ORE_FB;
+                const float32x4_t x0 = vld1q_f32(xk);
+                const float32x4_t x1 = vld1q_f32(xk + 4);
+                const float32x4_t x2 = vld1q_f32(xk + 8);
+                const float32x4_t x3 = vld1q_f32(xk + 12);
+                const float32x4_t v0 = vld1q_dup_f32(w0 + k);
+                c00 = vfmaq_f32(c00, v0, x0);
+                c01 = vfmaq_f32(c01, v0, x1);
+                c02 = vfmaq_f32(c02, v0, x2);
+                c03 = vfmaq_f32(c03, v0, x3);
+                const float32x4_t v1 = vld1q_dup_f32(w1 + k);
+                c10 = vfmaq_f32(c10, v1, x0);
+                c11 = vfmaq_f32(c11, v1, x1);
+                c12 = vfmaq_f32(c12, v1, x2);
+                c13 = vfmaq_f32(c13, v1, x3);
+                const float32x4_t v2 = vld1q_dup_f32(w2 + k);
+                c20 = vfmaq_f32(c20, v2, x0);
+                c21 = vfmaq_f32(c21, v2, x1);
+                c22 = vfmaq_f32(c22, v2, x2);
+                c23 = vfmaq_f32(c23, v2, x3);
+                const float32x4_t v3 = vld1q_dup_f32(w3 + k);
+                c30 = vfmaq_f32(c30, v3, x0);
+                c31 = vfmaq_f32(c31, v3, x1);
+                c32 = vfmaq_f32(c32, v3, x2);
+                c33 = vfmaq_f32(c33, v3, x3);
+                const float32x4_t v4 = vld1q_dup_f32(w4 + k);
+                c40 = vfmaq_f32(c40, v4, x0);
+                c41 = vfmaq_f32(c41, v4, x1);
+                c42 = vfmaq_f32(c42, v4, x2);
+                c43 = vfmaq_f32(c43, v4, x3);
+                const float32x4_t v5 = vld1q_dup_f32(w5 + k);
+                c50 = vfmaq_f32(c50, v5, x0);
+                c51 = vfmaq_f32(c51, v5, x1);
+                c52 = vfmaq_f32(c52, v5, x2);
+                c53 = vfmaq_f32(c53, v5, x3);
             }
             const int valid = ORE_MIN(ORE_FB, rows - tb * ORE_FB);
+            float     out[6][16];
+            vst1q_f32(out[0], c00);
+            vst1q_f32(out[0] + 4, c01);
+            vst1q_f32(out[0] + 8, c02);
+            vst1q_f32(out[0] + 12, c03);
+            vst1q_f32(out[1], c10);
+            vst1q_f32(out[1] + 4, c11);
+            vst1q_f32(out[1] + 8, c12);
+            vst1q_f32(out[1] + 12, c13);
+            vst1q_f32(out[2], c20);
+            vst1q_f32(out[2] + 4, c21);
+            vst1q_f32(out[2] + 8, c22);
+            vst1q_f32(out[2] + 12, c23);
+            vst1q_f32(out[3], c30);
+            vst1q_f32(out[3] + 4, c31);
+            vst1q_f32(out[3] + 8, c32);
+            vst1q_f32(out[3] + 12, c33);
+            vst1q_f32(out[4], c40);
+            vst1q_f32(out[4] + 4, c41);
+            vst1q_f32(out[4] + 8, c42);
+            vst1q_f32(out[4] + 12, c43);
+            vst1q_f32(out[5], c50);
+            vst1q_f32(out[5] + 4, c51);
+            vst1q_f32(out[5] + 8, c52);
+            vst1q_f32(out[5] + 12, c53);
             for (int i = 0; i < nr; ++i) {
-                float out[16];
-                vst1q_f32(out, c[i][0]);
-                vst1q_f32(out + 4, c[i][1]);
-                vst1q_f32(out + 8, c[i][2]);
-                vst1q_f32(out + 12, c[i][3]);
                 float * yr = y + (size_t) tb * ORE_FB * ystride + r + i;
-                for (int f = 0; f < valid; ++f) yr[(size_t) f * ystride] = out[f];
+                for (int f = 0; f < valid; ++f) yr[(size_t) f * ystride] = out[i][f];
             }
         }
     }
