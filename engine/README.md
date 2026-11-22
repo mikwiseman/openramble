@@ -53,7 +53,7 @@ the engine asks the processor what it has and picks a set of kernels.
 | Kernel set | Processors |
 |---|---|
 | `neon` | arm64 with dot products: every Apple silicon Mac, Arm servers and Windows on Arm since 2018 |
-| `avx512` | x86-64 with AVX-512 and VNNI: AMD from Zen 4, Intel from Ice Lake where present |
+| `avx512` | x86-64 with AVX-512 and VNNI: AMD from Zen 4, Intel from Ice Lake where present. On Zen 4, which runs 512-bit instructions in two halves, the float product stays 256-bit (`avx512+avx2`) |
 | `avx2` | x86-64 with AVX2 and FMA: Intel from 2013, AMD from 2015 |
 | `sse` | x86-64 with SSSE3 and SSE4.1: Intel from 2008, AMD from 2011 |
 | `generic` | anything else, in plain C |

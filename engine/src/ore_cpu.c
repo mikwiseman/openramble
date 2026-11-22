@@ -31,7 +31,17 @@ static int x86_has_avx512_vnni(void) {
     const int f = (r[1] >> 16) & 1, bw = (r[1] >> 30) & 1, vl = (r[1] >> 31) & 1, vnni = (r[2] >> 11) & 1;
     return f && bw && vl && vnni;
 }
+static void x86_cpuid(unsigned leaf, unsigned out[4]) {
+    int r[4];
+    __cpuid(r, (int) leaf);
+    for (int i = 0; i < 4; ++i) out[i] = (unsigned) r[i];
+}
 #else
+#include <cpuid.h>
+static void x86_cpuid(unsigned leaf, unsigned out[4]) {
+    out[0] = out[1] = out[2] = out[3] = 0;
+    __get_cpuid(leaf, &out[0], &out[1], &out[2], &out[3]);
+}
 static int x86_has_avx2_fma_f16c(void) {
     __builtin_cpu_init();
     return __builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma") && __builtin_cpu_supports("f16c");
@@ -46,6 +56,17 @@ static int x86_has_avx512_vnni(void) {
            __builtin_cpu_supports("avx512vl") && __builtin_cpu_supports("avx512vnni");
 }
 #endif
+
+// AMD's Zen 4 (family 19h; its predecessor in that family has no AVX-512) runs
+// a 512-bit instruction as two 256-bit halves.
+static int x86_512_in_halves(void) {
+    unsigned r[4];
+    x86_cpuid(0, r);
+    if (r[1] != 0x68747541u || r[3] != 0x69746e65u || r[2] != 0x444d4163u) return 0;  // "AuthenticAMD"
+    x86_cpuid(1, r);
+    const unsigned base = (r[0] >> 8) & 0xf;
+    return base == 0xf && base + ((r[0] >> 20) & 0xff) == 0x19;
+}
 #endif
 
 #if ORE_ARM64
@@ -75,6 +96,7 @@ const ore_kernels * ore_kernels_named(const char * name) {
 #endif
 #if ORE_X86
     if (strcmp(name, "avx512") == 0) return x86_has_avx512_vnni() ? &ore_kernels_avx512 : NULL;
+    if (strcmp(name, "avx512+avx2") == 0) return x86_has_avx512_vnni() ? &ore_kernels_avx512_f256 : NULL;
     if (strcmp(name, "avx2") == 0) return x86_has_avx2_fma_f16c() ? &ore_kernels_avx2 : NULL;
     if (strcmp(name, "sse") == 0) return x86_has_sse41() ? &ore_kernels_sse : NULL;
 #endif
@@ -86,7 +108,7 @@ const ore_kernels * ore_kernels_pick(void) {
     if (arm_has_dotprod()) return &ore_kernels_neon;
 #endif
 #if ORE_X86
-    if (x86_has_avx512_vnni()) return &ore_kernels_avx512;
+    if (x86_has_avx512_vnni()) return x86_512_in_halves() ? &ore_kernels_avx512_f256 : &ore_kernels_avx512;
     if (x86_has_avx2_fma_f16c()) return &ore_kernels_avx2;
     if (x86_has_sse41()) return &ore_kernels_sse;
 #endif

@@ -966,4 +966,14 @@ const ore_kernels ore_kernels_avx512 = {
     gemv_f32_avx2,
 };
 
+// The same table with the 256-bit float product, for processors that run a
+// 512-bit instruction as two 256-bit halves (AMD's Zen 4). The 512-bit float
+// kernel gains nothing there, and as MSVC compiles it, it is slower: 33
+// against 43 billion multiply-adds a second on an EPYC 9V74.
+const ore_kernels ore_kernels_avx512_f256 = {
+    "avx512+avx2",   quantize_q8k_avx2, quantize_q80_avx2, gemm_q4k_avx512, gemm_q80_avx512,     gemm_f32_avx2,
+    layer_norm_avx2, silu_avx2,         glu_avx2,          softmax_avx2,    dwconv_bn_silu_avx2, dwconv_bias_avx2,
+    gemv_f32_avx2,
+};
+
 #endif  // ORE_X86

@@ -74,13 +74,13 @@ int main(int argc, char ** argv) {
         fprintf(stderr, "open failed: %s\n", err);
         return 1;
     }
-    const ore_kernels * tables[6];
+    const ore_kernels * tables[8];
     int                 n_tables = 0;
     tables[n_tables++]           = &ore_kernels_generic;
     const ore_kernels * best     = ore_kernels_pick();
     if (best != &ore_kernels_generic) tables[n_tables++] = best;
-    const char * others[] = { "avx2", "sse" };
-    for (int i = 0; i < 2; ++i) {
+    const char * others[] = { "avx512", "avx512+avx2", "avx2", "sse" };
+    for (int i = 0; i < 4; ++i) {
         const ore_kernels * k = ore_kernels_named(others[i]);
         if (k && k != best) tables[n_tables++] = k;
     }

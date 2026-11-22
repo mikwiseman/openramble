@@ -380,7 +380,7 @@ int main(int argc, char ** argv) {
     const char * scratch = argc > 1 ? argv[1] : "ore-selftest.gguf";
     test_half();
     test_exp();
-    const char * names[] = { "generic", "neon", "avx512", "avx2", "sse" };
+    const char * names[] = { "generic", "neon", "avx512", "avx512+avx2", "avx2", "sse" };
     printf("kernel tables:");
     for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
         const ore_kernels * k = ore_kernels_named(names[i]);

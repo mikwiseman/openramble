@@ -99,7 +99,7 @@ void ore_pack16(const float * x, size_t xstride, int rows, int n, int tb0, int t
 
 // The best table this processor can run.
 const ore_kernels * ore_kernels_pick(void);
-// A table by name ("generic", "neon", "avx512", "avx2", "sse"), or NULL when
+// A table by name ("generic", "neon", "avx512", "avx512+avx2", "avx2", "sse"), or NULL when
 // this build or this processor does not have it.
 const ore_kernels * ore_kernels_named(const char * name);
 
@@ -109,6 +109,7 @@ extern const ore_kernels ore_kernels_neon;
 #endif
 #if ORE_X86
 extern const ore_kernels ore_kernels_avx512;
+extern const ore_kernels ore_kernels_avx512_f256;
 extern const ore_kernels ore_kernels_avx2;
 extern const ore_kernels ore_kernels_sse;
 #endif

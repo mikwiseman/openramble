@@ -199,9 +199,8 @@ jobs:
               "$bin/ore-cli" time model.gguf tcpp/samples/dots.wav "$threads" 3 2 4 8 16 30
               "$bin/tcpp-probe" time model.gguf tcpp/samples/dots.wav "$threads" 3 2 4 8 16 30
             done
-            # The other x86 kernel sets on this processor: AVX2 where the
-            # runs above used AVX-512, and the set for processors without AVX2.
-            for kernels in avx2 sse; do
+            # The other x86 kernel sets on this processor, where it has them.
+            for kernels in avx512 avx2 sse; do
               for threads in 1 4; do
                 ORE_KERNELS=$kernels "$bin/ore-cli" time model.gguf tcpp/samples/dots.wav "$threads" 3 8 30 2> /dev/null || true
               done
