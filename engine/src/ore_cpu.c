@@ -23,6 +23,14 @@ static int x86_has_sse41(void) {
     __cpuid(r, 1);
     return ((r[2] >> 9) & 1) && ((r[2] >> 19) & 1);  // SSSE3 and SSE4.1
 }
+static int x86_has_avx512_vnni(void) {
+    int r[4];
+    if (!x86_has_avx2_fma_f16c()) return 0;
+    if ((_xgetbv(0) & 0xe6) != 0xe6) return 0;  // the system saves the mask and ZMM state
+    __cpuidex(r, 7, 0);
+    const int f = (r[1] >> 16) & 1, bw = (r[1] >> 30) & 1, vl = (r[1] >> 31) & 1, vnni = (r[2] >> 11) & 1;
+    return f && bw && vl && vnni;
+}
 #else
 static int x86_has_avx2_fma_f16c(void) {
     __builtin_cpu_init();
@@ -31,6 +39,11 @@ static int x86_has_avx2_fma_f16c(void) {
 static int x86_has_sse41(void) {
     __builtin_cpu_init();
     return __builtin_cpu_supports("ssse3") && __builtin_cpu_supports("sse4.1");
+}
+static int x86_has_avx512_vnni(void) {
+    __builtin_cpu_init();
+    return x86_has_avx2_fma_f16c() && __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw") &&
+           __builtin_cpu_supports("avx512vl") && __builtin_cpu_supports("avx512vnni");
 }
 #endif
 #endif
@@ -61,6 +74,7 @@ const ore_kernels * ore_kernels_named(const char * name) {
     if (strcmp(name, "neon") == 0) return arm_has_dotprod() ? &ore_kernels_neon : NULL;
 #endif
 #if ORE_X86
+    if (strcmp(name, "avx512") == 0) return x86_has_avx512_vnni() ? &ore_kernels_avx512 : NULL;
     if (strcmp(name, "avx2") == 0) return x86_has_avx2_fma_f16c() ? &ore_kernels_avx2 : NULL;
     if (strcmp(name, "sse") == 0) return x86_has_sse41() ? &ore_kernels_sse : NULL;
 #endif
@@ -72,6 +86,7 @@ const ore_kernels * ore_kernels_pick(void) {
     if (arm_has_dotprod()) return &ore_kernels_neon;
 #endif
 #if ORE_X86
+    if (x86_has_avx512_vnni()) return &ore_kernels_avx512;
     if (x86_has_avx2_fma_f16c()) return &ore_kernels_avx2;
     if (x86_has_sse41()) return &ore_kernels_sse;
 #endif

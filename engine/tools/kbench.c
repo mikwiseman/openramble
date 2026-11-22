@@ -74,13 +74,16 @@ int main(int argc, char ** argv) {
         fprintf(stderr, "open failed: %s\n", err);
         return 1;
     }
-    const ore_kernels * tables[4];
+    const ore_kernels * tables[6];
     int                 n_tables = 0;
     tables[n_tables++]           = &ore_kernels_generic;
     const ore_kernels * best     = ore_kernels_pick();
     if (best != &ore_kernels_generic) tables[n_tables++] = best;
-    const ore_kernels * sse = ore_kernels_named("sse");
-    if (sse && sse != best) tables[n_tables++] = sse;
+    const char * others[] = { "avx2", "sse" };
+    for (int i = 0; i < 2; ++i) {
+        const ore_kernels * k = ore_kernels_named(others[i]);
+        if (k && k != best) tables[n_tables++] = k;
+    }
     printf("frames %d, reps %d, best table: %s\n", T, reps, best->name);
     const int ntb = ore_frame_blocks(T);
     int       bad = 0;
