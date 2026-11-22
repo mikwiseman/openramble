@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.42.0</title>
-      <pubDate>Fri, 20 Nov 2026 08:13:25 +0200</pubDate>
-      <sparkle:version>87</sparkle:version>
-      <sparkle:shortVersionString>0.42.0</sparkle:shortVersionString>
+      <title>0.42.1</title>
+      <pubDate>Sun, 22 Nov 2026 19:05:02 +0200</pubDate>
+      <sparkle:version>88</sparkle:version>
+      <sparkle:shortVersionString>0.42.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.42.0&lt;/h2&gt;&lt;h2&gt;Faster after you release the key&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Recognition takes less time. On an M4 Pro MacBook Pro a 4-second phrase went from about 71 ms to 62 ms, a 37-second take from 480 ms to 380 ms, and three minutes of speech from 2.4 seconds to 1.8 seconds.&lt;/li&gt;&lt;li&gt;The words did not change. The new build wrote the same text as the old one on all 1,422 English and Russian test recordings.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;Names you taught are heard&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;The spellings in your dictionary now also go to the speech model, which leans toward them while it listens. In our test with English product names, 32 of 37 were written correctly, up from 23.&lt;/li&gt;&lt;li&gt;This helps most when a name is said the English way. A name said the Russian way is still corrected by the dictionary after recognition, as before.&lt;/li&gt;&lt;li&gt;If you have added no words, nothing changes. The built-in list is not sent to the model.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;Small things in Settings&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;The arrows beside the microphone&amp;#x27;s name now follow the name.&lt;/li&gt;&lt;li&gt;The note under the shortcuts is shorter.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Your voice and text still never leave your Mac.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.42.0/OpenRamble-0.42.0.dmg" length="15191487" type="application/octet-stream" sparkle:edSignature="gS6r2kYY9yNfOASjOKarJK196Nfmf2yfBz0qQqmNk46JYPJIipkkXGuEM9XJ7HN2zSmSHdsdlRTlTeyE7HOADA==" />
+      <description>&lt;h2&gt;OpenRamble 0.42.1&lt;/h2&gt;&lt;h2&gt;A tidier setup&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;The speech model and the permissions are now one list with one layout, in the first-run setup and in Settings → Setup. Each row shows its state, what it is for, and the one button it needs.&lt;/li&gt;&lt;li&gt;A model download shows its progress bar under the row&amp;#x27;s own words.&lt;/li&gt;&lt;li&gt;The download sentence is shorter. It no longer names a mirror and a CDN, and the size is on the button.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;Easier to read&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;The smallest gray text is larger everywhere. Sentences are 12 points and times are 11, where some were 10.&lt;/li&gt;&lt;li&gt;In the Library, your dictations are listed in the same serif they have on the page beside the list. A recording&amp;#x27;s title and the empty Library&amp;#x27;s headline use it too.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;Small things&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;In the first-run try-out, the note fills the page, and &amp;quot;Skip the try-out&amp;quot; sits beside the key.&lt;/li&gt;&lt;li&gt;In Settings → About, &amp;quot;Check Now&amp;quot; sits beside the Updates heading.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Your voice and text still never leave your Mac.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.42.1/OpenRamble-0.42.1.dmg" length="15199283" type="application/octet-stream" sparkle:edSignature="PRbH3gktuVtDpaT/VtD883eX/RbuoCVjT5JiSKQS1nNkCzBAn7YXh8u0+YhosYRjJdFsGlhMzceR1MI+VekbBg==" />
     </item>
   </channel>
 </rss>
