@@ -246,7 +246,7 @@ OpenRamble recognizes 25 European languages, one language at a time, including E
 
 ### Which Macs does OpenRamble run on? Does it work on Intel?
 
-OpenRamble needs macOS 14 or later and runs on every Apple Silicon Mac, M1 included, where it recognizes speech on the GPU. Support for Intel Macs is experimental. On an Intel Mac, OpenRamble recognizes speech on the processor. The Intel version has been tested only under Rosetta on an Apple Silicon Mac, never on an actual Intel Mac.
+OpenRamble needs macOS 14 or later and runs on every Apple Silicon Mac, M1 included, where it recognizes speech on the GPU. Support for Intel Macs is experimental. On an Intel Mac, OpenRamble recognizes speech on the processor. Each change is checked on an Intel Mac, where the recognizer is built and has to recognize a spoken phrase. On that Mac recognition was slower than the speech itself, and nobody has tried the app by hand on an Intel Mac.
 
 ### Does OpenRamble remove filler words like "um" and "uh"? Will it rewrite what I said?
 
@@ -283,7 +283,7 @@ An early Windows and Linux version is in [`apps/desktop`](apps/desktop), and its
 ## Requirements
 
 - macOS 14 or later. Recording what your Mac plays needs macOS 14.2 or later. On 14.0 and 14.1, recordings capture only your microphone.
-- A Mac with Apple Silicon, where recognition runs on the GPU. Support for Intel Macs is experimental. On an Intel Mac, recognition runs on the processor. The Intel version has been tested only under Rosetta on an Apple Silicon Mac.
+- A Mac with Apple Silicon, where recognition runs on the GPU. Support for Intel Macs is experimental. On an Intel Mac, recognition runs on the processor and is much slower. Each change is checked on an Intel Mac, but nobody has tried the app by hand on one.
 - About 490 MB of disk space for the speech model, plus temporary space while it downloads.
 - If you used Parakeet v3 before, Settings offers the upgrade to Parakeet Ultra, and nothing downloads until you click. Both models stay on disk, about 1.2 GB together, until Ultra has been verified and loaded. OpenRamble then deletes v3.
 - In OpenRamble's tests, the recognition process used at most 842 MB of memory with the model loaded. The model stays loaded until an hour passes with no dictation or recording, and nothing unloads it earlier, memory pressure included. The next dictation reloads it while you speak, and recording starts at once either way.
