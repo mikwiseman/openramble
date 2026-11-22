@@ -1,0 +1,41 @@
+{
+ "run": "r88-conjunction.sonnet.high.1",
+ "task": "r88-conjunction",
+ "model": "claude-sonnet-5-5",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 20:12",
+ "exit": 1,
+ "timed_out": false,
+ "seconds": 182,
+ "slept_seconds": 0,
+ "load_before": "232.8",
+ "load_after": "190.1",
+ "memories_written": 0,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r88-conjunction.sonnet.high.1.jsonl",
+ "problems": [
+  "provider: API Error: Can't reach the API server \u2014 check your internet or DNS (ENOTFOUND)",
+  "result: success API Error: Can't reach the API server \u2014 check your internet or DNS (ENOTFOUND)"
+ ],
+ "tool_calls": 0,
+ "by_kind": {},
+ "turns": 1,
+ "usage": {
+  "input": 0,
+  "cache_write": 0,
+  "cached_input": 0,
+  "output": 0
+ },
+ "tokens": 0,
+ "cost_usd": 0,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 0,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 14
+}

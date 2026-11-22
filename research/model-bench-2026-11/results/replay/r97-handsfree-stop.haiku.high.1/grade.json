@@ -1,0 +1,62 @@
+{
+ "task": "r97-handsfree-stop",
+ "load": "4.6",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 25
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 1
+ },
+ "own_tests": {
+  "files": 2,
+  "fail_on_base": true
+ },
+ "hidden": {
+  "ok": false,
+  "code": 1,
+  "seconds": 39,
+  "failed": [
+   "DictationCoreTests.DictationControllerTests testAPressWhileThePasteWaitsForItsReadEndsTheWaitOutLoud",
+   "DictationCoreTests.DictationControllerTests testAShortcutPressedWhileALandedPasteFinishesStartsNothing"
+  ],
+  "tries": 2
+ },
+ "suite": {
+  "ok": false,
+  "code": 1,
+  "seconds": 88,
+  "failed": [
+   "DictationCoreTests.DictationControllerTests testAPressWhileThePasteWaitsForItsReadEndsTheWaitOutLoud",
+   "DictationCoreTests.DictationControllerTests testAShortcutPressedWhileALandedPasteFinishesStartsNothing"
+  ],
+  "tries": 2
+ },
+ "size": {
+  "source": 80,
+  "tests": 72,
+  "fixtures": 0,
+  "other": 0,
+  "reference_source": 25,
+  "ratio": 3.2
+ },
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "state": "fail",
+ "reason": "hidden tests",
+ "claims": {
+  "says_done": false,
+  "says_checks_pass": true
+ },
+ "false_green": false,
+ "unproven_claim": false,
+ "run": "r97-handsfree-stop.haiku.high.1"
+}

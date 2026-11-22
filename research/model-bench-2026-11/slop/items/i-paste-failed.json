@@ -1,6 +1,8 @@
 {
  "id": "i-paste-failed",
  "situation": "interface copy",
+ "ask": "Write the one-line notice for when the words could not be pasted.",
+ "label": "Shipped",
  "prompt": "OpenRamble is a dictation app for the Mac. Write the one-line notice it shows when the dictated words could not be pasted into the app the person was working in. The words are kept, and the person can paste them later.\n\nGive only the notice.",
  "required": [
   "The words could not be pasted",

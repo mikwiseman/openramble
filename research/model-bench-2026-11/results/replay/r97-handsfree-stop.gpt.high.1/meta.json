@@ -1,0 +1,41 @@
+{
+ "run": "r97-handsfree-stop.gpt.high.1",
+ "task": "r97-handsfree-stop",
+ "model": "gpt-6.2-sol",
+ "tool": "codex",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 19:28",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 472,
+ "slept_seconds": 0,
+ "load_before": "4.0",
+ "load_after": "7.9",
+ "memories_written": 0,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r97-handsfree-stop.gpt.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 59,
+ "by_kind": {
+  "Bash": 53,
+  "file_change": 6
+ },
+ "turns": 60,
+ "usage": {
+  "input": 139684,
+  "cached_input": 2476928,
+  "cache_write": 0,
+  "output": 19801
+ },
+ "tokens": 2636413,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 12,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 79
+}

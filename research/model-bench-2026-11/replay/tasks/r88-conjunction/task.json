@@ -11,5 +11,6 @@
   "core/conformance/fixtures/text/pipeline.json"
  ],
  "suite": "swift test --package-path Packages/DictationCore --filter 'CleanVerbatim|TextPipeline|Paragraph|SendIt|Dictionary' && cargo test -p ramble-text -p ramble-core --all-features",
- "check": "swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors && cargo fmt --all --check && cargo clippy -p ramble-core -p ramble-text --all-targets --all-features -- -D warnings && swift build --package-path core/conformance/generator && core/conformance/generator/.build/debug/GenerateFixtures core/conformance/corpus-text.json core/conformance/fixtures/text/pipeline.json && git diff --quiet -- core/conformance/fixtures && cargo test -p ramble-text --test conformance && ./scripts/check-network-surface.sh"
+ "check": "swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors && cargo fmt --all --check && cargo clippy -p ramble-core -p ramble-text --all-targets --all-features -- -D warnings && swift build --package-path core/conformance/generator && core/conformance/generator/.build/debug/GenerateFixtures core/conformance/corpus-text.json core/conformance/fixtures/text/pipeline.json && git diff --quiet -- core/conformance/fixtures && cargo test -p ramble-text --test conformance && ./scripts/check-network-surface.sh",
+ "not_built": "^(apps/|Packages/LocalASR/)"
 }

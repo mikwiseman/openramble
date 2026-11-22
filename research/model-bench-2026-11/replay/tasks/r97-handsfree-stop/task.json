@@ -10,5 +10,6 @@
   "Packages/DictationCore/Tests/DictationCoreTests/DictationControllerRaceTests.swift"
  ],
  "suite": "swift test --package-path Packages/DictationCore",
- "check": "swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors && swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors && ./scripts/check-network-surface.sh && ./scripts/check-diagnostics-surface.sh"
+ "check": "swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors && swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors && ./scripts/check-network-surface.sh && ./scripts/check-diagnostics-surface.sh",
+ "not_built": "^apps/"
 }

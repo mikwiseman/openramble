@@ -3,188 +3,129 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>OpenRamble Model Bench</title>
 <style>
-/* Layout: one centred column in OpenRamble's own language. Air groups, a
-   hairline separates rows, and anything a person or a model said is set in
-   the serif. One meaning per colour: green passed, orange needs attention,
-   and a filled mark is "with his instructions". */
+/* Layout: what was needed stands on the left, and what each model made stands
+   beside it at true size. An answer is drawn as its own words and a change as
+   its own lines. OpenRamble's language: air, a hairline, words in the serif. */
 :root {
   --paper: #fbfbfd;
   --ink: #1d1d1f;
-  --muted: #6e6e76;
+  --soft: rgba(29, 29, 31, 0.5);
+  --wall: rgba(29, 29, 31, 0.7);
+  --faint: rgba(29, 29, 31, 0.26);
   --hairline: rgba(29, 29, 31, 0.12);
-  --tile: rgba(29, 29, 31, 0.045);
+  --tile: rgba(29, 29, 31, 0.05);
   --good: #1f9d47;
   --attention: #d9730b;
   --words: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --app: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --figures: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-  --column: 43rem;
-  --surface: 24px;
-  --control: 10px;
-  --chip: 7px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #111114; --ink: #f2f2f5; --muted: #9a9aa3; --hairline: rgba(242, 242, 245, 0.15);
-    --tile: rgba(242, 242, 245, 0.07); --good: #36c964; --attention: #ff9f2e; color-scheme: dark;
+    --paper: #111114; --ink: #f2f2f5; --soft: rgba(242, 242, 245, 0.55); --wall: rgba(242, 242, 245, 0.72); --faint: rgba(242, 242, 245, 0.3);
+    --hairline: rgba(242, 242, 245, 0.15); --tile: rgba(242, 242, 245, 0.08); --good: #36c964; --attention: #ff9f2e;
+    color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #111114; --ink: #f2f2f5; --muted: #9a9aa3; --hairline: rgba(242, 242, 245, 0.15);
-  --tile: rgba(242, 242, 245, 0.07); --good: #36c964; --attention: #ff9f2e; color-scheme: dark;
+  --paper: #111114; --ink: #f2f2f5; --soft: rgba(242, 242, 245, 0.55); --wall: rgba(242, 242, 245, 0.72); --faint: rgba(242, 242, 245, 0.3);
+  --hairline: rgba(242, 242, 245, 0.15); --tile: rgba(242, 242, 245, 0.08); --good: #36c964; --attention: #ff9f2e;
+  color-scheme: dark;
 }
 
-body {
-  background: var(--paper);
-  color: var(--ink);
-  font: 400 1rem/1.5 var(--app);
-  -webkit-font-smoothing: antialiased;
-}
+body { background: var(--paper); color: var(--ink); font: 400 1rem/1.45 var(--app); -webkit-font-smoothing: antialiased; }
 .page {
-  max-width: var(--column);
-  margin: 0 auto;
-  padding-block: 4.5rem 6rem;
-  padding-left: max(20px, env(safe-area-inset-left, 0px));
-  padding-right: max(20px, env(safe-area-inset-right, 0px));
-  display: flex;
-  flex-direction: column;
-  gap: 6rem;
+  max-width: 66rem; margin: 0 auto; padding-block: 4rem 5rem;
+  padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 7.5rem;
 }
-section, header, footer { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; }
+h1, h2, p, blockquote { margin: 0; }
+h1 { font: 400 clamp(2.4rem, 7.2vw, 4.5rem)/1.03 var(--words); letter-spacing: -0.02em; text-wrap: balance; max-width: 14em; }
+h2 { font: 400 clamp(2rem, 5vw, 3rem)/1.05 var(--words); letter-spacing: -0.015em; }
+.label { font: 500 0.75rem/1.3 var(--app); letter-spacing: 0.07em; text-transform: uppercase; color: var(--soft); }
+.quiet { color: var(--soft); font-size: 0.875rem; }
+.figure { font: 400 1em/1 var(--words); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+header, section { display: flex; flex-direction: column; gap: 2.25rem; min-width: 0; }
 
-/* Type */
-h1, h2, h3, p, blockquote, figure { margin: 0; }
-h1 { font: 400 clamp(2.6rem, 9vw, 4.25rem)/1.02 var(--words); letter-spacing: -0.02em; text-wrap: balance; }
-h2 { font: 400 clamp(2rem, 6vw, 2.75rem)/1.08 var(--words); letter-spacing: -0.015em; }
-h3 { font: 500 1.0625rem/1.3 var(--app); }
-.label { font: 500 0.75rem/1.3 var(--app); letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
-.lede { font-size: 1.1875rem; line-height: 1.45; max-width: 34rem; color: var(--ink); }
-.note { color: var(--muted); font-size: 0.9375rem; max-width: 36rem; }
-.words { font-family: var(--words); }
-.num { font-family: var(--figures); font-variant-numeric: tabular-nums; font-size: 0.875em; letter-spacing: -0.01em; }
-.dim { color: var(--muted); }
-.intro { display: flex; flex-direction: column; gap: 0.75rem; }
+/* The board: three figures a model */
+.board { display: grid; grid-template-columns: minmax(7rem, 1.5fr) repeat(3, minmax(0, 1fr)); }
+.board > * { padding: 1.1rem 0; border-top: 1px solid var(--hairline); display: flex; flex-direction: column; justify-content: center; }
+.board > .top { border-top: 0; padding: 0 0 0.7rem; justify-content: flex-end; }
+.board .n { align-items: flex-end; text-align: right; }
+.board .figure { font-size: clamp(1.6rem, 5.4vw, 2.75rem); }
+.board .name { font-weight: 500; font-size: 1.0625rem; }
+.board small, .top small { font: 400 0.8125rem/1.3 var(--app); color: var(--soft); letter-spacing: 0; text-transform: none; }
 
-/* Rows: air and a hairline, never a box. */
-.rows { display: flex; flex-direction: column; }
-.row { display: grid; align-items: center; gap: 0.25rem 1rem; padding: 0.8rem 0; border-top: 1px solid var(--hairline); min-width: 0; }
-.rows > .row:last-child { border-bottom: 1px solid var(--hairline); }
-.row.head { border-top: 0; padding: 0 0 0.5rem; }
-.model { font-weight: 500; white-space: nowrap; display: flex; flex-direction: column; line-height: 1.25; }
-.model small { font: 400 0.8125rem/1.3 var(--app); color: var(--muted); }
-.right { text-align: right; }
+/* A section's controls */
+.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem 2rem; }
+.tabs { display: flex; gap: 0.25rem 1.5rem; flex-wrap: wrap; }
+.tabs button, .steps button { all: unset; cursor: pointer; color: var(--soft); font-size: 0.9375rem; padding: 0.3rem 0; border-bottom: 1.5px solid transparent; }
+.tabs button:hover, .steps button:hover { color: var(--ink); }
+.tabs button[aria-pressed="true"], .steps button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.steps { display: inline-flex; gap: 0.9rem; margin-left: 1rem; vertical-align: 0.35em; }
+.steps button { font: 400 0.875rem var(--app); padding: 0 0.15rem 0.1rem; }
+button:focus-visible, .wall:focus-visible, .map:focus-visible, .switch input:focus-visible + i { outline: 2px solid var(--ink); outline-offset: 3px; }
+.ask { font: 400 clamp(1.4rem, 3.6vw, 2.125rem)/1.25 var(--words); max-width: 26em; text-wrap: pretty; }
+.ask p + p { margin-top: 0.55em; }
+.ask ul { margin: 0.5em 0; padding-left: 1.1em; font-size: 0.8em; }
+.ask code { font: 0.74em ui-monospace, "SF Mono", Menlo, monospace; overflow-wrap: anywhere; }
 
-/* Scoreboard */
-.board .row { grid-template-columns: minmax(8.5rem, 1.3fr) 5.5rem repeat(3, minmax(4.5rem, 1fr)); }
-.marks { display: flex; gap: 5px; align-items: center; }
-.mark { width: 11px; height: 11px; border-radius: 50%; background: var(--good); }
-.mark.fail, .mark.partial { background: var(--attention); }
-.mark.partial { background: transparent; box-shadow: inset 0 0 0 2px var(--attention); }
-.mark.void, .mark.none { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hairline); }
-.arrow { color: var(--muted); padding: 0 0.15em; }
+.switch { display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.9375rem; user-select: none; }
+.switch input { position: absolute; opacity: 0; pointer-events: none; }
+.switch i { width: 40px; height: 24px; border-radius: 12px; background: var(--faint); position: relative; transition: background-color 150ms; flex: none; }
+.switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--paper); transition: transform 150ms; }
+.switch input:checked + i { background: var(--good); }
+.switch input:checked + i::after { transform: translateX(16px); }
 
-/* A task */
-.task { display: flex; flex-direction: column; gap: 1.1rem; }
-.task + .task { margin-top: 3.5rem; }
-blockquote.words { font-size: clamp(1.25rem, 3.6vw, 1.5rem); line-height: 1.38; text-wrap: pretty; }
-blockquote.words p + p { margin-top: 0.6em; }
-blockquote.words ul { margin: 0.5em 0; padding-left: 1.1em; font-size: 0.85em; }
-blockquote.words code { font: 0.78em var(--figures); overflow-wrap: anywhere; }
-.shipped { display: flex; flex-wrap: wrap; gap: 0.3rem 1.25rem; color: var(--muted); font-size: 0.9375rem; }
-.runs .row { grid-template-columns: minmax(8.5rem, 1.3fr) 4.25rem minmax(6rem, 2.2fr) 3.5rem 3.75rem; }
-.state { font-weight: 500; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.4rem; color: var(--good); }
-.state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.state.fail, .state.partial { color: var(--attention); }
-.state.void { color: var(--muted); }
-.size { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
-.track { position: relative; flex: 1; height: 8px; min-width: 2rem; }
-.track::before { content: ""; position: absolute; inset: 3.5px 0; background: var(--hairline); border-radius: 1px; }
-.bar { position: absolute; inset: 0 auto 0 0; background: var(--ink); border-radius: 2px; }
-.tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--good); border-radius: 1px; }
-.why { grid-column: 1 / -1; color: var(--attention); font-size: 0.875rem; }
-.unit { display: none; color: var(--muted); font: 400 0.8125rem var(--app); }
-details { border-top: 0; }
-summary { cursor: pointer; color: var(--muted); font-size: 0.9375rem; width: fit-content; padding: 0.25rem 0; border-radius: var(--chip); }
-summary:hover { color: var(--ink); }
-summary:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.said { display: flex; flex-direction: column; gap: 1.1rem; padding: 1rem 0 0; }
-.said p.words { font-size: 1.0625rem; line-height: 1.45; }
-.said .who { font: 500 0.8125rem var(--app); color: var(--muted); display: block; margin-bottom: 0.15rem; }
+/* The stage: five columns hang from one line */
+.stage { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0 clamp(0.5rem, 2.4vw, 2rem); align-items: start; border-top: 1px solid var(--hairline); padding-top: 1.1rem; }
+.col { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.col .who { font: 500 clamp(0.6875rem, 1.9vw, 0.9375rem)/1.25 var(--app); min-height: 2.5em; }
+.col .figure { font-size: clamp(1.5rem, 5.6vw, 3.25rem); }
+.col .facts { font: 400 clamp(0.625rem, 1.7vw, 0.8125rem)/1.35 var(--app); color: var(--soft); min-height: 2.9em; margin-bottom: 0.9rem; }
+.replay .col .facts { min-height: 4.3em; }
+.col .facts b { font-weight: 400; display: block; }
+.col .facts .bad { color: var(--attention); }
+.pass { color: var(--good); }
+.fail { color: var(--attention); }
 
-/* Legend */
-.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; color: var(--muted); font-size: 0.875rem; align-items: center; }
-.legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); flex: none; }
-.dot.open { background: var(--paper); box-shadow: inset 0 0 0 1.75px var(--ink); }
-.key-tick { width: 2px; height: 14px; background: var(--good); border-radius: 1px; }
+.wall { cursor: pointer; overflow: hidden; border-radius: 3px; }
+.wall > div { transform-origin: 0 0; font: 400 16px/1.32 var(--words); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--wall); }
+.col.needed .wall > div { color: var(--ink); }
+.wall:hover > div { color: var(--ink); }
+.map { display: flex; flex-direction: column; gap: 5px; cursor: pointer; border-radius: 3px; }
+.map.still { cursor: default; }
+.map i { display: block; height: 1px; margin-bottom: 1px; background: var(--ink); }
+.map .tests i { background: var(--faint); }
+.key { display: flex; gap: 1.25rem; align-items: center; }
+.key span { display: inline-flex; align-items: center; gap: 0.45rem; }
+.key i { width: 18px; height: 2px; background: var(--ink); }
+.key i.light { background: var(--faint); }
 
-/* Words per answer */
-.chart { display: flex; flex-direction: column; gap: 1.25rem; }
-.chart + .chart { margin-top: 3.5rem; }
-.situation { display: grid; grid-template-columns: minmax(7.5rem, 11rem) 1fr; gap: 0.15rem 1rem; align-items: center; padding: 0.7rem 0; border-top: 1px solid var(--hairline); }
-.situation > h3 { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9375rem; padding-bottom: 0.2rem; }
-.situation .name { color: var(--muted); font-size: 0.875rem; }
-.span { position: relative; height: 18px; }
-.span::before { content: ""; position: absolute; inset: 8.5px 0; background: var(--hairline); }
-.span .link { position: absolute; top: 8px; height: 2px; background: var(--ink); opacity: 0.55; }
-.span .dot { position: absolute; top: 4px; margin-left: -5px; }
-.span .tick { top: 1px; bottom: 1px; margin-left: -1px; }
-.axis { display: grid; grid-template-columns: minmax(7.5rem, 11rem) 1fr; gap: 1rem; color: var(--muted); }
-.axis div { position: relative; height: 1.1rem; }
-.axis div span { position: absolute; transform: translateX(-50%); }
-.axis div span:first-child { transform: none; }
-.axis div span:last-child { transform: translateX(-100%); }
+dialog { border: 0; padding: 0; background: var(--paper); color: var(--ink); border-radius: 24px; max-width: min(42rem, calc(100vw - 2rem)); max-height: min(85vh, 48rem); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28); }
+dialog::backdrop { background: rgba(0, 0, 0, 0.42); }
+dialog article { padding: 1.75rem 2rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
+dialog .said { font: 400 1.125rem/1.5 var(--words); white-space: pre-wrap; overflow-wrap: anywhere; }
+dialog header { flex-direction: row; justify-content: space-between; align-items: baseline; gap: 1rem; }
+dialog button { all: unset; cursor: pointer; color: var(--soft); font-size: 0.9375rem; padding: 0.2rem 0.4rem; border-radius: 7px; }
+dialog button:hover { color: var(--ink); }
 
-/* One question, twenty times */
-.question { font-size: clamp(1.5rem, 5vw, 2.125rem); line-height: 1.2; text-wrap: balance; }
-.twenty .row { grid-template-columns: minmax(6.5rem, 1fr) 4.75rem auto 3.25rem; }
-.answers { display: flex; flex-wrap: wrap; gap: 4px; }
-.answers button { all: unset; width: 13px; height: 13px; border-radius: 50%; cursor: pointer; background: var(--paper); box-shadow: inset 0 0 0 1.75px var(--ink); }
-.answers button.yes { background: var(--ink); }
-.answers button[aria-pressed="true"] { outline: 2px solid var(--attention); outline-offset: 2px; }
-.answers button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.reading { background: var(--tile); border-radius: var(--surface); padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.4rem; min-height: 7.5rem; }
-.reading p.words { font-size: 1.125rem; line-height: 1.42; }
+footer { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; align-items: center; justify-content: space-between; }
+footer code { font: 0.8125rem ui-monospace, "SF Mono", Menlo, monospace; background: var(--tile); padding: 0.5rem 0.75rem; border-radius: 10px; max-width: 100%; overflow-x: auto; white-space: nowrap; }
 
-/* Bars for shares and pairs */
-.pairs .row { grid-template-columns: minmax(8.5rem, 1.1fr) 1fr 1fr; }
-.share .row { grid-template-columns: minmax(8.5rem, 1.1fr) 1fr 1fr; }
-.meter { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
-.meter .track { height: 10px; }
-.meter .track::before { inset: 4.5px 0; }
-.meter .bar.open { background: var(--paper); box-shadow: inset 0 0 0 1.75px var(--ink); }
-.meter .num { min-width: 2.6rem; }
-
-footer { gap: 0.9rem; color: var(--muted); font-size: 0.9375rem; }
-footer code { font: 0.875rem var(--figures); color: var(--ink); background: var(--tile); padding: 0.55rem 0.8rem; border-radius: var(--control); width: fit-content; max-width: 100%; overflow-x: auto; white-space: nowrap; }
-
-@media (max-width: 40rem) {
-  .page { gap: 4.5rem; padding-block: 3rem 4rem; }
-  .board .row { grid-template-columns: 1fr auto; }
-  .board .row > :nth-child(n + 3) { grid-column: 1 / -1; display: flex; justify-content: space-between; text-align: left; }
-  .board .row > :nth-child(n + 3)::before { content: attr(data-label); color: var(--muted); font: 400 0.875rem var(--app); letter-spacing: 0; }
-  .board .row.head { display: none; }
-  .runs .row { grid-template-columns: 1fr auto auto auto; column-gap: 0.9rem; }
-  .runs .row .size { grid-column: 1 / -1; grid-row: 2; }
-  .runs .row .why { grid-row: 3; }
-  .runs .row.head { display: none; }
-  .unit { display: inline; }
-  .twenty .row { grid-template-columns: 1fr auto; }
-  .twenty .row .answers { grid-column: 1 / -1; }
-  .twenty .row .cond { grid-column: 1; grid-row: 2; }
-  .twenty .row .answers { grid-row: 3; }
-  .twenty .row .count { grid-row: 1; grid-column: 2; }
-  .pairs .row, .share .row { grid-template-columns: 1fr; }
-  .pairs .row.head, .share .row.head { display: none; }
-  .pairs .meter::before, .share .meter::before { content: attr(data-label); color: var(--muted); font-size: 0.8125rem; min-width: 7.5rem; }
-  .situation, .axis { grid-template-columns: 5.25rem 1fr; }
+@media (max-width: 44rem) {
+  .page { gap: 5rem; padding-block: 2.5rem 3.5rem; }
+  .board { grid-template-columns: minmax(5.5rem, 1.3fr) repeat(3, minmax(0, 1fr)); }
+  .board .name { font-size: 0.9375rem; }
+  .board small { font-size: 0.6875rem; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -20px; padding-right: 20px; width: 100%; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { white-space: nowrap; }
 }
-@media (prefers-reduced-motion: no-preference) {
-  .bar, .answers button { transition: background-color 120ms; }
-}
+@media (prefers-reduced-motion: reduce) { .switch i, .switch i::after { transition: none; } }
 </style>
 
 <div class="page" id="page"></div>
+<dialog id="reader"><article><header><span class="label" id="reader-who"></span><button type="button" id="reader-close">Close</button></header><div class="said" id="reader-text"></div></article></dialog>
 
 <script>
 // In a function, so that its names cannot collide with the window's own (top, name).
@@ -198,187 +139,138 @@ const h = (tag, attrs, ...kids) => {
     if (k === "class") el.className = v; else if (k === "text") el.textContent = v;
     else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v);
   }
-  for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) el.append(kid);
+  for (const kid of kids.flat(Infinity)) if (kid !== null && kid !== undefined && kid !== false) el.append(kid);
   return el;
 };
-const num = (text, extra) => h("span", { class: "num" + (extra ? " " + extra : ""), text });
-const name = (key) => DATA.models.find((m) => m.key === key).name;
-const money = (v) => (v === null ? "n/a" : v < 10 ? "$" + v.toFixed(2) : "$" + Math.round(v));
-const compact = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(n));
-const median = (list) => { const s = [...list].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-const pct = (v) => Math.max(0, Math.min(100, v)) + "%";
+const times = (x) => (x === null || x === undefined ? "–" : (x >= 9.95 ? Math.round(x) : x.toFixed(1)) + "×");
+const money = (v) => (v === null ? null : v < 10 ? "$" + v.toFixed(2) : "$" + Math.round(v));
+const plain = (text) => text.replace(/^```\w*\n?|```\s*$/gm, "").replace(/\*\*|`/g, "").replace(/^#+ /gm, "").trim();
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// What a person or a model said keeps its line breaks and inline code, and nothing else.
-const said = (text) => {
-  const out = [];
-  let list = null;
-  for (const block of text.split(/\n\s*\n/)) {
-    const lines = block.split("\n");
-    const inline = (line, el) => {
-      line.split(/(`[^`]+`)/).forEach((part) => el.append(part.startsWith("`") ? h("code", { text: part.slice(1, -1) }) : part.replace(/\*\*/g, "")));
-      return el;
-    };
-    if (lines.every((l) => l.startsWith("- "))) {
-      list = h("ul", {}, lines.map((l) => inline(l.slice(2), h("li"))));
-      out.push(list);
-    } else out.push(inline(lines.join(" "), h("p")));
-  }
-  return out;
+// What Mik said keeps its paragraphs, its lists and its inline code.
+const said = (text) => text.split(/\n\s*\n/).map((block) => {
+  const lines = block.split("\n");
+  const inline = (line, el) => { line.split(/(`[^`]+`)/).forEach((part) => el.append(part.startsWith("`") ? h("code", { text: part.slice(1, -1) }) : part)); return el; };
+  return lines.every((l) => l.startsWith("- ")) ? h("ul", {}, lines.map((l) => inline(l.slice(2), h("li")))) : inline(lines.join(" "), h("p"));
+});
+
+const reader = document.getElementById("reader");
+document.getElementById("reader-close").addEventListener("click", () => reader.close());
+reader.addEventListener("click", (e) => { if (e.target === reader) reader.close(); });
+const read = (who, text) => {
+  document.getElementById("reader-who").textContent = who;
+  document.getElementById("reader-text").textContent = plain(text);
+  reader.showModal();
+};
+const opens = (el, who, text) => {
+  el.setAttribute("role", "button"); el.setAttribute("tabindex", "0"); el.setAttribute("aria-label", "Read: " + who);
+  el.addEventListener("click", () => read(who, text));
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); read(who, text); } });
+  return el;
 };
 
 const page = document.getElementById("page");
-const R = DATA.replay, S = DATA.slop;
-const runsOf = (key) => R.tasks.map((t) => t.runs.find((r) => r.model === key)).filter(Boolean);
+const column = (cls, who, figure, facts, body) => h("div", { class: "col " + cls },
+  h("div", { class: "who" }, who), h("div", { class: "figure", text: figure }), h("div", { class: "facts" }, facts), body);
+const tabs = (names, current, pick) => h("div", { class: "tabs" }, names.map((n, i) =>
+  h("button", { type: "button", "aria-pressed": String(i === current), text: n, onclick: () => pick(i) })));
 
-// --- Header and the scoreboard
+// --- The answer to the page's question
 page.append(h("header", {},
   h("p", { class: "label", text: "OpenRamble model bench" }),
-  h("h1", { text: "Replay and Slop" }),
-  h("p", { class: "lede", text: "Two benchmarks of AI models as engineers on OpenRamble. Replay asks whether a model gets a real change right. Slop counts what a model writes that nobody needed." }),
-  h("p", { class: "note", text: `Pilot of ${DATA.date}. Every task was run once per model, so the table is a first look and not a ranking.` })));
+  h("h1", { text: "Which model should change OpenRamble?" }),
+  h("div", { class: "board" },
+    h("div", { class: "top" }),
+    h("div", { class: "top n label" }, "Passed"),
+    h("div", { class: "top n label" }, "Code", h("small", { text: "× what shipped" })),
+    h("div", { class: "top n label" }, "Words", h("small", { text: "× what was needed" })),
+    DATA.models.map((m) => { const b = DATA.board[m.key]; return [
+      h("div", {}, h("span", { class: "name", text: m.name }), h("small", { text: m.tool })),
+      h("div", { class: "n" }, h("span", { class: "figure", text: b.passed[0] + "/" + b.passed[1] })),
+      h("div", { class: "n" }, h("span", { class: "figure", text: times(b.code) })),
+      h("div", { class: "n" }, h("span", { class: "figure", text: times(b.words) }))]; })),
+  h("p", { class: "quiet", text: `Pilot of ${DATA.date}. One run per task, so a first look and not a ranking.` })));
 
-const board = h("div", { class: "rows board" },
-  h("div", { class: "row head label" }, h("span", { text: "Model" }), h("span", { text: "Replay" }),
-    h("span", { class: "right", text: "Minutes" }), h("span", { class: "right", text: "List price" }), h("span", { class: "right", text: "Words" })));
-for (const m of DATA.models) {
-  const mine = runsOf(m.key), costs = mine.map((r) => r.cost).filter((c) => c !== null);
-  const words = S.totals[m.key];
-  board.append(h("div", { class: "row" },
-    h("span", { class: "model" }, m.name, h("small", { text: m.tool })),
-    h("span", { class: "marks", role: "img", "aria-label": mine.map((r) => r.state).join(", ") },
-      R.tasks.map((t) => { const r = t.runs.find((x) => x.model === m.key); return h("span", { class: "mark " + (r ? r.state : "none"), title: t.title + ": " + (r ? r.state : "not run") }); })),
-    h("span", { class: "right", "data-label": "Minutes, median" }, num(mine.length ? median(mine.map((r) => r.minutes)).toFixed(1) : "n/a")),
-    h("span", { class: "right", "data-label": "List price, all runs" }, num(costs.length ? money(costs.reduce((a, b) => a + b, 0)) : "n/a")),
-    h("span", { class: "right", "data-label": "Words per answer" }, h("span", {}, num(String(words.plain.words)), h("span", { class: "arrow", text: "→" }), num(String(words.instructed.words))))));
-}
-page.append(h("section", {}, board,
-  h("p", { class: "note", text: "Replay shows one mark per task. Words is the median length of an answer, first without Mik's instructions and then with them." })));
-
-// --- Replay
-const replay = h("section", {}, h("div", { class: "intro" }, h("h2", { text: "Replay" }),
-  h("p", { class: "note", text: "A model gets OpenRamble as it was the day before a real change, and the request in Mik's words. The tests of the real change grade the result, and the model never sees them." })));
-for (const t of R.tasks) {
-  const most = Math.max(t.shipped.source, ...t.runs.map((r) => r.source), 1);
-  const rows = h("div", { class: "rows runs" },
-    h("div", { class: "row head label" }, h("span", { text: "Model" }), h("span", { text: "Result" }),
-      h("span", { text: "Lines changed" }), h("span", { class: "right", text: "Min" }), h("span", { class: "right", text: "Price" })));
-  for (const m of DATA.models) {
-    const r = t.runs.find((x) => x.model === m.key);
-    if (!r) continue;
-    rows.append(h("div", { class: "row" },
-      h("span", { class: "model", text: m.name }),
-      h("span", { class: "state " + r.state, text: r.state }),
-      h("span", { class: "size" },
-        h("span", { class: "track" }, h("span", { class: "bar", style: `width:${pct(100 * r.source / most)}` }),
-          t.kind === "trap" ? null : h("span", { class: "tick", style: `left:${pct(100 * t.shipped.source / most)}`, title: "What shipped" })),
-        num(String(r.source))),
-      h("span", { class: "right" }, num(r.minutes.toFixed(1)), h("span", { class: "unit", text: " min" })),
-      h("span", { class: "right" }, num(money(r.cost))),
-      r.state === "pass" ? null : h("span", { class: "why", text: r.reason })));
-  }
-  replay.append(h("article", { class: "task" },
-    h("p", { class: "label", text: t.area }),
-    h("blockquote", { class: "words" }, said(t.request)),
-    h("p", { class: "shipped" },
-      h("span", {}, "What shipped: ", t.kind === "trap" ? "nothing" : [num(String(t.shipped.source)), " lines"]),
-      h("span", { text: t.source })),
-    rows,
-    h("details", {}, h("summary", { text: "What each model reported" }),
-      h("div", { class: "said" }, DATA.models.map((m) => { const r = t.runs.find((x) => x.model === m.key);
-        return r && h("p", { class: "words" }, h("span", { class: "who", text: `${m.name}, ${r.words} words` }), r.opening); })))));
-}
+// --- Replay: the same request, and every change at its own length
+const replay = h("section", { class: "replay" });
+let task = 0;
+const drawMap = (files, who, report) => {
+  const map = h("div", { class: "map" + (report ? "" : " still") }, files.map((f) => h("div", { class: f.kind },
+    f.lines.map(([indent, length]) => h("i", { style: `margin-left:${indent}%;width:${Math.max(length, 2)}%` })))));
+  return report ? opens(map, who, report) : map;
+};
+const showTask = () => {
+  const t = DATA.replay[task];
+  replay.replaceChildren(
+    h("div", { class: "head" }, h("h2", { text: "Replay" }), tabs(DATA.replay.map((x) => x.title), task, (i) => { task = i; showTask(); })),
+    h("blockquote", { class: "ask" }, said(t.request)),
+    h("div", { class: "stage" },
+      column("needed", "Shipped", String(t.shipped.source), [h("b", { text: t.shipped.source === 1 ? "line of code" : "lines of code" }), t.note && h("b", { text: t.note })], drawMap(t.shipped.files, "", null)),
+      DATA.models.map((m) => {
+        const r = t.runs[m.key];
+        if (!r) return column("", m.name, "–", [h("b", { text: "not run yet" })], null);
+        if (r.state === "void") return column("", m.name, "–", [h("b", { text: "no result" })], null);
+        const mark = h("span", { class: r.state === "pass" ? "pass" : "fail", text: r.state === "pass" ? " ✓" : " ✗" });
+        const figure = t.shipped.source ? times(r.source / t.shipped.source) : String(r.source);
+        return column("", [m.name, mark], figure, [
+          h("b", { text: t.shipped.source ? `${r.source} lines` : (r.source === 1 ? "line of code" : "lines of code") }),
+          r.state === "pass" ? null : h("b", { class: "bad", text: r.reason === "hidden tests" ? "failed the real tests" : r.reason }),
+          h("b", { text: r.minutes.toFixed(1) + " min" }), money(r.cost) && h("b", { text: money(r.cost) })],
+          drawMap(r.files, `${m.name}, its report`, r.report));
+      })),
+    h("p", { class: "quiet key" }, h("span", {}, h("i"), "code"), h("span", {}, h("i", { class: "light" }), "tests")));
+};
+showTask();
 page.append(replay);
 
-// --- Slop
-const legend = () => h("p", { class: "legend" },
-  h("span", {}, h("i", { class: "dot open" }), "Without his instructions"),
-  h("span", {}, h("i", { class: "dot" }), "With them"),
-  h("span", {}, h("i", { class: "key-tick" }), "What shipped"));
-const slop = h("section", {}, h("div", { class: "intro" }, h("h2", { text: "Slop" }),
-  h("p", { class: "note", text: `What a model writes that the reader did not need. ${S.items} writing jobs taken from the history, each done without Mik's own instructions and with them.` })));
-
-// Words per answer
-const top = Math.ceil(Math.max(...S.situations.flatMap((s) => [s.shipped, ...Object.values(s.models).flat()])) / 100) * 100;
-const at = (v) => pct(100 * v / top);
-const words = h("div", { class: "chart" }, h("h3", { text: "How many words is the answer?" }), legend());
-const list = h("div", {});
-for (const s of S.situations) {
-  const block = h("div", { class: "situation" }, h("h3", {}, h("span", { text: s.name }), h("span", { class: "dim", style: "font-weight:400" }, "shipped ", num(String(s.shipped)))));
-  for (const m of DATA.models) {
-    const [plain, told] = s.models[m.key];
-    block.append(h("span", { class: "name", text: m.name }),
-      h("span", { class: "span", role: "img", "aria-label": `${m.name}: ${plain} words, ${told} with his instructions` },
-        h("span", { class: "link", style: `left:${at(Math.min(plain, told))};width:${pct(100 * Math.abs(plain - told) / top)}` }),
-        h("span", { class: "tick", style: `left:${at(s.shipped)}` }),
-        h("i", { class: "dot open", style: `left:${at(plain)}`, title: `${plain} words` }),
-        h("i", { class: "dot", style: `left:${at(told)}`, title: `${told} words` })));
-  }
-  list.append(block);
-}
-const marks = [0, top / 3, 2 * top / 3, top].map((v) => Math.round(v / 50) * 50);
-words.append(list, h("div", { class: "axis" }, h("span"), h("div", {}, marks.map((v) => h("span", { class: "num", style: `left:${at(v)}`, text: String(v) })))));
-slop.append(words);
-
-// One question, twenty times
-const Q = S.repeat;
-if (Q) {
-  const reading = h("div", { class: "reading", "aria-live": "polite" });
-  const show = (m, cell, i, button) => {
-    document.querySelectorAll(".answers button[aria-pressed=true]").forEach((b) => b.setAttribute("aria-pressed", "false"));
-    button.setAttribute("aria-pressed", "true");
-    reading.replaceChildren(
-      h("span", { class: "label", text: `${m.name}, ${cell.condition === "plain" ? "without his instructions" : "with his instructions"}, answer ${i + 1} of ${cell.answers.length}` }),
-      h("p", { class: "words", text: cell.answers[i].opening }));
+// --- Slop: the same job, and every answer at its own length
+const slop = h("section", {});
+let job = 0, told = true;
+const kinds = [...new Set(DATA.slop.map((j) => j.situation))];
+const scale = () => (innerWidth < 704 ? 230 : 300);
+const drawWall = (text, who) => {
+  const inner = h("div", { text: plain(text) });
+  const wall = opens(h("div", { class: "wall" }, inner), who, text);
+  wall.fit = () => {
+    const z = wall.clientWidth / scale();
+    inner.style.width = scale() + "px"; inner.style.transform = `scale(${z})`;
+    wall.style.height = Math.ceil(inner.offsetHeight * z) + "px";
+    return Math.ceil(inner.offsetHeight * z);
   };
-  const rows = h("div", { class: "rows twenty" });
-  let first = null;
-  for (const m of DATA.models) for (const cell of Q.cells.filter((c) => c.model === m.key)) {
-    const buttons = cell.answers.map((a, i) => h("button", { class: a.yes ? "yes" : "", type: "button", "aria-pressed": "false",
-      "aria-label": `Answer ${i + 1}: opened with ${a.yes ? "yes" : "no"}`, onclick: (e) => show(m, cell, i, e.currentTarget) }));
-    if (!first && cell.condition === "instructed") first = () => show(m, cell, 0, buttons[0]);
-    rows.append(h("div", { class: "row" },
-      h("span", { class: "model", text: m.name }),
-      h("span", { class: "cond dim", style: "font-size:.875rem", text: cell.condition === "plain" ? "without" : "with his" }),
-      h("span", { class: "answers" }, buttons),
-      h("span", { class: "right count" }, num(cell.answers.filter((a) => a.yes).length + "/" + cell.answers.length))));
-  }
-  slop.append(h("div", { class: "chart" }, h("h3", { text: "One question, twenty times" }),
-    h("p", { class: "note", text: Q.rule }),
-    h("blockquote", { class: "words question", text: Q.question }),
-    h("p", { class: "legend" }, h("span", {}, h("i", { class: "dot" }), "Opened with yes"), h("span", {}, h("i", { class: "dot open" }), "Opened with no"), h("span", { text: "Tap a dot to read the answer." })),
-    rows, reading));
-  if (first) first();
-}
-
-// What a judge marked, and which answer a judge would rather receive
-const judges = S.judges;
-const meter = (label, value, most, text, open) => h("span", { class: "meter", "data-label": label },
-  h("span", { class: "track" }, h("span", { class: "bar" + (open ? " open" : ""), style: `width:${pct(100 * value / most)}` })), num(text));
-const share = h("div", { class: "rows share" }, h("div", { class: "row head label" }, h("span", { text: "Model" }), h("span", { text: "Without his instructions" }), h("span", { text: "With them" })));
-const mostShare = Math.max(...DATA.models.flatMap((m) => ["plain", "instructed"].map((c) => S.totals[m.key][c].share[judges[0].key])), 0.01);
-for (const m of DATA.models) {
-  const t = S.totals[m.key], j = judges[0].key;
-  share.append(h("div", { class: "row" }, h("span", { class: "model", text: m.name }),
-    meter("Without", t.plain.share[j], mostShare, Math.round(100 * t.plain.share[j]) + "%", true),
-    meter("With them", t.instructed.share[j], mostShare, Math.round(100 * t.instructed.share[j]) + "%", false)));
-}
-slop.append(h("div", { class: "chart" }, h("h3", { text: "How much of it was not needed?" }),
-  h("p", { class: "note", text: `The share of a model's words that a judge marked, with ${judges[0].name} as the judge. ${judges[1].name} as the judge marks about ${S.judge_ratio} times as much and puts the models in the same order.` }),
-  share));
-
-const pairs = h("div", { class: "rows pairs" }, h("div", { class: "row head label" }, h("span", { text: "Model" }), judges.map((j) => h("span", { text: "Judge " + j.name }))));
-for (const m of DATA.models) {
-  pairs.append(h("div", { class: "row" }, h("span", { class: "model", text: m.name }),
-    judges.map((j) => { const [won, of] = S.totals[m.key].pairs[j.key]; return meter("Judge " + j.name, won, of, won + "/" + of, false); })));
-}
-slop.append(h("div", { class: "chart" }, h("h3", { text: "Which answer would he rather receive?" }),
-  h("p", { class: "note", text: `Two answers to the same request, shown without names. Two judges picked one in each of ${S.agree[1]} pairs, and they agree on ${S.agree[0]}. Mik's own votes will decide between them.` }),
-  pairs));
+  return wall;
+};
+const showJob = (animate) => {
+  const j = DATA.slop[job], before = animate ? [...slop.querySelectorAll(".col")].map((c) => { const w = c.querySelector(".wall"); return w ? w.offsetHeight : 0; }) : [];
+  const same = DATA.slop.map((x, i) => [x, i]).filter(([x]) => x.situation === j.situation);
+  const walls = [];
+  const stage = h("div", { class: "stage" },
+    column("needed", j.label, String(j.needed.words), [h("b", { text: "words" })], walls[0] = drawWall(j.needed.text, j.label)),
+    DATA.models.map((m, i) => {
+      const a = j.answers[m.key] && j.answers[m.key][told ? "instructed" : "plain"];
+      if (!a) return column("", m.name, "–", [h("b", { text: "no answer" })], null);
+      return column("", m.name, times(a.words / j.needed.words), [h("b", { text: a.words + " words" }),
+        a.missing ? h("b", { class: "bad", text: a.missing === 1 ? "1 fact left out" : a.missing + " facts left out" }) : null],
+        walls[i + 1] = drawWall(a.text, `${m.name}, ${a.words} words`));
+    }));
+  slop.replaceChildren(
+    h("div", { class: "head" }, h("h2", { text: "Slop" }),
+      h("label", { class: "switch" }, h("input", { type: "checkbox", id: "told", checked: told ? "" : null, onchange: (e) => { told = e.target.checked; showJob(true); } }), h("i"), "Mik's instructions")),
+    tabs(kinds.map((k) => k[0].toUpperCase() + k.slice(1)), kinds.indexOf(j.situation), (i) => { job = DATA.slop.findIndex((x) => x.situation === kinds[i]); showJob(false); }),
+    h("blockquote", { class: "ask" }, j.ask, same.length > 1 ? h("span", { class: "steps" }, same.map(([x, i], n) =>
+      h("button", { type: "button", "aria-pressed": String(i === job), "aria-label": `Job ${n + 1} of ${same.length}`, text: String(n + 1), onclick: () => { job = i; showJob(false); } }))) : null),
+    stage);
+  walls.forEach((w, i) => {
+    if (!w) return;
+    const to = w.fit();
+    if (animate && !calm && before[i] && w.animate) w.animate([{ height: before[i] + "px" }, { height: to + "px" }], { duration: 380, easing: "cubic-bezier(.2,.8,.2,1)" });
+  });
+};
 page.append(slop);
+showJob(false);
+addEventListener("resize", () => slop.querySelectorAll(".wall").forEach((w) => w.fit && w.fit()));
 
-page.append(h("footer", {},
-  h("p", { class: "label", text: "Run it again" }),
-  h("code", { text: "research/model-bench-2026-11/bench pilot" }),
-  h("p", { text: `Every model ran inside its own tool at ${DATA.effort} effort, in a sandbox that hides the answer. Prices are list prices as the tool reports them, and Codex reports none. DESIGN.md says what each number measures, and LEDGER.md says how each was checked.` })));
+page.append(h("footer", { class: "quiet" },
+  h("span", { text: `Each model ran inside its own tool at ${DATA.effort} effort. Tap any answer or change to read it.` }),
+  h("code", { text: "research/model-bench-2026-11/bench pilot" })));
 })();
 </script>

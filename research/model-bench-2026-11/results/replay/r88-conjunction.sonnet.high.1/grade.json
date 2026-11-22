@@ -1,0 +1,6 @@
+{
+ "task": "r88-conjunction",
+ "state": "void",
+ "reason": "the tool reported a problem: provider: API Error: Can't reach the API server \u2014 check your internet or DNS (ENOTFOUND); result: success API Error: Can't reach the API server \u2014 check your internet or DNS (ENOTFOUND)",
+ "run": "r88-conjunction.sonnet.high.1"
+}

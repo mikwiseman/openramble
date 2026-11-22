@@ -7,20 +7,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 153,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.288
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 159,
+   "missing": 0,
    "tokens": 5996,
    "cost_usd": 0.111592
   },
@@ -30,20 +18,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 75,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 159,
+   "missing": 0,
    "tokens": 22609,
    "cost_usd": null
   },
@@ -53,20 +29,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 106,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.085
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 159,
+   "missing": 0,
    "tokens": 7509,
    "cost_usd": 0.0019513
   },
@@ -76,20 +40,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 146,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.068
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 159,
+   "missing": 0,
    "tokens": 5618,
    "cost_usd": 0.0177589
   },
@@ -99,20 +51,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 159,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.208
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 159,
+   "missing": 0,
    "tokens": 4205,
    "cost_usd": 0.0514206
   },
@@ -122,20 +62,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 85,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.153
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 159,
+   "missing": 1,
    "tokens": 14854,
    "cost_usd": null
   },
@@ -145,26 +73,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 231,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.134,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 31,
-     "quote": "I didn't commit anything, since I have no shell access in this session. To commit, save the message to a file and run `git commit -F <file>` with the change staged."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.134,
-    "gpt": 0.429
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 159,
+   "missing": 0,
    "tokens": 6130,
    "cost_usd": 0.0018126
   },
@@ -174,26 +84,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 165,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.097,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 16,
-     "quote": "and lowering it for host builds isn't possible without also changing it for the shipped library"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.097,
-    "gpt": 0.412
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 159,
+   "missing": 0,
    "tokens": 3925,
    "cost_usd": 0.0118488
   },
@@ -203,20 +95,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 100,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.28
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 119,
+   "missing": 0,
    "tokens": 5312,
    "cost_usd": 0.09268000000000001
   },
@@ -226,20 +106,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 54,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 119,
+   "missing": 1,
    "tokens": 22300,
    "cost_usd": null
   },
@@ -249,20 +117,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 88,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.216
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 119,
+   "missing": 0,
    "tokens": 6668,
    "cost_usd": 0.0016364
   },
@@ -272,20 +128,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 97,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.371
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 119,
+   "missing": 0,
    "tokens": 5272,
    "cost_usd": 0.0164148
   },
@@ -295,20 +139,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 175,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.263
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 119,
+   "missing": 0,
    "tokens": 4205,
    "cost_usd": 0.09246399999999999
   },
@@ -318,20 +150,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 69,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 2,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 119,
+   "missing": 0,
    "tokens": 14316,
    "cost_usd": null
   },
@@ -341,26 +161,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 174,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.046,
-   "slop": [
-    {
-     "class": "stock",
-     "words": 8,
-     "quote": "The commit message is ready to paste, but"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.046,
-    "gpt": 0.431
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 119,
+   "missing": 0,
    "tokens": 4856,
    "cost_usd": 0.0012812000000000001
   },
@@ -370,20 +172,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 112,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.214
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 119,
+   "missing": 0,
    "tokens": 3490,
    "cost_usd": 0.0096147
   },
@@ -393,20 +183,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 186,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.086
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 201,
+   "missing": 0,
    "tokens": 7045,
    "cost_usd": 0.142056
   },
@@ -416,26 +194,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 85,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.071,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 6,
-     "quote": "Hold-to-talk still replays the key release."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.071,
-    "gpt": 0.0
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 201,
+   "missing": 0,
    "tokens": 16199,
    "cost_usd": null
   },
@@ -445,26 +205,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 173,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.04,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 7,
-     "quote": "A hold's release still replays through stop()."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.04,
-    "gpt": 0.092
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 201,
+   "missing": 0,
    "tokens": 7748,
    "cost_usd": 0.0019271
   },
@@ -474,26 +216,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 192,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.047,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 9,
-     "quote": "The fix keeps the controller correct on its own."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.047,
-    "gpt": 0.125
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 201,
+   "missing": 0,
    "tokens": 6103,
    "cost_usd": 0.019731
   },
@@ -503,20 +227,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 194,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.113
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 201,
+   "missing": 0,
    "tokens": 5102,
    "cost_usd": 0.1084
   },
@@ -526,20 +238,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 110,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 201,
+   "missing": 0,
    "tokens": 21922,
    "cost_usd": null
   },
@@ -549,20 +249,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 227,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.286
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 201,
+   "missing": 0,
    "tokens": 6287,
    "cost_usd": 0.0017474
   },
@@ -572,26 +260,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 190,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.026,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 5,
-     "quote": "The `released` flag becomes `stopped`."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.026,
-    "gpt": 0.068
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 201,
+   "missing": 0,
    "tokens": 4313,
    "cost_usd": 0.012850899999999998
   },
@@ -601,20 +271,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 14,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 1,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 8,
+   "missing": 0,
    "tokens": 4549,
    "cost_usd": 0.07356
   },
@@ -624,20 +282,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 12,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 2,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 8,
+   "missing": 0,
    "tokens": 22095,
    "cost_usd": null
   },
@@ -647,20 +293,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 7,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 1,
-   "facts_required": 2,
+   "needed": 8,
+   "missing": 0,
    "tokens": 5199,
    "cost_usd": 0.0010444
   },
@@ -670,20 +304,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 15,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 8,
+   "missing": 0,
    "tokens": 4393,
    "cost_usd": 0.010463100000000001
   },
@@ -693,20 +315,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 13,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 8,
+   "missing": 0,
    "tokens": 2708,
    "cost_usd": 0.043983999999999995
   },
@@ -716,20 +326,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 13,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 1,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 8,
+   "missing": 0,
    "tokens": 20826,
    "cost_usd": null
   },
@@ -739,20 +337,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 18,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.611
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 8,
+   "missing": 0,
    "tokens": 3382,
    "cost_usd": 0.0006867
   },
@@ -762,20 +348,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 19,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.158
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 8,
+   "missing": 0,
    "tokens": 2565,
    "cost_usd": 0.003203
   },
@@ -785,20 +359,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 43,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 3,
-   "facts_required": 4,
+   "needed": 44,
+   "missing": 1,
    "tokens": 4883,
    "cost_usd": 0.085288
   },
@@ -808,20 +370,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 42,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 44,
+   "missing": 0,
    "tokens": 15412,
    "cost_usd": null
   },
@@ -831,20 +381,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 43,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 44,
+   "missing": 0,
    "tokens": 5635,
    "cost_usd": 0.001242
   },
@@ -854,20 +392,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 43,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 44,
+   "missing": 0,
    "tokens": 4707,
    "cost_usd": 0.013198999999999999
   },
@@ -877,20 +403,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 44,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 44,
+   "missing": 0,
    "tokens": 3024,
    "cost_usd": 0.054992
   },
@@ -900,20 +414,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 40,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 44,
+   "missing": 0,
    "tokens": 21183,
    "cost_usd": null
   },
@@ -923,20 +425,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 44,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 44,
+   "missing": 0,
    "tokens": 3708,
    "cost_usd": 0.0008293
   },
@@ -946,20 +436,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 47,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 4,
-   "facts_required": 4,
+   "needed": 44,
+   "missing": 0,
    "tokens": 2673,
    "cost_usd": 0.0038789000000000002
   },
@@ -969,20 +447,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 88,
-   "stock": 0,
-   "decoration": 2,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.136
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 92,
+   "missing": 0,
    "tokens": 4810,
    "cost_usd": 0.08148
   },
@@ -992,20 +458,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 66,
-   "stock": 0,
-   "decoration": 1,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.045
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 92,
+   "missing": 0,
    "tokens": 22480,
    "cost_usd": null
   },
@@ -1015,31 +469,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 73,
-   "stock": 0,
-   "decoration": 4,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.11,
-   "slop": [
-    {
-     "class": "decoration",
-     "words": 2,
-     "quote": "**OpenRamble 0.34.1**"
-    },
-    {
-     "class": "padding",
-     "words": 6,
-     "quote": "It only runs while you're dictating."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.11,
-    "gpt": 0.205
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 92,
+   "missing": 0,
    "tokens": 5652,
    "cost_usd": 0.0012394
   },
@@ -1049,31 +480,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 96,
-   "stock": 0,
-   "decoration": 5,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.24,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 8,
-     "quote": "Before, that first press started the microphone late."
-    },
-    {
-     "class": "padding",
-     "words": 15,
-     "quote": "It's only set up and ready, and it turns on when you press the key."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.24,
-    "gpt": 0.24
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 92,
+   "missing": 0,
    "tokens": 4658,
    "cost_usd": 0.0124948
   },
@@ -1083,26 +491,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 110,
-   "stock": 0,
-   "decoration": 6,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.136,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 15,
-     "quote": "It is only set up in advance, and it starts when you press the key."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.136,
-    "gpt": 0.218
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 92,
+   "missing": 0,
    "tokens": 3059,
    "cost_usd": 0.055504
   },
@@ -1112,20 +502,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 70,
-   "stock": 0,
-   "decoration": 1,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.043
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 92,
+   "missing": 0,
    "tokens": 21238,
    "cost_usd": null
   },
@@ -1135,31 +513,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 102,
-   "stock": 0,
-   "decoration": 4,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.176,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 9,
-     "quote": "It turns on only when you press the key."
-    },
-    {
-     "class": "decoration",
-     "words": 9,
-     "quote": "**Faster dictation start after your Mac has been idle**"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.176,
-    "gpt": 0.176
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 92,
+   "missing": 0,
    "tokens": 4266,
    "cost_usd": 0.0010972
   },
@@ -1169,20 +524,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 109,
-   "stock": 0,
-   "decoration": 3,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.165
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 92,
+   "missing": 0,
    "tokens": 2933,
    "cost_usd": 0.0062647
   },
@@ -1192,31 +535,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 205,
-   "stock": 0,
-   "decoration": 8,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.093,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 9,
-     "quote": ", with a comment explaining why it lives there"
-    },
-    {
-     "class": "offer",
-     "words": 10,
-     "quote": "drop it if you would rather not raise it here."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.093,
-    "gpt": 0.434
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 104,
+   "missing": 0,
    "tokens": 5858,
    "cost_usd": 0.114496
   },
@@ -1226,26 +546,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 77,
-   "stock": 0,
-   "decoration": 4,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.026,
-   "slop": [
-    {
-     "class": "decoration",
-     "words": 2,
-     "quote": "## Summary"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.026,
-    "gpt": 0.0
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 104,
+   "missing": 0,
    "tokens": 15654,
    "cost_usd": null
   },
@@ -1255,26 +557,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 112,
-   "stock": 0,
-   "decoration": 7,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.134,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 15,
-     "quote": "I did not run the script myself. The verification results above are from your run."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.134,
-    "gpt": 0.339
-   },
-   "facts": 2,
-   "facts_required": 3,
+   "needed": 104,
+   "missing": 1,
    "tokens": 7172,
    "cost_usd": 0.0018881000000000002
   },
@@ -1284,31 +568,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 189,
-   "stock": 0,
-   "decoration": 8,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.233,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 35,
-     "quote": "A comment explains why the pattern exists: a plain `clearContents()` or `declareTypes()` puts dictation on Universal Clipboard, where it reaches every device on the Apple ID. The comment also records "
-    },
-    {
-     "class": "offer",
-     "words": 9,
-     "quote": "If you want it, it is a one-line follow-up."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.233,
-    "gpt": 0.328
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 104,
+   "missing": 0,
    "tokens": 5404,
    "cost_usd": 0.0177288
   },
@@ -1318,36 +579,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 210,
-   "stock": 0,
-   "decoration": 7,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.21,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 13,
-     "quote": "Define `FORBIDDEN_PASTEBOARD` directly above the clipboard check that uses it: ```sh FORBIDDEN_PASTEBOARD='clearContents\\(\\)|declareTypes\\(' ```"
-    },
-    {
-     "class": "padding",
-     "words": 26,
-     "quote": "A comment records why the pattern exists and how it went missing, so the definition is not removed again as apparent leftover from the ASR scan."
-    },
-    {
-     "class": "offer",
-     "words": 5,
-     "quote": "That is worth a follow-up."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.21,
-    "gpt": 0.233
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 104,
+   "missing": 0,
    "tokens": 4428,
    "cost_usd": 0.10136
   },
@@ -1357,26 +590,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 90,
-   "stock": 0,
-   "decoration": 4,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 1,
-   "judged": true,
-   "slop_share": 0.022,
-   "slop": [
-    {
-     "class": "decoration",
-     "words": 2,
-     "quote": "## Summary"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.022,
-    "gpt": 0.0
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 104,
+   "missing": 0,
    "tokens": 14443,
    "cost_usd": null
   },
@@ -1386,41 +601,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 286,
-   "stock": 0,
-   "decoration": 11,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.182,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 19,
-     "quote": "This restores only the pasteboard pattern. The ASR worker's control-plane scan is not restored, since that worker is retired."
-    },
-    {
-     "class": "hedge",
-     "words": 23,
-     "quote": "I ran these checks outside this session and am reporting the results as given. The reviewer should rerun the planted-call case before merging."
-    },
-    {
-     "class": "decoration",
-     "words": 4,
-     "quote": "**Changes** - `scripts/check-network-surface.sh`: adds"
-    },
-    {
-     "class": "padding",
-     "words": 6,
-     "quote": "The gate exists to block that."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.182,
-    "gpt": 0.577
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 104,
+   "missing": 0,
    "tokens": 5486,
    "cost_usd": 0.0015959
   },
@@ -1430,26 +612,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 244,
-   "stock": 0,
-   "decoration": 7,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.139,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 34,
-     "quote": "A plain `clearContents()` or `declareTypes()` puts dictation on Universal Clipboard, where it reaches every device on the Apple ID. The comment also records how the definition was lost, so the next cl"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.139,
-    "gpt": 0.48
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 104,
+   "missing": 0,
    "tokens": 3875,
    "cost_usd": 0.0134587
   },
@@ -1459,26 +623,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 96,
-   "stock": 0,
-   "decoration": 5,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.198,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 19,
-     "quote": "which are scheduled by default and can be turned off in Settings. Installing an update always needs a click."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.198,
-    "gpt": 0.708
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 25,
+   "missing": 0,
    "tokens": 5250,
    "cost_usd": 0.09404
   },
@@ -1488,20 +634,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 28,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.143
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 25,
+   "missing": 0,
    "tokens": 15293,
    "cost_usd": null
   },
@@ -1511,26 +645,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 87,
-   "stock": 0,
-   "decoration": 4,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.23,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 20,
-     "quote": "scheduled checks are on by default and can be turned off in Settings. Installing an update always requires a click."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.23,
-    "gpt": 0.598
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 25,
+   "missing": 0,
    "tokens": 6596,
    "cost_usd": 0.0016484
   },
@@ -1540,31 +656,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 108,
-   "stock": 0,
-   "decoration": 4,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.13,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 9,
-     "quote": "Downloading and installing an update always needs your click."
-    },
-    {
-     "class": "unproven",
-     "words": 5,
-     "quote": "Transcription runs locally through `LocalASR`."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.13,
-    "gpt": 0.759
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 25,
+   "missing": 0,
    "tokens": 5034,
    "cost_usd": 0.014994799999999999
   },
@@ -1574,41 +667,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 153,
-   "stock": 0,
-   "decoration": 4,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.51,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 22,
-     "quote": "scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update always requires a click."
-    },
-    {
-     "class": "restate",
-     "words": 24,
-     "quote": "No other shipping code may touch the network. The rules say CI enforces this through `scripts/check-network-surface.sh`, which holds the list of denied network APIs."
-    },
-    {
-     "class": "hedge",
-     "words": 10,
-     "quote": "The `LocalASR` name suggests transcription then runs on your machine."
-    },
-    {
-     "class": "padding",
-     "words": 22,
-     "quote": "The update check does contact the update server, so by default the app makes some network requests, but they carry no audio."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.51,
-    "gpt": 0.654
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 25,
+   "missing": 0,
    "tokens": 3483,
    "cost_usd": 0.067424
   },
@@ -1618,20 +678,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 27,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 25,
+   "missing": 0,
    "tokens": 14145,
    "cost_usd": null
   },
@@ -1641,66 +689,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 188,
-   "stock": 0,
-   "decoration": 10,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.537,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 21,
-     "quote": "Scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update requires a click."
-    },
-    {
-     "class": "padding",
-     "words": 15,
-     "quote": "These fetch model files to your machine and only run when you request a download."
-    },
-    {
-     "class": "decoration",
-     "words": 2,
-     "quote": "**Model downloads**"
-    },
-    {
-     "class": "decoration",
-     "words": 3,
-     "quote": "**Sparkle update checks**"
-    },
-    {
-     "class": "decoration",
-     "words": 2,
-     "quote": "**Run `scripts/check-network-surface.sh`**"
-    },
-    {
-     "class": "decoration",
-     "words": 7,
-     "quote": "**Check what the Sparkle update request contains.**"
-    },
-    {
-     "class": "decoration",
-     "words": 4,
-     "quote": "**Check the enforcement method.**"
-    },
-    {
-     "class": "restate",
-     "words": 13,
-     "quote": "The rules say CI enforces the boundary, but I haven't seen that output."
-    },
-    {
-     "class": "padding",
-     "words": 34,
-     "quote": "The rules file doesn't say what metadata Sparkle sends with an update check (typically app and OS version, and possibly a system profile if profiling is enabled). Confirm that setting in the Sparkle c"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.537,
-    "gpt": 0.872
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 25,
+   "missing": 0,
    "tokens": 4892,
    "cost_usd": 0.0013472
   },
@@ -1710,66 +700,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 233,
-   "stock": 0,
-   "decoration": 10,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.588,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 22,
-     "quote": "Scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update always requires a click."
-    },
-    {
-     "class": "restate",
-     "words": 29,
-     "quote": "The rules file says no other shipping code may access the network. `scripts/check-network-surface.sh` keeps a denied-API list that CI enforces by filename, so a violation should fail the build."
-    },
-    {
-     "class": "padding",
-     "words": 29,
-     "quote": "- **The Linux and desktop items don't apply to the Mac app.** Items 3 and 4 cover the Tauri desktop app (Windows, Linux) and the Linux server's inbound listener."
-    },
-    {
-     "class": "padding",
-     "words": 8,
-     "quote": "It's an update check, not audio upload, but"
-    },
-    {
-     "class": "decoration",
-     "words": 10,
-     "quote": "**This is a statement of policy, not a code audit.**"
-    },
-    {
-     "class": "decoration",
-     "words": 8,
-     "quote": "**The update check is still an outbound request.**"
-    },
-    {
-     "class": "decoration",
-     "words": 2,
-     "quote": "**Model downloads**"
-    },
-    {
-     "class": "decoration",
-     "words": 3,
-     "quote": "**Sparkle update checks**"
-    },
-    {
-     "class": "offer",
-     "words": 26,
-     "quote": "If you want independent confirmation, you could run the check script yourself or watch the app's traffic with something like Little Snitch or `nettop` while dictating."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.588,
-    "gpt": 0.824
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 25,
+   "missing": 0,
    "tokens": 3535,
    "cost_usd": 0.011024699999999998
   },
@@ -1779,26 +711,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 115,
-   "stock": 0,
-   "decoration": 1,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.043,
-   "slop": [
-    {
-     "class": "offer",
-     "words": 5,
-     "quote": "How many installs exist today?"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.043,
-    "gpt": 0.73
-   },
-   "facts": 1,
-   "facts_required": 2,
+   "needed": 13,
+   "missing": 1,
    "tokens": 5922,
    "cost_usd": 0.12524000000000002
   },
@@ -1808,26 +722,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 57,
-   "stock": 0,
-   "decoration": 1,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 2,
-   "judged": true,
-   "slop_share": 0.018,
-   "slop": [
-    {
-     "class": "decoration",
-     "words": 1,
-     "quote": "**OpenRamble**"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.018,
-    "gpt": 0.193
-   },
-   "facts": 1,
-   "facts_required": 2,
+   "needed": 13,
+   "missing": 1,
    "tokens": 15492,
    "cost_usd": null
   },
@@ -1837,26 +733,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 114,
-   "stock": 0,
-   "decoration": 1,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.158,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 18,
-     "quote": "If you still want the new identifier, you'd first need to change the invariant in the rules file."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.158,
-    "gpt": 0.737
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 13,
+   "missing": 0,
    "tokens": 6384,
    "cost_usd": 0.0015964
   },
@@ -1866,36 +744,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 135,
-   "stock": 0,
-   "decoration": 8,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.319,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 12,
-     "quote": "The rules file calls the ID permanent only because of existing users."
-    },
-    {
-     "class": "padding",
-     "words": 16,
-     "quote": "- **Unchanged:** the Sparkle EdDSA key stays, and so does inside-out signing. Only the ID changes."
-    },
-    {
-     "class": "offer",
-     "words": 15,
-     "quote": "If not, I'll make the change and update the rules file and `docs/release.md` to match."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.319,
-    "gpt": 0.83
-   },
-   "facts": 1,
-   "facts_required": 2,
+   "needed": 13,
+   "missing": 1,
    "tokens": 5392,
    "cost_usd": 0.0196509
   },
@@ -1905,31 +755,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 275,
-   "stock": 0,
-   "decoration": 9,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.149,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 18,
-     "quote": "The rules file lists `is.waiwai.dictation` as a permanent release invariant because existing Accessibility permission grants depend on it."
-    },
-    {
-     "class": "padding",
-     "words": 23,
-     "quote": "If you do go ahead, update the rules file and release docs in the same change so the invariant names the new identifier."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.149,
-    "gpt": 0.655
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 13,
+   "missing": 0,
    "tokens": 3754,
    "cost_usd": 0.08258399999999999
   },
@@ -1939,20 +766,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 58,
-   "stock": 0,
-   "decoration": 1,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 1,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.328
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 13,
+   "missing": 0,
    "tokens": 14156,
    "cost_usd": null
   },
@@ -1962,46 +777,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 268,
-   "stock": 0,
-   "decoration": 6,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.269,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 18,
-     "quote": "The repo's release invariants say the bundle identifier `is.waiwai.dictation` is permanent because existing Accessibility grants depend on it."
-    },
-    {
-     "class": "padding",
-     "words": 10,
-     "quote": "and the app would lose its permission state on update"
-    },
-    {
-     "class": "padding",
-     "words": 21,
-     "quote": "- **Domain and marketing:** the website, download links, and appcast URL can use \"openramble\" without any change to the bundle ID."
-    },
-    {
-     "class": "padding",
-     "words": 9,
-     "quote": "that's a decision for you as the owner, and"
-    },
-    {
-     "class": "padding",
-     "words": 14,
-     "quote": "I'd treat that as a separate decision and not fold it into the launch."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.269,
-    "gpt": 0.907
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 13,
+   "missing": 0,
    "tokens": 4667,
    "cost_usd": 0.0012887
   },
@@ -2011,51 +788,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 325,
-   "stock": 0,
-   "decoration": 13,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.172,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 25,
-     "quote": "2. Keep the existing Sparkle EdDSA key. That rule is independent of the bundle ID, and replacing the key would break updates on its own."
-    },
-    {
-     "class": "restate",
-     "words": 13,
-     "quote": "3. Re-sign the Sparkle nested code from the inside out, without `codesign --deep`."
-    },
-    {
-     "class": "padding",
-     "words": 6,
-     "quote": "I haven't touched any files, and"
-    },
-    {
-     "class": "decoration",
-     "words": 3,
-     "quote": "**Why it's locked:**"
-    },
-    {
-     "class": "decoration",
-     "words": 3,
-     "quote": "**The deciding question:**"
-    },
-    {
-     "class": "decoration",
-     "words": 6,
-     "quote": "**If you do decide to rename:**"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.172,
-    "gpt": 0.797
-   },
-   "facts": 2,
-   "facts_required": 2,
+   "needed": 13,
+   "missing": 1,
    "tokens": 3827,
    "cost_usd": 0.0150208
   },
@@ -2065,26 +799,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 106,
-   "stock": 0,
-   "decoration": 4,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.047,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 5,
-     "quote": "(don't edit them by hand)"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.047,
-    "gpt": 0.415
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 35,
+   "missing": 0,
    "tokens": 5974,
    "cost_usd": 0.109824
   },
@@ -2094,20 +810,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 61,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 35,
+   "missing": 0,
    "tokens": 15724,
    "cost_usd": null
   },
@@ -2117,26 +821,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 98,
-   "stock": 0,
-   "decoration": 5,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.082,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 8,
-     "quote": "Confirm the Swift change is what you intend."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.082,
-    "gpt": 0.306
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 35,
+   "missing": 0,
    "tokens": 6631,
    "cost_usd": 0.0015012
   },
@@ -2146,26 +832,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 126,
-   "stock": 0,
-   "decoration": 5,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.056,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 7,
-     "quote": "The red test is doing its job"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.056,
-    "gpt": 0.397
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 35,
+   "missing": 0,
    "tokens": 5674,
    "cost_usd": 0.0180969
   },
@@ -2175,26 +843,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 202,
-   "stock": 0,
-   "decoration": 12,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.03,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 6,
-     "quote": "the rules file forbids exactly this"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.03,
-    "gpt": 0.465
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 35,
+   "missing": 0,
    "tokens": 4392,
    "cost_usd": 0.090608
   },
@@ -2204,20 +854,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 77,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.039
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 35,
+   "missing": 0,
    "tokens": 21464,
    "cost_usd": null
   },
@@ -2227,46 +865,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 225,
-   "stock": 0,
-   "decoration": 10,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.396,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 20,
-     "quote": "If the change touches file cutting, also update `apps/cli/src/plan.rs` and `FileAudioChunks.swift` together, since their tests pin the same cut frames."
-    },
-    {
-     "class": "padding",
-     "words": 16,
-     "quote": "The red test is doing its job: the Swift side now differs from the Rust port."
-    },
-    {
-     "class": "padding",
-     "words": 17,
-     "quote": "I can't run any of this from here because the session has no tools or repository access."
-    },
-    {
-     "class": "offer",
-     "words": 24,
-     "quote": "If you paste the Swift diff, I can work out the matching Rust change and tell you which cases the regenerated corpus should show."
-    },
-    {
-     "class": "decoration",
-     "words": 12,
-     "quote": "**Commit the Swift change, the Rust change, and the regenerated fixtures together.**"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.396,
-    "gpt": 0.449
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 35,
+   "missing": 0,
    "tokens": 5015,
    "cost_usd": 0.001244
   },
@@ -2276,41 +876,8 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 235,
-   "stock": 0,
-   "decoration": 10,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.302,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 18,
-     "quote": "If your change touches file cutting, the rules also say to change `apps/cli/src/plan.rs` and `FileAudioChunks.swift` together, or neither."
-    },
-    {
-     "class": "padding",
-     "words": 30,
-     "quote": "**Decide whether the Swift change was intended.** If the new output is what you wanted, continue. If it was accidental, fix the Swift side and the test goes green again."
-    },
-    {
-     "class": "restate",
-     "words": 5,
-     "quote": ", as the rules require"
-    },
-    {
-     "class": "padding",
-     "words": 18,
-     "quote": "The red test is doing its job: it shows the Rust port has drifted from your Swift change."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.302,
-    "gpt": 0.63
-   },
-   "facts": 3,
-   "facts_required": 3,
+   "needed": 35,
+   "missing": 0,
    "tokens": 3939,
    "cost_usd": 0.011766800000000001
   },
@@ -2320,20 +887,8 @@
    "condition": "instructed",
    "model": "fable",
    "words": 257,
-   "stock": 0,
-   "decoration": 7,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.128
-   },
-   "facts": 1,
-   "facts_required": 1,
+   "needed": 40,
+   "missing": 0,
    "tokens": 8103,
    "cost_usd": 0.19448
   },
@@ -2343,20 +898,8 @@
    "condition": "instructed",
    "model": "gpt",
    "words": 91,
-   "stock": 0,
-   "decoration": 1,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 1,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.0
-   },
-   "facts": 1,
-   "facts_required": 1,
+   "needed": 40,
+   "missing": 0,
    "tokens": 16075,
    "cost_usd": null
   },
@@ -2366,26 +909,8 @@
    "condition": "instructed",
    "model": "haiku",
    "words": 278,
-   "stock": 0,
-   "decoration": 9,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.022,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 6,
-     "quote": "since this session has no tools"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.022,
-    "gpt": 0.14
-   },
-   "facts": 1,
-   "facts_required": 1,
+   "needed": 40,
+   "missing": 0,
    "tokens": 12164,
    "cost_usd": 0.0042614
   },
@@ -2395,31 +920,8 @@
    "condition": "instructed",
    "model": "sonnet",
    "words": 281,
-   "stock": 0,
-   "decoration": 9,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.093,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 15,
-     "quote": "So an ordinary hands-free tap that lands during a paste now starts and immediately stops."
-    },
-    {
-     "class": "padding",
-     "words": 11,
-     "quote": "Alternatively, add a separate `secondPress` field, which is clearer but heavier."
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.093,
-    "gpt": 0.121
-   },
-   "facts": 1,
-   "facts_required": 1,
+   "needed": 40,
+   "missing": 0,
    "tokens": 7669,
    "cost_usd": 0.037917
   },
@@ -2429,41 +931,8 @@
    "condition": "plain",
    "model": "fable",
    "words": 585,
-   "stock": 0,
-   "decoration": 22,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.168,
-   "slop": [
-    {
-     "class": "restate",
-     "words": 13,
-     "quote": "The user never pressed a second time; the key release ended the take."
-    },
-    {
-     "class": "hedge",
-     "words": 35,
-     "quote": "- **Stale `isHandsFree` if `begin()` declines.** If `begin()` refuses to start (not enabled, or model not ready), `stopHandsFree()` runs against whatever `isHandsFree` and `state` are left from before"
-    },
-    {
-     "class": "padding",
-     "words": 47,
-     "quote": "- **Design question.** A press and a second press both inside the paste replay as start-then-stop, which gives an empty take. Dropping the queued press (`pressDuringInsertion = nil`) may be cleaner, u"
-    },
-    {
-     "class": "decoration",
-     "words": 3,
-     "quote": "## Other issues"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.168,
-    "gpt": 0.323
-   },
-   "facts": 1,
-   "facts_required": 1,
+   "needed": 40,
+   "missing": 0,
    "tokens": 7208,
    "cost_usd": 0.20274399999999998
   },
@@ -2473,20 +942,8 @@
    "condition": "plain",
    "model": "gpt",
    "words": 186,
-   "stock": 0,
-   "decoration": 5,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 1,
-   "judged": true,
-   "slop_share": 0.0,
-   "slop": [],
-   "slop_share_by_judge": {
-    "opus": 0.0,
-    "gpt": 0.113
-   },
-   "facts": 1,
-   "facts_required": 1,
+   "needed": 40,
+   "missing": 0,
    "tokens": 14980,
    "cost_usd": null
   },
@@ -2496,41 +953,8 @@
    "condition": "plain",
    "model": "haiku",
    "words": 330,
-   "stock": 0,
-   "decoration": 12,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.124,
-   "slop": [
-    {
-     "class": "hedge",
-     "words": 2,
-     "quote": "Likely regression:"
-    },
-    {
-     "class": "hedge",
-     "words": 22,
-     "quote": "If the queued press can be a hands-free press that was released before any second press, point 1 is a real regression."
-    },
-    {
-     "class": "padding",
-     "words": 7,
-     "quote": "**3. No test.** Nothing covers either case."
-    },
-    {
-     "class": "restate",
-     "words": 10,
-     "quote": "That contradicts \"releasing the key means nothing in hands-free mode.\""
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.124,
-    "gpt": 0.255
-   },
-   "facts": 1,
-   "facts_required": 1,
+   "needed": 40,
+   "missing": 0,
    "tokens": 10913,
    "cost_usd": 0.004186700000000001
   },
@@ -2540,133 +964,10 @@
    "condition": "plain",
    "model": "sonnet",
    "words": 491,
-   "stock": 0,
-   "decoration": 22,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "judged": true,
-   "slop_share": 0.077,
-   "slop": [
-    {
-     "class": "padding",
-     "words": 30,
-     "quote": "- **A third press during the paste is untested.** The second press is idempotent with this change. Confirm what the key handler does with further presses while `pressDuringInsertion` is non-nil."
-    },
-    {
-     "class": "restate",
-     "words": 8,
-     "quote": "In hands-free mode this should mean nothing, but"
-    }
-   ],
-   "slop_share_by_judge": {
-    "opus": 0.077,
-    "gpt": 0.326
-   },
-   "facts": 1,
-   "facts_required": 1,
+   "needed": 40,
+   "missing": 0,
    "tokens": 6721,
    "cost_usd": 0.039456899999999996
-  }
- ],
- "work": [
-  {
-   "run": "r39-clipboard-gate.fable.high.1",
-   "task": "r39-clipboard-gate",
-   "model": "claude-fable-5-2",
-   "words": 342,
-   "stock": 0,
-   "decoration": 22,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 1,
-   "report_slop_share": 0.0,
-   "report_slop": [],
-   "code_slop": []
-  },
-  {
-   "run": "r39-clipboard-gate.gpt.high.1",
-   "task": "r39-clipboard-gate",
-   "model": "gpt-6.2-sol",
-   "words": 79,
-   "stock": 0,
-   "decoration": 0,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "report_slop_share": 0.0,
-   "report_slop": [],
-   "code_slop": []
-  },
-  {
-   "run": "r39-clipboard-gate.haiku.high.1",
-   "task": "r39-clipboard-gate",
-   "model": "claude-haiku-5-5",
-   "words": 217,
-   "stock": 0,
-   "decoration": 8,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "report_slop_share": 0.0,
-   "report_slop": [],
-   "code_slop": [
-    {
-     "class": "comment",
-     "words": 11,
-     "quote": "# Runs the gate on the fixture. Sets GATE_STATUS and GATE_OUTPUT."
-    }
-   ]
-  },
-  {
-   "run": "t-exists.gpt.high.1",
-   "task": "t-exists",
-   "model": "gpt-6.2-sol",
-   "words": 75,
-   "stock": 0,
-   "decoration": 3,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 1,
-   "report_slop_share": 0.107,
-   "report_slop": [
-    {
-     "class": "unproven",
-     "words": 8,
-     "quote": "The preference survives relaunch, **Check Now** still works"
-    }
-   ],
-   "code_slop": []
-  },
-  {
-   "run": "t-exists.sonnet.high.1",
-   "task": "t-exists",
-   "model": "claude-sonnet-5-5",
-   "words": 162,
-   "stock": 0,
-   "decoration": 1,
-   "offers": 0,
-   "tool_markup": 0,
-   "house_style": 0,
-   "report_slop_share": 0.265,
-   "report_slop": [
-    {
-     "class": "padding",
-     "words": 9,
-     "quote": "The README and `CLAUDE.md` already describe all of this."
-    },
-    {
-     "class": "padding",
-     "words": 11,
-     "quote": "The same section has a \"Check Now\" button for manual checks."
-    },
-    {
-     "class": "offer",
-     "words": 23,
-     "quote": "If it's discoverability, the simplest fix is to link to it from the privacy text in Settings, but I haven't made that change."
-    }
-   ],
-   "code_slop": []
   }
  ]
 }

@@ -1,0 +1,19 @@
+{
+ "facts": [
+  true
+ ],
+ "slop": [
+  {
+   "quote": "The microphone stays on and the next dictation inserts nothing.",
+   "class": "restate"
+  },
+  {
+   "quote": "Escape still discards the held press.",
+   "class": "padding"
+  },
+  {
+   "quote": "All three pass now, and the full DictationCore suite passes, including the storm.",
+   "class": "unproven"
+  }
+ ]
+}

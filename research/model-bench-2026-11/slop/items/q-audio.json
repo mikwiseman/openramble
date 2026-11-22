@@ -1,6 +1,8 @@
 {
  "id": "q-audio",
  "situation": "reply",
+ "ask": "Does OpenRamble on the Mac send my audio anywhere?",
+ "label": "Needed",
  "prompt": "This is from the repository's rules file:\n\n## Network boundary\n\nThe shipping app has exactly two network areas:\n\n1. Explicit model downloads through `LocalASR/ModelDownloading.swift`.\n2. Sparkle update checks and downloads through `SparkleUpdater.swift`.\n   Scheduled checks are enabled by default and can be disabled in Settings;\n   downloading and installing an update always requires a click.\n\nThe desktop app (Windows, Linux) has one:\n\n3. Explicit model downloads through\n   `apps/desktop/src-tauri/src/adapters/download.rs`.\n\nThe Linux server has one, inbound only:\n\n4. `apps/cli/src/listen.rs`. ffmpeg is spawned only from\n   `apps/cli/src/decode.rs` with a file-only protocol whitelist.\n\nNo other shipping code may access the network. The complete denied API list is\nmaintained in `scripts/check-network-surface.sh` and enforced by CI — by\nfilename on both sides, so the promise is checked rather than intended. Update\nthe public privacy description in `README.md` if this boundary ever changes.\n\nQuestion from the owner: Does OpenRamble on the Mac send my audio anywhere?",
  "required": [
   "The audio is not sent anywhere",

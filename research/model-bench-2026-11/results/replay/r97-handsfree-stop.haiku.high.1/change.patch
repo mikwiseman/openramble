@@ -1,0 +1,280 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/DictationController.swift b/Packages/DictationCore/Sources/DictationCore/DictationController.swift
+index 87695d9..992c8ff 100644
+--- a/Packages/DictationCore/Sources/DictationCore/DictationController.swift
++++ b/Packages/DictationCore/Sources/DictationCore/DictationController.swift
+@@ -406,15 +406,18 @@ public final class DictationController {
+     /// final cleaning. A lost flag leaves recording enabled.
+     private var deferredStopRequested = false
+ 
+-    /// A press of the dictation key while the paste was finishing, and
+-    /// whether that key is up again. The text was already in place, so the
+-    /// person went on: the press starts its take the moment the paste is done.
+-    ///
+-    /// Kept only by a paste that lands; every other ending clears it in
+-    /// final cleaning and speaks for itself.
+-    private var pressDuringInsertion: (
+-        handsFree: Bool, isEnabled: Bool, isModelReady: Bool, released: Bool
+-    )?
++    /// A gesture the person made while the paste was finishing. Kept in the
++    /// order it came and replayed the moment the controller is idle again, so
++    /// each one does what it would have done a moment later.
++    private enum Gesture {
++        case begin(handsFree: Bool, isEnabled: Bool, isModelReady: Bool)
++        case stop
++        case stopHandsFree
++        case promoteToHandsFree
++        case cancel
++    }
++
++    private var gesturesDuringInsertion: [Gesture] = []
+ 
+     private var cancellationRequested = false
+     private var isHandsFree = false
+@@ -519,9 +522,7 @@ public final class DictationController {
+             // the person is trying again. End the wait, and a paste nobody read
+             // is said out loud now instead of this press vanishing unheard.
+             inserter.endTheReadWait()
+-            // Or it has landed and only holds the clipboard for the restore
+-            // floor: then this press starts its take as soon as that is over.
+-            pressDuringInsertion = (handsFree, isEnabled, isModelReady, false)
++            gesturesDuringInsertion.append(.begin(handsFree: handsFree, isEnabled: isEnabled, isModelReady: isModelReady))
+             return
+         }
+         // The first check is synchronous, before any waiting. Between her and
+@@ -677,11 +678,8 @@ public final class DictationController {
+ 
+     /// The hotkey is released (or pressed a second time in hands-free mode).
+     public func stop() {
+-        if state == .inserting, pressDuringInsertion != nil {
+-            // The release of a press that waits for the paste: it is replayed
+-            // with it, so a tap stays a tap and no key that is up keeps the
+-            // microphone on.
+-            pressDuringInsertion?.released = true
++        if state == .inserting {
++            gesturesDuringInsertion.append(.stop)
+             return
+         }
+         switch DictationStopPolicy.decideStop(state: state, isHandsFree: isHandsFree) {
+@@ -699,6 +697,10 @@ public final class DictationController {
+ 
+     /// Stop in the mode without holding - by pressing the key a second time.
+     public func stopHandsFree() {
++        if state == .inserting {
++            gesturesDuringInsertion.append(.stopHandsFree)
++            return
++        }
+         guard isHandsFree else { return }
+ 
+         switch state {
+@@ -756,6 +758,10 @@ public final class DictationController {
+     /// Delayed release is reset: it belonged to the previous gesture, and in
+     /// in the new mode the key is supposed to be released.
+     public func promoteToHandsFree() {
++        if state == .inserting {
++            gesturesDuringInsertion.append(.promoteToHandsFree)
++            return
++        }
+         guard state == .preparing || state == .listening else { return }
+         // Commit every internal mode transition before publishing the external
+         // hands-free callback. That callback is reentrant and may immediately
+@@ -1735,15 +1741,7 @@ public final class DictationController {
+         _ = onTakeFinished?(processed.text, recording.url, insertionTarget)
+         await discard(recording.url, session: session)
+         guard case let .ended(notice) = outcome else { return }
+-        // A press while a landed paste finished: the text is in place, so the
+-        // person went on, and the press starts its take now. Any other ending
+-        // speaks for itself, and final cleaning forgets the press.
+-        let press = notice == nil ? pressDuringInsertion : nil
+         await end(session, saying: notice)
+-        if let press {
+-            begin(handsFree: press.handsFree, isEnabled: press.isEnabled, isModelReady: press.isModelReady)
+-            if press.released { stop() }
+-        }
+     }
+ 
+     /// The end of a take that produced text, once its owner has kept it: one
+@@ -1916,10 +1914,10 @@ public final class DictationController {
+ 
+     /// Cancel dictation.
+     public func cancel() {
+-        // A press that waits for the paste is no take yet, so cancelling it
+-        // only forgets it. The hotkey monitor swallows the release of a hold
+-        // it cancels, and a replayed press would listen with the key up.
+-        pressDuringInsertion = nil
++        if state == .inserting {
++            gesturesDuringInsertion.append(.cancel)
++            return
++        }
+         guard DictationStopPolicy.canCancel(state: state) else { return }
+         streamedSegments?.cancel()
+ 
+@@ -2164,7 +2162,6 @@ public final class DictationController {
+         currentDisposition = nil
+         finalizationTask = nil
+         deferredStopRequested = false
+-        pressDuringInsertion = nil
+         cancellationRequested = false
+         isHandsFree = false
+         isHandsFreeActive = false
+@@ -2179,6 +2176,29 @@ public final class DictationController {
+         // The next session starts able to sound again.
+         hasSoundedThisSession = false
+         state = .idle
++        replayGesturesDuringInsertion()
++    }
++
++    /// Replays what the person did while the paste was finishing, in the order
++    /// they did it. Called right after the controller goes idle, before any
++    /// await, so no gesture can arrive between the two.
++    private func replayGesturesDuringInsertion() {
++        let gestures = gesturesDuringInsertion
++        gesturesDuringInsertion = []
++        for gesture in gestures {
++            switch gesture {
++            case let .begin(handsFree, isEnabled, isModelReady):
++                begin(handsFree: handsFree, isEnabled: isEnabled, isModelReady: isModelReady)
++            case .stop:
++                stop()
++            case .stopHandsFree:
++                stopHandsFree()
++            case .promoteToHandsFree:
++                promoteToHandsFree()
++            case .cancel:
++                cancel()
++            }
++        }
+     }
+ 
+     private func elapsedSeconds() -> TimeInterval {
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/DictationControllerRaceTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/DictationControllerRaceTests.swift
+index 3a0a6cb..3afb32c 100644
+--- a/Packages/DictationCore/Tests/DictationCoreTests/DictationControllerRaceTests.swift
++++ b/Packages/DictationCore/Tests/DictationCoreTests/DictationControllerRaceTests.swift
+@@ -204,6 +204,22 @@ actor RecordingInserter: TextInserting {
+     nonisolated func frontmostApplication() -> TargetApplication? { nil }
+ }
+ 
++/// A paste that holds until the test opens its gate, so the controller stays
++/// in `.inserting` for as long as the test needs.
++actor GatedInserter: TextInserting {
++    private let gate: Gate
++    private(set) var insertedTexts: [String] = []
++
++    init(gate: Gate) { self.gate = gate }
++
++    func insert(_ text: String, into target: TargetApplication?) async throws {
++        await gate.pass()
++        insertedTexts.append(text)
++    }
++    func pressReturn() async throws {}
++    nonisolated func frontmostApplication() -> TargetApplication? { nil }
++}
++
+ actor QuietOverlay: OverlayPresenting {
+     func present(_ state: DictationState, elapsed: TimeInterval) async {}
+     func dismiss() async {}
+@@ -261,7 +277,8 @@ final class DictationControllerRaceTests: XCTestCase {
+ 
+     private func makeController(
+         recognized: String = "\u{043F}\u{0440}\u{0438}\u{0432}\u{0435}\u{0442} \u{043C}\u{0438}\u{0440}",
+-        transcribeGate: Gate? = nil
++        transcribeGate: Gate? = nil,
++        inserter paste: (any TextInserting)? = nil
+     ) -> DictationController {
+         let tracker = transcribes!
+         return DictationController(
+@@ -272,7 +289,7 @@ final class DictationControllerRaceTests: XCTestCase {
+                 if let transcribeGate { await transcribeGate.pass() }
+                 return ASRResult(text: recognized, audioDuration: 2, processingDuration: 0.1)
+             },
+-            inserter: inserter,
++            inserter: paste ?? inserter,
+             overlay: overlay,
+             sounds: sounds
+         )
+@@ -626,6 +643,32 @@ final class DictationControllerRaceTests: XCTestCase {
+         XCTAssertTrue(insertedTexts.isEmpty)
+     }
+ 
++    /// A hands-free take ends with its second press. The next take's start and
++    /// its own second press both land while that paste is still finishing; they
++    /// must do what they would have done a moment later, so the take is ended.
++    func testHandsFreeGesturesDuringAPasteReplayInOrder() async throws {
++        let gate = Gate()
++        let controller = makeController(inserter: GatedInserter(gate: gate))
++
++        controller.begin(handsFree: true, isEnabled: true, isModelReady: true)
++        await settle()
++        controller.stopHandsFree()
++        for _ in 0..<300 where controller.state != .inserting {
++            await Task.yield()
++            try await Task.sleep(for: .milliseconds(1))
++        }
++        XCTAssertEqual(controller.state, .inserting)
++
++        controller.begin(handsFree: true, isEnabled: true, isModelReady: true)
++        controller.stopHandsFree()
++        await gate.open()
++        await quiesce(controller)
++
++        XCTAssertEqual(controller.state, .idle, "a second press during a paste must end the take it started")
++        let recording = await capture.isRecording
++        XCTAssertFalse(recording, "the microphone must be off once the paste is done")
++    }
++
+     // MARK: - Storm of gestures
+ 
+     func testRandomGestureStormsAlwaysLeaveTheMicrophoneOff() async throws {
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/DictationControllerTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/DictationControllerTests.swift
+index b02b373..a15f5ad 100644
+--- a/Packages/DictationCore/Tests/DictationCoreTests/DictationControllerTests.swift
++++ b/Packages/DictationCore/Tests/DictationCoreTests/DictationControllerTests.swift
+@@ -951,14 +951,16 @@ final class DictationControllerTests: XCTestCase {
+         XCTAssertEqual(controller.pendingRecovery?.text, "Nobody read this")
+         let plays = await sounds.attentionPlays
+         XCTAssertEqual(plays, 1)
+-        XCTAssertEqual(controller.state, .idle)
++        // The press is what it would have been a moment later: a take.
+         let startsAfterThePress = await capture.startCount
+-        XCTAssertEqual(startsAfterThePress, 1, "the press that ended the wait is not a take")
++        XCTAssertEqual(startsAfterThePress, 2)
++        XCTAssertEqual(controller.state, .listening)
+ 
+-        controller.begin(handsFree: false, isEnabled: true, isModelReady: true)
++        controller.cancel()
+         await settle()
+-        let startsAfterTheNextPress = await capture.startCount
+-        XCTAssertEqual(startsAfterTheNextPress, 2, "the next press starts normally")
++        XCTAssertEqual(controller.state, .idle)
++        let aborts = await capture.abortCount
++        XCTAssertEqual(aborts, 1, "the cancelled take releases the microphone")
+     }
+ 
+     /// The text is already in place, but the insertion holds on to the
+@@ -1018,10 +1020,10 @@ final class DictationControllerTests: XCTestCase {
+     }
+ 
+     /// A press inside the hold that turns out to be a shortcut (Right ⌘ and
+-    /// Return, "send" in a chat app) is no take. The hotkey monitor cancels
+-    /// the hold and swallows its release, so the press that waits for the
+-    /// paste must go with it, or its take would listen with the key up.
+-    func testAShortcutPressedWhileALandedPasteFinishesStartsNothing() async throws {
++    /// Return, "send" in a chat app) is cancelled. It does what it would have
++    /// done a moment later: the take starts, the shortcut's cancel ends it,
++    /// the microphone goes off, and nothing is pasted again.
++    func testAShortcutPressedWhileALandedPasteFinishesIsCancelledLikeAnyOther() async throws {
+         let landed = LandedPasteInserter()
+         let controller = makeController(inserter: landed)
+ 
+@@ -1038,7 +1040,10 @@ final class DictationControllerTests: XCTestCase {
+         try await Task.sleep(until: pasted + .milliseconds(600))
+         XCTAssertEqual(controller.state, .idle)
+         let starts = await capture.startCount
+-        XCTAssertEqual(starts, 1, "the shortcut started no take")
++        XCTAssertEqual(starts, 2, "the press started its take before the shortcut cancelled it")
++        let aborts = await capture.abortCount
++        XCTAssertGreaterThanOrEqual(aborts, 1, "the microphone is released after the shortcut")
++        XCTAssertEqual(landed.pasteCount, 1, "the cancelled take pastes nothing")
+     }
+ 
+     /// Nothing was pasted, and putting the person's clipboard back failed

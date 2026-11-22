@@ -1,0 +1,6 @@
+{
+ "task": "r97-handsfree-stop",
+ "state": "void",
+ "reason": "the answer was looked up",
+ "run": "r97-handsfree-stop.gpt.high.1"
+}

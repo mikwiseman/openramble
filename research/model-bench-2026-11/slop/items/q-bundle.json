@@ -1,6 +1,8 @@
 {
  "id": "q-bundle",
  "situation": "reply",
+ "ask": "Can we rename the bundle identifier to is.waiwai.openramble before the launch?",
+ "label": "Needed",
  "prompt": "This is from the repository's rules file:\n\n## Release invariants\n\n- The bundle identifier `is.waiwai.dictation` is permanent because existing\n  Accessibility permission grants depend on it.\n- The existing Sparkle EdDSA key is permanent. Never generate a replacement.\n- Sign Sparkle nested code from the inside out. Do not use `codesign --deep` for\n  signing because it can replace required nested entitlements.\n\nSee [docs/release.md](docs/release.md) and [AGENTS.md](AGENTS.md).\n\nQuestion from the owner: Can we rename the bundle identifier to is.waiwai.openramble before the launch?",
  "required": [
   "The bundle identifier cannot be renamed",

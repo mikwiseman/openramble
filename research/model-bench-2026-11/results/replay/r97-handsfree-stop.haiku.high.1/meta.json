@@ -1,0 +1,44 @@
+{
+ "run": "r97-handsfree-stop.haiku.high.1",
+ "task": "r97-handsfree-stop",
+ "model": "claude-haiku-5-5",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 19:43",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 866,
+ "slept_seconds": 0,
+ "load_before": "7.4",
+ "load_after": "4.6",
+ "memories_written": 0,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r97-handsfree-stop.haiku.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 56,
+ "by_kind": {
+  "Bash": 35,
+  "Read": 1,
+  "Edit": 20
+ },
+ "turns": 57,
+ "usage": {
+  "input": 88,
+  "cache_write": 144636,
+  "cached_input": 4597401,
+  "output": 73817
+ },
+ "tokens": 4815942,
+ "cost_usd": 0.3865929900000001,
+ "models_used": [
+  "claude-haiku-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 10,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 270
+}

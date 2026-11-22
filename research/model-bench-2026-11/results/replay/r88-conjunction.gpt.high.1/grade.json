@@ -1,0 +1,6 @@
+{
+ "task": "r88-conjunction",
+ "state": "void",
+ "reason": "the tool reported a problem: tool: Model metadata for `gpt-6.2-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues.; tool: {\"type\": \"error\", \"message\": \"Reconnecting... 2/5 (workspace ro",
+ "run": "r88-conjunction.gpt.high.1"
+}

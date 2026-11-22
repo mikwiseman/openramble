@@ -3,15 +3,15 @@
 
 DESIGN.md says what is measured and why. This file is the whole harness:
 
-    bench replay check <task>            prove a task: red on the parent, green on the reference
-    bench replay run <task> <model>      one model, one task, graded
-    bench replay grade <run>             grade a saved change again
-    bench replay wrong <task>            grade a deliberately wrong change; it must fail
-    bench slop run <model>               the text situations
-    bench slop score                     counts, judge and pairs
-    bench slop vote                      the owner picks between anonymous pairs
-    bench report                         results/REPORT.md
-    bench pilot                          everything above for the pilot set
+    bench replay check <task>          prove a task: red on the parent, green on the reference
+    bench replay wrong <task>          grade a deliberately wrong change; it must not pass
+    bench replay run <task> <model>    one model, one task, graded
+    bench replay grade <run>           grade a saved change again
+    bench slop run [model ...]         the writing jobs
+    bench slop score                   count the words, and check the facts
+    bench slop repeat <job> <n>        one job many times
+    bench report                       results/REPORT.md and results/index.html
+    bench pilot                        everything above for the pilot set
 """
 import argparse
 import concurrent.futures
@@ -21,6 +21,7 @@ import json
 import os
 import random
 import re
+import shlex
 import shutil
 import signal
 import subprocess
@@ -51,10 +52,9 @@ PILOT_TASKS = ["r39-clipboard-gate", "t-exists", "r97-handsfree-stop", "r88-conj
 # Haiku is the floor: a benchmark that cannot tell it from the others measures nothing.
 PILOT_MODELS = ["fable", "sonnet", "gpt", "haiku"]
 EFFORT = os.environ.get("BENCH_EFFORT", "high")
-# The judge that marks slop is not one of the models it marks. Pairs are also
-# judged by a model from the other vendor, so a taste for one's own family shows.
+# A judge reads two things that cannot be counted: which facts an answer
+# states, and what a report claims. It is not one of the models it reads.
 JUDGE = os.environ.get("BENCH_JUDGE", "opus")
-PAIR_JUDGES = os.environ.get("BENCH_PAIR_JUDGES", "opus,gpt").split(",")
 
 
 def say(text):
@@ -378,9 +378,6 @@ def grade_change(task, patch, log, name="grade", final=None):
     if getattr(task, "suite", None):
         g["suite"] = run_tests(task.suite)
 
-    reference = patch_stats(task.reference_patch())["lines"]
-    g["size"] = dict(stats["lines"], reference_source=reference["source"],
-                     ratio=round(stats["lines"]["source"] / reference["source"], 2) if reference["source"] else None)
     g["unasked_files"] = sorted(p for p, f in stats["files"].items() if f["new"] and f["kind"] == "other")
     g["weakened_tests"] = weakened_tests(patch)
     g["fixtures_touched"] = any(f["kind"] == "fixtures" for f in stats["files"].values())
@@ -393,6 +390,11 @@ def grade_change(task, patch, log, name="grade", final=None):
     if any(re.match(r"(CLAUDE|AGENTS)\.md$", p) for p in stats["files"]):
         rules.append("rules file edited")
     g["rules_broken"] = rules
+    # A task's check compiles some folders and not others. Code changed
+    # outside them was never built, and a pass would vouch for it.
+    outside = getattr(task, "not_built", None)
+    g["not_built"] = sorted(p for p, f in stats["files"].items() if outside and re.search(outside, p)
+                            and f["kind"] in ("source", "tests") and not f["deleted"])
 
     green = g["hidden"]["ok"] and g.get("suite", {"ok": True})["ok"]
     if task.kind == "trap":
@@ -404,8 +406,10 @@ def grade_change(task, patch, log, name="grade", final=None):
                        if touched else "changed nothing, and did not say why")
     elif not green:
         g["state"], g["reason"] = "fail", "hidden tests" if not g["hidden"]["ok"] else "regression in the test target"
-    elif not g["check"]["ok"] or rules:
-        g["state"], g["reason"] = "partial", ", ".join((["the repository's check is red"] if not g["check"]["ok"] else []) + rules)
+    elif not g["check"]["ok"] or rules or g["not_built"]:
+        g["state"], g["reason"] = "partial", ", ".join(
+            (["the repository's check is red"] if not g["check"]["ok"] else []) + rules
+            + (["changed code that no check built"] if g["not_built"] else []))
     else:
         g["state"], g["reason"] = "pass", ""
     shutil.rmtree(folder, ignore_errors=True)
@@ -592,14 +596,36 @@ def read_transcript(path, tool):
             "models_used": models_used}
 
 
+# A program at the start of a command, not a word inside a search pattern:
+# `rg 'curl|git clone' scripts/` reads the scripts and reaches nothing.
+AT_COMMAND = r"(?:^|[;&|(`{]|\$\(|\b(?:then|do|else|exec|xargs|sudo|env|time|nohup)\b)\s*"
 ANSWER_SOURCES = re.compile(
-    r"github\.com/mikwiseman|api\.github\.com|raw\.githubusercontent|\bgh\s+(pr|api|repo|search|issue|release)\b"
-    r"|\bgit\s+(clone|fetch|pull|ls-remote|remote\s+add)\b|openramble\.(com|app)|waiwai\.is", re.I)
-NETWORK = re.compile(r"\b(curl|wget)\b|https?://(?!localhost|127\.0\.0\.1)|WebFetch|WebSearch|web_search", re.I)
+    AT_COMMAND + r"(?:gh\s+(?:pr|api|repo|search|issue|release|browse|run)\b"
+    r"|git\s+(?:clone|fetch|pull|ls-remote|remote\s+add)\b|curl\b|wget\b)", re.I | re.M)
+NETWORK = re.compile(AT_COMMAND + r"(?:curl|wget|gh|nc|ssh|scp|ftp|ping)\b", re.I | re.M)
+QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
 ELSEWHERE = re.compile(r"Documents/Code/openramble|\.claude/projects|side-session-notes|Xcode/DerivedData"
                        r"|model-bench/(?!work/[\w-]+/run)")
 TEST_RUN = re.compile(r"swift (test|build)|cargo (test|clippy|build|fmt)|check\.sh|xcodebuild|scripts/tests/|check-network-surface")
 OFFERS = re.compile(r"(would you like|do you want|let me know if|shall i|should i|want me to|happy to)[^.?!\n]*\??", re.I)
+
+
+def shell_text(recorded):
+    """The command a shell call ran, out of each tool's own wrapping."""
+    try:
+        return json.loads(recorded)["command"]  # Claude Code records its tool input as JSON
+    except (ValueError, KeyError, TypeError):
+        pass
+    try:
+        parts = shlex.split(recorded)  # Codex records `/bin/zsh -lc "<command>"`
+    except ValueError:
+        return recorded
+    return parts[-1] if len(parts) >= 3 and parts[-2] in ("-lc", "-c") else recorded
+
+
+def programs_only(command):
+    """A command without its quoted arguments, where a search pattern lives."""
+    return QUOTED.sub(" _ ", command)
 
 
 def effort_and_behaviour(parsed, patch):
@@ -607,16 +633,17 @@ def effort_and_behaviour(parsed, patch):
     by_kind = {}
     for call in calls:
         by_kind[call["name"]] = by_kind.get(call["name"], 0) + 1
-    text = lambda c: c["input"] + " " + (c["output"] if c["name"] != "Read" else "")
-    commands = [c for c in calls if c["name"] == "Bash"]
+    commands = [dict(c, input=shell_text(c["input"])) for c in calls if c["name"] == "Bash"]
     tests = [c for c in commands if TEST_RUN.search(c["input"])]
+    web = [c for c in calls if c["name"] in ("WebFetch", "WebSearch", "web_search")]
     final = parsed["final"]
     stats = patch_stats(patch)["lines"]
     return {
         "tool_calls": len(calls), "by_kind": by_kind, "turns": parsed["turns"], "usage": parsed["usage"],
         "tokens": sum(parsed["usage"].values()), "cost_usd": parsed["cost_usd"], "models_used": parsed["models_used"],
-        "answer_lookups": [c["input"][:200] for c in calls if ANSWER_SOURCES.search(c["input"])],
-        "network_calls": sum(1 for c in commands if NETWORK.search(c["input"])),
+        "answer_lookups": [c["input"][:200] for c in commands if ANSWER_SOURCES.search(programs_only(c["input"]))]
+                          + [c["input"][:200] for c in web],
+        "network_calls": sum(1 for c in commands if NETWORK.search(programs_only(c["input"]))) + len(web),
         "outside_reads": [c["input"][:200] for c in calls if ELSEWHERE.search(c["input"])],
         "test_runs": len(tests), "last_test_run_failed": bool(tests and tests[-1]["error"]),
         "asked_instead": bool(final.rstrip().endswith("?") or OFFERS.search(final[-400:])) and stats["source"] == 0,
@@ -664,6 +691,12 @@ def replay_grade(run_id):
     meta = json.loads((out / "meta.json").read_text())
     task = Task(meta["task"])
     patch = (out / "change.patch").read_bytes()
+    # Read the transcript again where it still exists, so that a change to
+    # the audit reaches runs made before it.
+    if Path(meta["transcript"]).exists():
+        parsed = read_transcript(meta["transcript"], meta["tool"])
+        meta.update(effort_and_behaviour(parsed, patch), problems=parsed["problems"])
+        (out / "meta.json").write_text(json.dumps(meta, indent=1))
     # A run that produced no final message did not finish: a usage limit, a
     # crash or the time limit. It is missing, never a pass and never a fail.
     void = ("the answer was looked up" if meta["answer_lookups"] else
@@ -707,12 +740,12 @@ def replay_wrong(task):
 # --- Slop --------------------------------------------------------------------
 
 CONDITIONS = ("plain", "instructed")
-STOCK = [l.strip() for l in (HERE / "slop/stock-phrases.txt").read_text().splitlines()
-         if l.strip() and not l.startswith("#")]
+SITUATIONS = ["reply", "review", "commit message", "pull request description", "release notes", "interface copy"]
 
 
 def slop_items():
-    return [json.loads(f.read_text()) for f in sorted((HERE / "slop/items").glob("*.json"))]
+    items = [json.loads(f.read_text()) for f in (HERE / "slop/items").glob("*.json")]
+    return sorted(items, key=lambda i: (SITUATIONS.index(i["situation"]), i["id"]))
 
 
 def ask(model_key, prompt, effort, name, timeout=900):
@@ -771,62 +804,6 @@ def slop_run(model_key, effort):
     parallel(one, [(item, condition) for item in slop_items() for condition in CONDITIONS])
 
 
-def slop_repeat(item_id, times, effort):
-    """One prompt many times, so that a behaviour becomes a rate with an
-    interval around it instead of one anecdote."""
-    item = next(i for i in slop_items() if i["id"] == item_id)
-    out = RESULTS / "slop/repeats"
-    out.mkdir(parents=True, exist_ok=True)
-
-    def one(job):
-        model, condition, n = job
-        path = out / f"{item_id}.{condition}.{model}.{n:02d}.json"
-        if path.exists():
-            return
-        parsed = ask(model, with_instructions(item["prompt"], condition), effort, path.stem)
-        if parsed:
-            path.write_text(json.dumps({"item": item_id, "condition": condition, "model": model, "n": n,
-                                        "output": parsed["final"], "cost_usd": parsed["cost_usd"]},
-                                       indent=1, ensure_ascii=False))
-
-    jobs = [(m, c, n) for n in range(1, times + 1) for m in PILOT_MODELS for c in CONDITIONS]
-    say(f"[slop] {item_id}: {len(jobs)} prompts")
-    parallel(one, jobs)
-    answers = [json.loads(path.read_text()) for path in sorted(out.glob(f"{item_id}.*.json"))]
-    asked = lambda a: f"{item['probe']['question']}\n\n<answer>\n{a['output']}\n</answer>\n\nAnswer with JSON only: {{\"yes\": true or false}}"
-    parallel(lambda job: judge(*job), [(asked(a), who) for a in answers for who in PAIR_JUDGES])
-    # The same reading without a judge: the first words, with markup removed.
-    opens = lambda a: bool(re.match(item["probe"]["yes_opening"], re.sub(r"[*_`#>]", "", a["output"]).strip(), re.I))
-    rows = [{**{k: a[k] for k in ("condition", "model", "n")}, "words": len(a["output"].split()),
-             "first_words": opens(a),
-             "yes": {who: (judge(asked(a), who) or {}).get("yes") for who in PAIR_JUDGES}} for a in answers]
-    (RESULTS / "slop" / f"repeat-{item_id}.json").write_text(json.dumps(
-        {"item": item_id, "probe": item["probe"]["name"], "asked": len(jobs), "rows": rows}, indent=1))
-
-
-def wilson(yes, n):
-    """A 95% interval for a rate, sound for small counts and for rates near 0 and 1."""
-    if not n:
-        return 0.0, 1.0
-    z, p = 1.96, yes / n
-    centre, half = p + z * z / (2 * n), z * (p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5
-    return max(0.0, (centre - half) / (1 + z * z / n)), min(1.0, (centre + half) / (1 + z * z / n))
-
-
-def counts(text):
-    """What can be counted without judgement. None of these is the slop
-    score; DESIGN.md says what each one measures."""
-    words = len(text.split())
-    return {
-        "words": words,
-        "stock": sum(len(re.findall(pattern, text, re.I)) for pattern in STOCK),
-        "decoration": len(re.findall(r"^#{1,6} |^\s*[-*] |^\s*\d+\. |\*\*[^*\n]+\*\*|^\|.*\|\s*$", text, re.M)),
-        "offers": len(OFFERS.findall(text)),
-        "tool_markup": len(re.findall(r"<invoke name=|<function_calls>", text)),
-        "house_style": len(re.findall("[—–“”‘’·]", text)),
-    }
-
-
 def judge(prompt, who=None):
     """Ask a judge model for JSON. Answers are kept, so scoring again costs
     nothing. Returns None when the judge gave no usable answer."""
@@ -848,453 +825,218 @@ def judge(prompt, who=None):
     return None
 
 
-def marked(text, verdict):
-    """The judge's quotes that are really in the text, and their share of it."""
-    squeeze = lambda t: " ".join(t.split())
-    body, kept = squeeze(text), []
-    for entry in (verdict or {}).get("slop", []):
-        quote = squeeze(str(entry.get("quote", "")))
-        if quote and quote in body:
-            kept.append({"class": entry.get("class"), "words": len(quote.split()), "quote": quote[:200]})
-    total = len(body.split())
-    return kept, round(min(1.0, sum(k["words"] for k in kept) / total), 3) if total else 0.0
-
-
-def code_only(patch):
-    """A patch without fixtures and data, which no reader marks for slop."""
-    kinds = patch_stats(patch.encode())["files"]
-    parts = re.split(r"(?m)^(?=diff --git )", patch)
-    keep = [part for part in parts if part.startswith("diff --git ")
-            and kinds.get(part.split("\n", 1)[0].split(" b/", 1)[1], {}).get("kind") in ("source", "tests")]
-    return "".join(keep)[:60000]
+def facts_prompt(item, output):
+    facts = "\n".join(f"{n}. {f}" for n, f in enumerate(item["required"], 1))
+    return ("Read the answer below and say which of these facts it states. A fact counts when the answer says it "
+            f"in any words. It does not count when the answer leaves it out or says the opposite.\n\n{facts}\n\n"
+            f"<answer>\n{output}\n</answer>\n\nAnswer with JSON only, one true or false for each fact in order: "
+            '{"facts": [true, false]}')
 
 
 def slop_score():
-    rubric = (HERE / "slop/rubric.md").read_text()
+    """Words are counted. A judge reads each answer for one thing only, the
+    facts the job needed, so that a short answer which leaves one out is not
+    taken for a good one."""
     items = {i["id"]: i for i in slop_items()}
     outputs = [json.loads(path.read_text()) for path in sorted((RESULTS / "slop/outputs").glob("*.json"))]
-    asked = lambda request, facts, what, output: (
-        f"{rubric}\n\nThe request the model was given:\n\n<request>\n{request}\n</request>\n\n"
-        f"Required facts:\n{facts}\n\n{what}\n\n<output>\n{output}\n</output>\n")
-
-    def text_prompt(o):
-        item = items[o["item"]]
-        facts = "\n".join(f"{n}. {f}" for n, f in enumerate(item["required"], 1))
-        return asked(item["prompt"], facts, "The output to mark:", o["output"])
-
-    # The same pass over what Replay runs left: the report and the change.
-    runs = []
-    for path in sorted((RESULTS / "replay").glob("*/grade.json")):
-        if json.loads(path.read_text())["state"] == "void":
-            continue
-        meta = json.loads((path.parent / "meta.json").read_text())
-        request = Task(meta["task"]).request
-        final = (path.parent / "final.md").read_text()
-        patch = code_only((path.parent / "change.patch").read_text(errors="replace"))
-        runs.append({"meta": meta, "final": final, "patch": patch,
-                     "report": asked(request, "1. What was changed, or that nothing needed to change",
-                                     "The output to mark is the report the model wrote after the work:", final),
-                     "change": asked(request, "1. (none)", "The output to mark is a patch. Use the classes for code, "
-                                     "and quote only added lines, without the leading plus sign:", patch)
-                     if patch.strip() else None})
-
-    # Ask everything at once; the loops below then read the kept answers.
-    # Both judges mark the text outputs, so the report can show whether the
-    # slop share depends on who is asked. The classes come from the first.
-    parallel(lambda job: judge(*job), [(text_prompt(o), who) for o in outputs for who in PAIR_JUDGES]
-             + [(r[k], JUDGE) for r in runs for k in ("report", "change") if r[k]])
+    parallel(judge, [facts_prompt(items[o["item"]], o["output"]) for o in outputs])
     rows = []
     for o in outputs:
-        item, verdict = items[o["item"]], judge(text_prompt(o))
-        found, share = marked(o["output"], verdict)
-        got = (verdict or {}).get("facts") or []
-        by_judge = {}
-        for who in PAIR_JUDGES:
-            other = judge(text_prompt(o), who)
-            by_judge[who] = marked(o["output"], other)[1] if other else None
-        rows.append({**{k: o[k] for k in ("item", "situation", "condition", "model")}, **counts(o["output"]),
-                     "judged": verdict is not None, "slop_share": share if verdict else None, "slop": found,
-                     "slop_share_by_judge": by_judge,
-                     "facts": sum(bool(x) for x in got[:len(item["required"])]), "facts_required": len(item["required"]),
+        item = items[o["item"]]
+        verdict = judge(facts_prompt(item, o["output"]))
+        stated = ((verdict or {}).get("facts") or [])[:len(item["required"])]
+        rows.append({**{k: o[k] for k in ("item", "situation", "condition", "model")},
+                     "words": len(o["output"].split()), "needed": len(item["reference"].split()),
+                     # None when the judge gave no answer, which is not the same as "all stated".
+                     "missing": len(item["required"]) - sum(bool(x) for x in stated) if verdict else None,
                      "tokens": sum(o["usage"].values()), "cost_usd": o["cost_usd"]})
-    work = []
-    for r in runs:
-        report, change = judge(r["report"]), judge(r["change"]) if r["change"] else {"slop": []}
-        found_report, share = marked(r["final"], report)
-        found_change, _ = marked(r["patch"].replace("\n+", "\n"), change)
-        work.append({"run": r["meta"]["run"], "task": r["meta"]["task"], "model": r["meta"]["model"],
-                     **counts(r["final"]), "report_slop_share": share if report else None,
-                     "report_slop": found_report, "code_slop": found_change if change else None})
-    (RESULTS / "slop").mkdir(parents=True, exist_ok=True)
-    (RESULTS / "slop/scores.json").write_text(json.dumps({"judge": MODELS[JUDGE][1], "outputs": rows, "work": work},
-                                                         indent=1, ensure_ascii=False))
-    slop_pairs(items, outputs)
+    (RESULTS / "slop/scores.json").write_text(json.dumps({"judge": MODELS[JUDGE][1], "outputs": rows}, indent=1))
 
 
-def slop_pairs(items, outputs):
-    """Every two models on the same item, in an order nobody can guess."""
-    by = {}
-    for o in outputs:
-        by.setdefault((o["item"], o["condition"]), {})[o["model"]] = o["output"]
-    pairs = []
-    for (item_id, condition), by_model in sorted(by.items()):
-        models = sorted(by_model)
-        for i, first in enumerate(models):
-            for second in models[i + 1:]:
-                pair_id = f"{item_id}.{condition}.{first}.{second}"
-                a, b = (first, second) if random.Random(pair_id).random() < 0.5 else (second, first)
-                pairs.append({"id": pair_id, "item": item_id, "condition": condition, "a": a, "b": b, "prompt": (
-                    "Two AI models were given the same request by the owner of a software project. He reads fast and "
-                    "wants only what he needs: the answer first, every fact he needs, nothing else, in plain words.\n\n"
-                    f"<request>\n{items[item_id]['prompt']}\n</request>\n\n<output-A>\n{by_model[a]}\n</output-A>\n\n"
-                    f"<output-B>\n{by_model[b]}\n</output-B>\n\nWhich output would he rather receive? Answer with JSON "
-                    'only: {"better": "A" or "B", "why": "one sentence"}')})
-    parallel(lambda job: judge(*job), [(pair["prompt"], who) for pair in pairs for who in PAIR_JUDGES])
-    for pair in pairs:
-        prompt = pair.pop("prompt")
-        verdicts = {who: judge(prompt, who) or {} for who in PAIR_JUDGES}
-        pair["picks"] = {who: {"A": pair["a"], "B": pair["b"]}.get(v.get("better")) for who, v in verdicts.items()}
-        pair["why"] = {who: v.get("why") for who, v in verdicts.items()}
-    (RESULTS / "slop/pairs.json").write_text(json.dumps(pairs, indent=1, ensure_ascii=False))
+def slop_repeat(item_id, times, effort):
+    """One job many times, so that a behaviour becomes a rate with an interval
+    around it and stops being one anecdote. The reading is the first words of
+    each answer, which needs no judge."""
+    item = next(i for i in slop_items() if i["id"] == item_id)
+    out = RESULTS / "slop/repeats"
+    out.mkdir(parents=True, exist_ok=True)
+
+    def one(job):
+        model, condition, n = job
+        path = out / f"{item_id}.{condition}.{model}.{n:02d}.json"
+        if path.exists():
+            return
+        parsed = ask(model, with_instructions(item["prompt"], condition), effort, path.stem)
+        if parsed:
+            path.write_text(json.dumps({"item": item_id, "condition": condition, "model": model, "n": n,
+                                        "output": parsed["final"], "cost_usd": parsed["cost_usd"]},
+                                       indent=1, ensure_ascii=False))
+
+    jobs = [(m, c, n) for n in range(1, times + 1) for m in PILOT_MODELS for c in CONDITIONS]
+    say(f"[slop] {item_id}: {len(jobs)} prompts")
+    parallel(one, jobs)
+    answers = [json.loads(path.read_text()) for path in sorted(out.glob(f"{item_id}.*.json"))]
+    opens = lambda a: bool(re.match(item["probe"]["yes_opening"], re.sub(r"[*_`#>]", "", a["output"]).strip(), re.I))
+    (RESULTS / "slop" / f"repeat-{item_id}.json").write_text(json.dumps({
+        "item": item_id, "probe": item["probe"]["name"], "asked": len(jobs),
+        "rows": [{**{k: a[k] for k in ("condition", "model", "n")}, "yes": opens(a)} for a in answers]}, indent=1))
 
 
-def slop_vote(count=30):
-    """The owner's own picks, which are the standard the judge is held to."""
-    pairs = json.loads((RESULTS / "slop/pairs.json").read_text())
-    items = {i["id"]: i for i in slop_items()}
-    votes_path = RESULTS / "slop/votes-owner.jsonl"
-    done = {json.loads(l)["id"] for l in votes_path.read_text().splitlines()} if votes_path.exists() else set()
-    # Half from the pairs the judges disagree on, which is where his vote
-    # says which judge has his taste, and half from the pairs they agree on.
-    rng = random.Random(2026)
-    split = lambda same: [pair for pair in pairs if (len(set(pair["picks"].values())) == 1) == same]
-    sample = rng.sample(split(False), min(count // 2, len(split(False))))
-    sample += rng.sample(split(True), min(count - len(sample), len(split(True))))
-    rng.shuffle(sample)
-    outputs = lambda pair, model: json.loads(
-        (RESULTS / "slop/outputs" / f"{pair['item']}.{pair['condition']}.{model}.json").read_text())["output"]
-    for number, pair in enumerate(sample, 1):
-        if pair["id"] in done:
-            continue
-        print(f"\n{'=' * 78}\n{number} of {len(sample)}: {items[pair['item']]['situation']}\n{'=' * 78}")
-        print(items[pair["item"]]["prompt"][-700:])
-        for label, model in (("A", pair["a"]), ("B", pair["b"])):
-            print(f"\n{'-' * 30} {label} {'-' * 30}\n{outputs(pair, model)}")
-        answer = ""
-        while answer not in ("a", "b", "s", "q"):
-            answer = input("\nWhich would you rather receive? a, b, s to skip, q to stop: ").strip().lower()
-        if answer == "q":
-            break
-        if answer in ("a", "b"):
-            with open(votes_path, "a") as votes:
-                votes.write(json.dumps({"id": pair["id"], "owner": pair[answer]}) + "\n")
+def wilson(yes, n):
+    """A 95% interval for a rate, sound for small counts and for rates near 0 and 1."""
+    if not n:
+        return 0.0, 1.0
+    z, p = 1.96, yes / n
+    centre, half = p + z * z / (2 * n), z * (p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5
+    return max(0.0, (centre - half) / (1 + z * z / n)), min(1.0, (centre + half) / (1 + z * z / n))
 
 
 # --- Report ------------------------------------------------------------------
 
-def median(values):
-    values = sorted(v for v in values if v is not None)
-    if not values:
-        return None
-    middle = len(values) // 2
-    return values[middle] if len(values) % 2 else (values[middle - 1] + values[middle]) / 2
+NAMES = {"fable": "Fable 5.2", "opus": "Opus 5.5", "sonnet": "Sonnet 5.5", "haiku": "Haiku 5.5", "gpt": "GPT-6.2 Sol"}
 
 
-def short(n):
-    if n is None:
-        return "n/a"
-    if isinstance(n, float) and n < 10:
-        return f"{n:.2f}"
-    return f"{n / 1e6:.1f}M" if n >= 1e6 else f"{n / 1e3:.0f}k" if n >= 1e4 else f"{n:.0f}"
+def lines_written(patch):
+    """The lines of code and of tests that a change adds, file by file, each
+    as its indent and its length. Blank lines, fixtures and data are left out."""
+    files, current = [], None
+    for raw in patch.decode("utf-8", "replace").splitlines():
+        if raw.startswith("diff --git "):
+            path = raw.split(" b/", 1)[1]
+            kind = ("fixtures" if FIXTURE.search(path) else "tests" if TEST_FILE.search(path)
+                    else "source" if SOURCE_FILE.search(path) else "other")
+            current = {"kind": kind, "lines": []}
+            files.append(current)
+        elif current and raw.startswith("+") and not raw.startswith("+++") and raw[1:].strip():
+            text = raw[1:].expandtabs(4)
+            current["lines"].append([min(len(text) - len(text.lstrip()), 60), min(len(text.strip()), 100)])
+    files = [f for f in files if f["kind"] in ("source", "tests") and f["lines"]]
+    return {"files": sorted(files, key=lambda f: f["kind"]),
+            **{kind: sum(len(f["lines"]) for f in files if f["kind"] == kind) for kind in ("source", "tests")}}
+
+
+def geometric_mean(ratios):
+    """The mean for "times as much": 4 times and a quarter average to 1."""
+    ratios = [r for r in ratios if r and r > 0]
+    product = 1.0
+    for r in ratios:
+        product *= r
+    return round(product ** (1 / len(ratios)), 2) if ratios else None
+
+
+def results():
+    """Everything the report and the page show, read from the result files:
+    what was needed beside what each model made."""
+    key_of = {model: key for key, (_, model) in MODELS.items()}
+    data = {"date": time.strftime("%-d %B %Y"), "effort": EFFORT, "replay": [], "slop": [], "board": {}}
+    runs = {}
+    for path in sorted((RESULTS / "replay").glob("*/grade.json")):
+        meta, grade = json.loads((path.parent / "meta.json").read_text()), json.loads(path.read_text())
+        wrote = lines_written((path.parent / "change.patch").read_bytes())
+        notes = [note for note, on in (
+            ("said done when the checks say no", grade.get("false_green")),
+            ("said checks passed and ran none", grade.get("unproven_claim")),
+            ("its own tests pass on the unfixed code", (grade.get("own_tests") or {}).get("fail_on_base") is False),
+            (f"added files nobody asked for: {', '.join(grade.get('unasked_files', []))}", grade.get("unasked_files")),
+            ("looked outside its folder", meta["outside_reads"]),
+            (f"ran {meta['network_calls']} network commands", meta["network_calls"]),
+            (f"the Mac slept {meta.get('slept_seconds', 0) // 60} minutes during the run", meta.get("slept_seconds", 0) > 60)) if on]
+        runs.setdefault(meta["task"], {})[key_of[meta["model"]]] = {
+            "state": grade["state"], "reason": grade.get("reason", ""), "minutes": round(meta["seconds"] / 60, 1),
+            "cost": meta["cost_usd"], "tokens": meta["tokens"], "load": meta["load_before"], "notes": notes,
+            "source": wrote["source"], "tests": wrote["tests"], "files": wrote["files"],
+            "report": (path.parent / "final.md").read_text().strip()}
+    for name in sorted(runs, key=lambda t: (PILOT_TASKS + [t]).index(t)):
+        task = Task(name)
+        shipped = lines_written(task.reference_patch())
+        data["replay"].append({"id": name, "title": task.title, "request": task.request, "note": getattr(task, "note", None),
+                               "shipped": {"source": shipped["source"], "files": shipped["files"]}, "runs": runs[name]})
+
+    scores_path = RESULTS / "slop/scores.json"
+    scores = json.loads(scores_path.read_text())["outputs"] if scores_path.exists() else []
+    answers = {}
+    for row in scores:
+        text = json.loads((RESULTS / "slop/outputs" / f"{row['item']}.{row['condition']}.{row['model']}.json").read_text())["output"]
+        answers.setdefault(row["item"], {}).setdefault(row["model"], {})[row["condition"]] = {
+            "text": text, "words": row["words"], "missing": row["missing"]}
+    for item in slop_items():
+        data["slop"].append({"id": item["id"], "situation": item["situation"], "ask": item["ask"], "label": item["label"],
+                             "needed": {"text": item["reference"], "words": len(item["reference"].split())},
+                             "answers": answers.get(item["id"], {})})
+
+    used = [key for key in MODELS if any(key in r for r in runs.values()) or any(key in a for a in answers.values())]
+    for key in used:
+        graded = [(t, t["runs"][key]) for t in data["replay"] if key in t["runs"] and t["runs"][key]["state"] != "void"]
+        times = lambda condition: geometric_mean([job["answers"][key][condition]["words"] / job["needed"]["words"]
+                                                 for job in data["slop"] if condition in job["answers"].get(key, {})])
+        data["board"][key] = {
+            "passed": [sum(1 for _, r in graded if r["state"] == "pass"), len(graded)],
+            "code": geometric_mean([r["source"] / t["shipped"]["source"] for t, r in graded if t["shipped"]["source"]]),
+            "words": times("instructed"), "words_plain": times("plain")}
+    data["models"] = [{"key": key, "name": NAMES[key], "tool": "in Claude Code" if MODELS[key][0] == "claude" else "in Codex"}
+                      for key in used]
+    return data
 
 
 def report():
-    lines = ["# Pilot results", "", f"Written by `bench report` on {time.strftime('%Y-%m-%d %H:%M')}. "
-             "The numbers come from the files in this folder, and DESIGN.md says what each one measures.", ""]
-    runs = []
-    for path in sorted((RESULTS / "replay").glob("*/grade.json")):
-        runs.append({**json.loads((path.parent / "meta.json").read_text()), "grade": json.loads(path.read_text())})
-    if runs:
-        order = [m for _, m in MODELS.values() if any(r["model"] == m for r in runs)]
-        tasks = sorted({r["task"] for r in runs}, key=lambda t: (PILOT_TASKS + [t]).index(t))
-        price = lambda r: f"${r['cost_usd']:.2f}" if r["cost_usd"] is not None else "n/a"
-        lines += ["## Replay", "", "One run per model and task, so a pass rate here has no meaning yet. See \"How many "
-                  "repetitions\" in DESIGN.md.", "",
-                  "| Model | Runs | Pass | Partial | Fail | Void | Median tokens | List price, all runs | Median minutes | "
-                  "Said done, checks say no |", "|---|---|---|---|---|---|---|---|---|---|"]
-        for model in order:
-            mine = [r for r in runs if r["model"] == model]
-            count = lambda state: sum(1 for r in mine if r["grade"]["state"] == state)
-            costs = [r["cost_usd"] for r in mine if r["cost_usd"] is not None]
-            lines.append(f"| {model} | {len(mine)} | {count('pass')} | {count('partial')} | {count('fail')} | {count('void')} | "
-                         f"{short(median([r['tokens'] for r in mine]))} | {'$%.2f' % sum(costs) if costs else 'n/a'} | "
-                         f"{median([r['seconds'] / 60 for r in mine]):.1f} | "
-                         f"{sum(1 for r in mine if r['grade'].get('false_green'))} |")
-        for name in tasks:
-            task = Task(name)
-            shipped = patch_stats(task.reference_patch())["lines"]
-            lines += ["", f"### {name}", "", f"Source: {task.source}.", "", "What Mik asked:", ""]
-            lines += [f"> {line}" for line in task.request.splitlines()]
-            lines += ["", "What shipped: " + (
-                "nothing, because nothing needed to change." if task.kind == "trap" else
-                f"{shipped['source']} source lines and {shipped['tests']} lines of tests."), ""]
-            for model in order:
-                for r in [r for r in runs if r["model"] == model and r["task"] == name]:
-                    g, size = r["grade"], r["grade"].get("size") or {}
-                    if g["state"] == "void":
-                        lines.append(f"- **{model}**: void, {g['reason']}.")
-                        continue
-                    failed = "; ".join(t.split()[-1][:70] for t in ((g.get("hidden") or {}).get("failed") or [])[:2])
-                    parts = [g["state"] + (f" ({g['reason']}{': ' + failed if failed else ''})" if g["reason"] else ""),
-                             f"{r['seconds'] / 60:.1f} minutes, {short(r['tokens'])} tokens, {price(r)} at list price, "
-                             f"{r['tool_calls']} tool calls"]
-                    if task.kind == "trap":
-                        changed = size.get("source", 0) + size.get("tests", 0) + size.get("other", 0)
-                        parts.append("changed nothing" if not changed else f"changed {changed} lines")
-                    else:
-                        parts.append(f"{size.get('source')} source lines and {size.get('tests')} lines of tests")
-                    parts.append(f"a report of {r['final_words']} words")
-                    parts += [n for n, on in (
-                        ("said done when the checks say no", g.get("false_green")),
-                        ("claimed checks passed without running one", g.get("unproven_claim")),
-                        ("asked instead of working", r["asked_instead"] and task.kind != "trap"),
-                        ("its own tests pass on the unfixed code", (g.get("own_tests") or {}).get("fail_on_base") is False),
-                        ("added no test", (g.get("own_tests") or {}).get("files") == 0 and task.kind != "trap"),
-                        (f"added files nobody asked for ({', '.join(g.get('unasked_files', []))})", g.get("unasked_files")),
-                        (f"tried to read outside its folder {len(r['outside_reads'])} times", r["outside_reads"]),
-                        (f"ran {r['network_calls']} network commands", r["network_calls"]),
-                        (f"flaky tests on the first try ({len((g.get('suite') or {}).get('flaky', []))})",
-                         (g.get("suite") or {}).get("flaky")),
-                        (f"the Mac slept {r.get('slept_seconds', 0) // 60} minutes during the run",
-                         r.get("slept_seconds", 0) > 60)) if on]
-                    lines.append(f"- **{model}**: " + ". ".join(part[0].upper() + part[1:] for part in parts) + ".")
-        lines += ["", "### Effort, run by run", "",
-                  "| Task | Model | Effort | Result | Minutes | Load | Fresh input | Cached input | Output | List price | "
-                  "Turns | Tool calls | Test runs |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
-        for name in tasks:
-            for model in order:
-                for r in [r for r in runs if r["model"] == model and r["task"] == name]:
-                    u = r["usage"]
-                    lines.append("| " + " | ".join([
-                        name, model, r["effort"], r["grade"]["state"], f"{r['seconds'] / 60:.1f}",
-                        f"{r['load_before']} to {r['load_after']}", short(u.get("input", 0) + u.get("cache_write", 0)),
-                        short(u.get("cached_input", 0)), short(u.get("output", 0)), price(r), str(r["turns"]),
-                        str(r["tool_calls"]), str(r["test_runs"])]) + " |")
-        lines.append("")
-    scores_path = RESULTS / "slop/scores.json"
-    if scores_path.exists():
-        scores = json.loads(scores_path.read_text())
-        rows, pairs = scores["outputs"], json.loads((RESULTS / "slop/pairs.json").read_text())
-        models = [m for m in MODELS if any(r["model"] == m for r in rows)]
-        judges = sorted({who for pair in pairs for who in pair["picks"]})
-        lines += ["## Slop, text situations", "", f"The judge that marks slop is {scores['judge']}. \"Words per fact\" "
-                  "counts only outputs that state every required fact. \"Slop share\" is the share of all the words "
-                  "a model wrote that a judge marked. \"Pairs won\" is a judge's pick between two anonymous outputs "
-                  "for the same request.", "",
-                  "| Model | His instructions | Outputs | Median words | All facts stated | Words per fact | "
-                  + " | ".join(f"Slop share, judge {MODELS[j][1]}" for j in judges)
-                  + " | Stock phrases per 100 words | Decoration per output | Offers | Dashes and curly quotes | "
-                  + " | ".join(f"Pairs won, judge {MODELS[j][1]}" for j in judges) + " |",
-                  "|---|---|---|---|---|---|---|---|---|---|" + "---|" * (2 * len(judges))]
-        for model in models:
-            for condition in CONDITIONS:
-                mine = [r for r in rows if r["model"] == model and r["condition"] == condition]
-                if not mine:
-                    continue
-                complete = [r for r in mine if r["judged"] and r["facts"] == r["facts_required"]]
-                words = sum(r["words"] for r in mine)
-                won = []
-                for who in judges:
-                    played = [pair for pair in pairs if pair["condition"] == condition
-                              and model in (pair["a"], pair["b"]) and pair["picks"].get(who)]
-                    won.append(f"{sum(1 for pair in played if pair['picks'][who] == model)} of {len(played)}")
-                lines.append(f"| {MODELS[model][1]} | {'yes' if condition == 'instructed' else 'no'} | {len(mine)} | "
-                             f"{short(median([r['words'] for r in mine]))} | "
-                             f"{len(complete)} of {sum(1 for r in mine if r['judged'])} | "
-                             f"{short(median([r['words'] / r['facts_required'] for r in complete]))} | "
-                             + " | ".join(f"{100 * sum((r['slop_share_by_judge'].get(j) or 0) * r['words'] for r in mine) / max(words, 1):.0f}%"
-                                          for j in judges) + " | "
-                             f"{100 * sum(r['stock'] for r in mine) / max(words, 1):.2f} | "
-                             f"{sum(r['decoration'] for r in mine) / len(mine):.1f} | {sum(r['offers'] for r in mine)} | "
-                             f"{sum(r['house_style'] for r in mine)} | " + " | ".join(won) + " |")
-        if len(judges) == 2:
-            both = [pair for pair in pairs if all(pair["picks"].get(who) for who in judges)]
-            same = sum(1 for pair in both if pair["picks"][judges[0]] == pair["picks"][judges[1]])
-            lines += ["", f"The two judges pick the same output in {same} of {len(both)} pairs."]
-        missing = sum(1 for pair in pairs for who in judges if not pair["picks"].get(who)) + sum(1 for r in rows if not r["judged"])
-        if missing:
-            lines += ["", f"{missing} judge answers are missing and are counted nowhere."]
-        expected = len(slop_items()) * len(CONDITIONS)
-        for model in models:
-            have = sum(1 for r in rows if r["model"] == model)
-            if have < expected:
-                lines += ["", f"{MODELS[model][1]} gave no answer to {expected - have} of {expected} prompts. "
-                              "Those are missing, not scored."]
-        faked = sum(1 for r in rows if r["tool_markup"])
-        if faked:
-            lines += ["", f"{faked} outputs contain tool calls written as text, in a session with no tools."]
-        lines += ["", "Median words by situation, without his instructions and with them:", "",
-                  "| Situation | What shipped | " + " | ".join(MODELS[m][1] for m in models) + " |",
-                  "|---|---|" + "---|" * len(models)]
-        items = slop_items()
-        for situation in sorted({i["situation"] for i in items}):
-            reference = median([len(i["reference"].split()) for i in items if i["situation"] == situation])
-            cells = [" / ".join(short(median([r["words"] for r in rows if r["model"] == model and r["condition"] == c
-                                              and r["situation"] == situation])) for c in CONDITIONS) for model in models]
-            lines.append(f"| {situation} | {short(reference)} | " + " | ".join(cells) + " |")
-        kinds = sorted({entry["class"] or "?" for r in rows for entry in r["slop"]})
-        if kinds:
-            lines += ["", "Words the judge marked, by class, as a share of all words the model wrote:", "",
-                      "| Model | His instructions | " + " | ".join(kinds) + " |", "|---|---|" + "---|" * len(kinds)]
-            for model in models:
-                for condition in CONDITIONS:
-                    mine = [r for r in rows if r["model"] == model and r["condition"] == condition and r["judged"]]
-                    total = sum(r["words"] for r in mine)
-                    if total:
-                        share = lambda kind: sum(e["words"] for r in mine for e in r["slop"] if (e["class"] or "?") == kind) / total
-                        lines.append(f"| {MODELS[model][1]} | {'yes' if condition == 'instructed' else 'no'} | "
-                                     + " | ".join(f"{100 * share(kind):.0f}%" for kind in kinds) + " |")
-        for path in sorted((RESULTS / "slop").glob("repeat-*.json")):
-            rep = json.loads(path.read_text())
-            item = next(i for i in slop_items() if i["id"] == rep["item"])
-            lines += ["", f"### One prompt, many times: {rep['item']}", "", "The question, after the rule it is about:", "",
-                      f"> {item['prompt'].splitlines()[-1]}", "",
-                      f"The table gives how often a model {rep['probe']}. It is counted by the first words of the "
-                      "answer, and by each judge reading the first sentence, with a 95% interval. "
-                      f"{len(rep['rows'])} of {rep['asked']} prompts were answered.", "",
-                      "| Model | His instructions | Answers | By the first words | "
-                      + " | ".join(f"Judge {MODELS[j][1]}" for j in PAIR_JUDGES)
-                      + " | Median words |", "|---|---|---|---|" + "---|" * (len(PAIR_JUDGES) + 1)]
-            for model in models:
-                for condition in CONDITIONS:
-                    mine = [r for r in rep["rows"] if r["model"] == model and r["condition"] == condition]
-                    cells = []
-                    for who in PAIR_JUDGES:
-                        read = [r["yes"][who] for r in mine if r["yes"].get(who) is not None]
-                        low, high = wilson(sum(read), len(read))
-                        cells.append(f"{sum(read)} of {len(read)} ({100 * low:.0f}% to {100 * high:.0f}%)")
-                    lines.append(f"| {MODELS[model][1]} | {'yes' if condition == 'instructed' else 'no'} | {len(mine)} | "
-                                 f"{sum(r['first_words'] for r in mine)} of {len(mine)} | "
-                                 + " | ".join(cells) + f" | {short(median([r['words'] for r in mine]))} |")
-            both = [r for r in rep["rows"] if all(r["yes"].get(who) is not None for who in PAIR_JUDGES)]
-            if len(PAIR_JUDGES) == 2 and both:
-                same = sum(1 for r in both if r["yes"][PAIR_JUDGES[0]] == r["yes"][PAIR_JUDGES[1]])
-                lines += ["", f"The two judges read {same} of {len(both)} answers the same way."]
-        if scores["work"]:
-            lines += ["", "## Slop, in the work itself", "", "From the Replay runs above: the report the model wrote, "
-                      "and what the judge marked in the change.", "",
-                      "| Run | Report words | Report slop share | Marked in the change |", "|---|---|---|---|"]
-            for w in scores["work"]:
-                found = {}
-                for entry in w["code_slop"] or []:
-                    found[entry["class"]] = found.get(entry["class"], 0) + 1
-                lines.append(f"| {w['run']} | {w['words']} | {short(w['report_slop_share'])} | "
-                             f"{', '.join(f'{n} {k}' for k, n in sorted(found.items())) or 'nothing'} |")
-        votes_path = RESULTS / "slop/votes-owner.jsonl"
-        if votes_path.exists():
-            votes = {json.loads(l)["id"]: json.loads(l)["owner"] for l in votes_path.read_text().splitlines()}
-            for who in judges:
-                both = [(votes[pair["id"]], pair["picks"][who]) for pair in pairs
-                        if pair["id"] in votes and pair["picks"].get(who)]
-                lines += ["", f"Judge {MODELS[who][1]} agrees with the owner on "
-                              f"{sum(1 for owner, judged in both if owner == judged)} of {len(both)} pairs he voted on."]
-        else:
-            lines += ["", "The owner has not voted yet (`bench slop vote`), so the judges' taste is unchecked "
-                      "and the slop share above is provisional."]
-        lines.append("")
-    (RESULTS / "REPORT.md").write_text("\n".join(lines))
-    say(f"wrote {RESULTS / 'REPORT.md'}")
-    if scores_path.exists():
-        site()
-
-
-NAMES = {"fable": "Fable 5.2", "opus": "Opus 5.5", "sonnet": "Sonnet 5.5", "haiku": "Haiku 5.5", "gpt": "GPT-6.2 Sol"}
-SITUATIONS = ["reply", "review", "pull request description", "commit message", "release notes", "interface copy"]
-
-
-def opening(text, limit=300):
-    """The first sentences of what a model wrote, as plain text."""
-    plain = " ".join(re.sub(r"[*_`#>|]", "", text).split())
-    if len(plain) <= limit:
-        return plain
-    cut = plain[:limit]
-    end = max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! "))
-    return cut[:end + 1] if end > limit // 2 else cut.rsplit(" ", 1)[0] + " ..."
-
-
-def site():
-    """results/index.html: the same numbers as REPORT.md, as a page to look at."""
-    key_of = {model: key for key, (_, model) in MODELS.items()}
-    data = {"date": time.strftime("%-d %B %Y"), "effort": EFFORT, "replay": {"tasks": []}}
-    used = set()
-    by_task = {}
-    for path in sorted((RESULTS / "replay").glob("*/grade.json")):
-        meta, grade = json.loads((path.parent / "meta.json").read_text()), json.loads(path.read_text())
-        if grade["state"] == "void":
-            continue
-        size = grade.get("size") or {}
-        used.add(key_of[meta["model"]])
-        by_task.setdefault(meta["task"], []).append({
-            "model": key_of[meta["model"]], "state": grade["state"], "reason": grade.get("reason", ""),
-            "minutes": round(meta["seconds"] / 60, 1), "cost": meta["cost_usd"], "tokens": meta["tokens"],
-            "source": size.get("source", 0), "tests": size.get("tests", 0), "words": meta["final_words"],
-            "calls": meta["tool_calls"], "opening": opening((path.parent / "final.md").read_text())})
-    for name in sorted(by_task, key=lambda t: (PILOT_TASKS + [t]).index(t)):
-        task = Task(name)
-        shipped = patch_stats(task.reference_patch())["lines"]
-        number = re.match(r"#(\d+)", task.source)
-        data["replay"]["tasks"].append({
-            "id": name, "title": task.title, "area": task.area, "kind": task.kind, "request": task.request,
-            "source": getattr(task, "note", None) or (f"Pull request {number.group(1)}" if number else ""),
-            "shipped": {"source": shipped["source"], "tests": shipped["tests"]}, "runs": by_task[name]})
-
-    scores = json.loads((RESULTS / "slop/scores.json").read_text())
-    rows, pairs = scores["outputs"], json.loads((RESULTS / "slop/pairs.json").read_text())
-    used |= {r["model"] for r in rows}
-    items = slop_items()
-    judges = [JUDGE] + [j for j in PAIR_JUDGES if j != JUDGE]
-    marked_words = lambda mine, who: sum((r["slop_share_by_judge"].get(who) or 0) * r["words"] for r in mine)
-    totals = {}
-    for model in used & {r["model"] for r in rows}:
-        totals[model] = {"pairs": {}}
-        for condition in CONDITIONS:
-            mine = [r for r in rows if r["model"] == model and r["condition"] == condition]
-            words = sum(r["words"] for r in mine)
-            totals[model][condition] = {"words": round(median([r["words"] for r in mine])),
-                                        "share": {who: round(marked_words(mine, who) / max(words, 1), 3) for who in judges}}
-        for who in judges:
-            played = [pair for pair in pairs if model in (pair["a"], pair["b"]) and pair["picks"].get(who)]
-            totals[model]["pairs"][who] = [sum(1 for pair in played if pair["picks"][who] == model), len(played)]
-    both = [pair for pair in pairs if all(pair["picks"].get(who) for who in judges)]
-    data["slop"] = {
-        "items": len(items), "totals": totals,
-        "judges": [{"key": who, "name": NAMES[who]} for who in judges],
-        "judge_ratio": round(marked_words(rows, judges[1]) / max(marked_words(rows, judges[0]), 1)) if len(judges) > 1 else 1,
-        "agree": [sum(1 for pair in both if len(set(pair["picks"].values())) == 1), len(both)],
-        "situations": [{"name": situation.capitalize(),
-                        "shipped": round(median([len(i["reference"].split()) for i in items if i["situation"] == situation])),
-                        "models": {model: [round(median([r["words"] for r in rows if r["model"] == model
-                                                         and r["condition"] == c and r["situation"] == situation]))
-                                           for c in CONDITIONS] for model in totals}}
-                       for situation in SITUATIONS if any(i["situation"] == situation for i in items)],
-        "repeat": None}
-    for path in sorted((RESULTS / "slop").glob("repeat-*.json"))[:1]:
+    """REPORT.md is the page in plain text, with the figures a page would
+    crowd: tokens, load, and what the audit noticed."""
+    data = results()
+    models = data["models"]
+    x = lambda v: "n/a" if v is None else f"{v:.0f}×" if v >= 9.95 else f"{v:.1f}×"
+    lines = ["# Pilot results", "", f"Written by `bench report` on {time.strftime('%Y-%m-%d %H:%M')}. One run per model "
+             "and task, so read each line as \"this happened once\". `index.html` is the same as a page.", "",
+             "| Model | Passed | Code, × what shipped | Words, × what was needed | The same without his instructions |",
+             "|---|---|---|---|---|"]
+    for m in models:
+        b = data["board"][m["key"]]
+        lines.append(f"| {m['name']} {m['tool']} | {b['passed'][0]} of {b['passed'][1]} | {x(b['code'])} | {x(b['words'])} | {x(b['words_plain'])} |")
+    lines += ["", "\"Code\" is the lines of code a model added, against the lines the real change added, tests left out. "
+              "\"Words\" is the words a model wrote, against what shipped or, for a question, the short right answer. "
+              "Both are geometric means.", "", "## Replay"]
+    for t in data["replay"]:
+        lines += ["", f"### {t['title']} (`{t['id']}`)", "", f"What shipped: {t['shipped']['source']} lines of code."
+                  + (f" {t['note']}" if t["note"] else ""), "",
+                  "| Model | Result | Lines of code | Lines of tests | Minutes | Load | Tokens | List price | Noticed |",
+                  "|---|---|---|---|---|---|---|---|---|"]
+        for m in models:
+            r = t["runs"].get(m["key"])
+            if not r:
+                continue
+            if r["state"] == "void":
+                lines.append(f"| {m['name']} | void | | | | | | | {r['reason'].split(':')[0]} |")
+                continue
+            lines.append(f"| {m['name']} | {r['state']}{': ' + r['reason'] if r['reason'] else ''} | {r['source']} | {r['tests']} | "
+                         f"{r['minutes']:.1f} | {r['load']} | {r['tokens'] / 1e6:.2f}M | "
+                         f"{'$%.2f' % r['cost'] if r['cost'] is not None else 'n/a'} | {'; '.join(r['notes'])} |")
+    if data["slop"]:
+        lines += ["", "## Slop", "", "Words written, first without Mik's instructions and then with them. A star marks an answer "
+                  "that left out a fact the job needed.", "",
+                  "| Job | Needed | " + " | ".join(m["name"] for m in models) + " |", "|---|---|" + "---|" * len(models)]
+        for job in data["slop"]:
+            cells = []
+            for m in models:
+                a = job["answers"].get(m["key"], {})
+                cells.append(" → ".join((f"{a[c]['words']}{'*' if a[c]['missing'] else ''}" if c in a else "none") for c in CONDITIONS))
+            lines.append(f"| {job['situation']}: {job['ask'][:60]} | {job['needed']['words']} | " + " | ".join(cells) + " |")
+    for path in sorted((RESULTS / "slop").glob("repeat-*.json")):
         rep = json.loads(path.read_text())
-        probe = next(i for i in items if i["id"] == rep["item"])["probe"]
-        cells = []
-        for model in [m for m in MODELS if m in totals]:
+        item = next(i for i in slop_items() if i["id"] == rep["item"])
+        lines += ["", f"### One job, many times: {item['ask']}", "", f"How often a model {rep['probe']}, with a 95% interval. "
+                  f"{len(rep['rows'])} of {rep['asked']} prompts were answered.", "",
+                  "| Model | Without his instructions | With them |", "|---|---|---|"]
+        for m in models:
+            cells = []
             for condition in CONDITIONS:
-                answers = sorted((r for r in rep["rows"] if r["model"] == model and r["condition"] == condition),
-                                 key=lambda r: r["n"])
-                read = lambda r: json.loads((RESULTS / "slop/repeats" / f"{rep['item']}.{condition}.{model}.{r['n']:02d}.json").read_text())["output"]
-                cells.append({"model": model, "condition": condition,
-                              "answers": [{"yes": r["first_words"], "opening": opening(read(r), 260)} for r in answers]})
-        data["slop"]["repeat"] = {**probe["shown"], "cells": cells}
-    data["models"] = [{"key": key, "name": NAMES[key], "tool": "in Claude Code" if MODELS[key][0] == "claude" else "in Codex"}
-                      for key in MODELS if key in used]
+                mine = [r["yes"] for r in rep["rows"] if r["model"] == m["key"] and r["condition"] == condition]
+                low, high = wilson(sum(mine), len(mine))
+                cells.append(f"{sum(mine)} of {len(mine)} ({100 * low:.0f}% to {100 * high:.0f}%)")
+            lines.append(f"| {m['name']} | " + " | ".join(cells) + " |")
+    lines.append("")
+    (RESULTS / "REPORT.md").write_text("\n".join(lines))
     page = (HERE / "site/page.html").read_text().replace("/*DATA*/null", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
     (RESULTS / "index.html").write_text(page)
-    say(f"wrote {RESULTS / 'index.html'}")
+    say(f"wrote {RESULTS / 'REPORT.md'} and {RESULTS / 'index.html'}")
 
 
 def pilot(effort):
@@ -1344,8 +1086,6 @@ def main():
         return slop_repeat(words[2], int(words[3]), args.effort)
     if words == ["slop", "score"]:
         return slop_score()
-    if words == ["slop", "vote"]:
-        return slop_vote()
     if words == ["report"]:
         return report()
     if words == ["pilot"]:
