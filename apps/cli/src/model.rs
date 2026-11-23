@@ -1,14 +1,15 @@
 //! Which model is being served, and whether its bytes are the published ones.
 //!
-//! The Mac app ships Q4_K_M and the desktop app Q8_0; a server may run either.
-//! Both manifests are compiled in, and a model file is checked against the
-//! entry with its file name: its size first, then its SHA-256.
+//! The Mac and desktop apps ship Q4_K_M, and the desktop app shipped Q8_0
+//! before; a server may run either. Their manifests are compiled in, and a
+//! model file is checked against the entry with its file name: its size
+//! first, then its SHA-256.
 
 use std::path::Path;
 
 use ramble_model::{Manifest, ManifestFile};
 
-const MANIFESTS: [(&str, &str); 2] = [
+const MANIFESTS: [(&str, &str); 3] = [
     (
         "the Mac app's manifest",
         include_str!("../../../Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json"),
@@ -16,6 +17,10 @@ const MANIFESTS: [(&str, &str); 2] = [
     (
         "the desktop app's manifest",
         include_str!("../../desktop/src-tauri/model-manifest.json"),
+    ),
+    (
+        "the desktop app's previous manifest",
+        include_str!("../../desktop/src-tauri/previous-model-manifest.json"),
     ),
 ];
 
@@ -78,7 +83,7 @@ mod tests {
         assert_eq!(mac, "the Mac app's manifest");
         let (q8, desktop) = expected("parakeet-ultra-Q8_0.gguf").unwrap();
         assert_eq!(q8.byte_count, 740_363_168);
-        assert_eq!(desktop, "the desktop app's manifest");
+        assert_eq!(desktop, "the desktop app's previous manifest");
         assert!(expected("something-else.gguf").is_none());
     }
 

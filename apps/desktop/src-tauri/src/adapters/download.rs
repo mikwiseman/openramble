@@ -13,7 +13,7 @@
 
 use ramble_model::{Manifest, ManifestFile, ModelStore, Source};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum DownloadError {
@@ -82,17 +82,18 @@ const ATTEMPTS_PER_SOURCE: usize = 3;
 /// Progress, as a fraction and in bytes.
 pub type ProgressFn = dyn Fn(u64, u64) + Send + Sync;
 
-/// Fetch every file the manifest names into a staging directory, verify it, and
-/// promote it.
+/// Fetch every file the manifest names into a staging directory and say
+/// where it is.
 ///
-/// Nothing becomes the install until every byte has been checked, because a
-/// half-downloaded model that loads is worse than none: it fails at dictation
-/// time, when a person is mid-sentence.
-pub fn install(
+/// Nothing is installed here. The caller promotes the staging directory,
+/// which checks every byte first, because a half-downloaded model that loads
+/// is worse than none: it fails at dictation time, when a person is
+/// mid-sentence.
+pub fn fetch(
     store: &ModelStore,
     progress: &ProgressFn,
     cancelled: &(dyn Fn() -> bool + Send + Sync),
-) -> Result<(), DownloadError> {
+) -> Result<PathBuf, DownloadError> {
     let manifest = &store.manifest;
     // Left over from an attempt that did not finish; each can hold 739 MB.
     let _ = store.sweep_stale_staging();
@@ -126,11 +127,7 @@ pub fn install(
         )?;
         done += file.byte_count as u64;
     }
-
-    store
-        .promote(&staging)
-        .map_err(|error| DownloadError::Corrupt(error.to_string()))?;
-    Ok(())
+    Ok(staging)
 }
 
 fn fetch_one(
