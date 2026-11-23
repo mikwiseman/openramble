@@ -97,9 +97,10 @@ engine's four threads were 1.4 to 2.4 times faster than its one in each of
 three rounds (ledger T1).
 
 **No accelerator path was built.** On Apple silicon the Metal runtime the
-Mac app ships is faster than this engine, and it stays. The engine is for
-the computers that have no such path today, which are Windows and Linux
-computers and Intel Macs.
+Mac app ships is faster than this engine today. The engine went first to the
+computers that have no such path, which are Windows and Linux computers and
+Intel Macs. On 23 November Mik asked for it on every Mac as well; the
+section "Apple silicon" below is where that stands.
 
 ## Reference machines and targets
 
@@ -206,6 +207,38 @@ clock and threads, which a script checks on the built file (ledger A1). Its
 output is the same, to the last digit of every confidence, on macOS,
 Windows and Linux and on arm64 and x86-64 (ledger X1).
 
+## Apple silicon
+
+Mik's words on 23 November 2026: "Use our own library", "best in class,
+state of the art". The engine has to beat Metal on the Mac before the Mac
+app moves to it, and it does not yet: 133 ms on eight threads against 80 ms
+for an 8 s clip on the M4 Pro.
+
+**The M4 has a faster place to multiply.** Its matrix unit (SME) does 1,786
+billion 8-bit multiply-adds a second on one thread, where a NEON thread does
+114 and Metal's 80 ms implies about 560 (ledger K8). The 8-bit matrix
+extension adds nothing.
+
+**It needs weights in another form.** The unit multiplies 16 weight rows by
+16 frames at once. The engine's activations already have that shape; the
+Q4_K weights, with a scale for every 32 columns of every row, do not, and
+keeping their arithmetic bit for bit on the unit loses the gain. Weights
+stored as 8-bit numbers with one scale for a row fit it. That is a new
+model file with different numbers, so it ships only after the word-error
+gate.
+
+**M1, M2 and M3 have no matrix unit.** For them the choice is between NEON,
+which a base M1's four fast cores may or may not carry past its small
+graphics processor, and a Metal path of our own. Neither can be judged from
+here: the hosted M1 machine's graphics processor is virtual. A real M1, M2
+or M3 Mac has to be measured first.
+
+**What a person feels is the measure.** Most takes are 2 to 6 s. The
+comparison that decides is key-up to text on such takes, warm, after ten
+idle minutes and on a busy machine, not the 8 s figure alone. The engine
+opens a model in 15 to 70 ms and holds 118 MB where the Metal runtime holds
+several hundred.
+
 ## The smaller change, and what it gets
 
 A change to the shipped runtime and its settings gets part of the gain. The
@@ -257,10 +290,11 @@ peak where the engine uses 118 MB).
    Linux machine, and the new kernel choice on Windows on the older AMD
    processor. The test that kept threads off in October passes on the
    Mac.
-5. The next step after them needs Mik's yes. It puts the engine behind
-   `ramble-engine` for Windows and Linux and behind the Swift adapter for
-   Intel Macs, with the real-model test suites as the gate, and it moves
-   Windows and Linux to the 4-bit file.
+5. The engine is behind `ramble-engine` for Windows, Linux and the server
+   (pull request 116, ledger W1, P3, S3) and behind the Swift adapter for
+   Intel Macs (pull request 118). Windows and Linux keep the Q8_0 file,
+   because the 4-bit file is less accurate on x86 (P3, and H17 in pull
+   request 115).
 6. Later items each need their own measurement. They are 4-bit weights for
    the two 1x1 convolutions, kernels for Arm's 8-bit matrix extension, a
    cache of the position projections, and recognizing closed stretches of a

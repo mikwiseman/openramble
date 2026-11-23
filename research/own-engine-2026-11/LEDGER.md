@@ -791,21 +791,108 @@ Limits. One run, three clip lengths, and one processor of each kind. The
 1.5 to 1.7 times on the AMD machines is the gain a person with a two-core
 computer would see if the app gave transcribe.cpp the same threads.
 
+## W1. The engine in the app: Windows, Linux and the server
+
+Change (23 November, pull request 116). `core/ramble-engine` compiles
+`engine/` with the `cc` crate (`build.rs`) and no longer depends on
+transcribe.cpp. `src/ore.rs` is the only unsafe code and mirrors `ore.h`.
+
+- **Threads.** `Engine::load` asks for the number of processors, at most
+  four. The server's pool calls `Engine::load_with_threads(dir, 1)`.
+- **Long audio.** `ramble-engine` still cuts at 30 s itself, at the quietest
+  20 ms of the last 5 s, as it did for transcribe.cpp.
+- **Older processors.** Pull request 114 had made the desktop app refuse a
+  processor without AVX2. That is removed: `processor.rs`,
+  `UnsupportedProcessor`, the refusal in `Dictation::begin`, the tray text
+  and the settings window opening at launch. `processor_notice()` is added
+  to the session's notices instead, and says recognition will be slower.
+- **Checks.** `scripts/check-desktop-portability.sh` reads every object the
+  crate compiled and allows newer instructions only in the two kernel files.
+  `scripts/check-network-surface.sh` reads `engine/src` and `engine/include`
+  for sockets, processes and the environment.
+
+Not seen: the settings window's notice on such a processor. It was read in
+`index.html`, not looked at.
+
+## P3. Word errors on x86 with the file the packages ship
+
+Question. P1 compared the engine with transcribe.cpp on the M4 with the
+4-bit file. Windows and Linux download the Q8_0 file. Is the engine as
+accurate with it on x86?
+
+Method (run 45206608695, job "FLEURS, Linux x86_64", Ubuntu 22.04, commit
+`dcacf2f`; the arithmetic did not change after it). All 1,422 English and
+Russian FLEURS test clips, 29,586 words, through four setups, compared by
+`tools/parity.py`. The baseline is transcribe.cpp built as the 0.42.1
+packages build it, with Q8_0.
+
+| Setup | Word errors | Rate | Clips whose text differs from the baseline | Fewer errors, more errors |
+|---|---|---|---|---|
+| transcribe.cpp, Q8_0 | 1,440 | 4.87% | | |
+| Engine, Q8_0 | 1,437 | 4.86% | 47 | 11, 8 |
+| Engine, Q4_K_M | 1,472 | 4.98% | 381 | 79, 97 |
+| transcribe.cpp, Q4_K_M | 1,489 | 5.03% | 380 | 74, 107 |
+
+Found. With the shipped file the engine is as accurate as the shipped
+runtime. The 4-bit file costs 32 to 49 more errors in either runtime, which
+agrees with pull request 115 (H17). So the packages keep Q8_0, and the gain
+that matters is the engine's with Q8_0.
+
+## S3. Against the packages as built, idle and busy
+
+Method (run 45225801224, commit `300ac80`). An 8 s clip, the Q8_0 file,
+milliseconds, best of the job. "Ships" is transcribe.cpp built with the
+0.42.1 packages' settings on one thread. Busy means one busy process on
+every processor of the machine.
+
+| Machine | Ships, idle | Engine, 4 threads, idle | Ships, busy | Engine, 4 threads, busy |
+|---|---|---|---|---|
+| Linux, EPYC 7763, Ubuntu 22.04 | 2,541 | 851 | 3,757 | 2,166 |
+| Windows, Xeon 8573C | 3,284 | 833 | 5,493 | 1,418 |
+| Linux arm64, Neoverse-N2 | 5,070 | 557 | 5,807 | 1,646 |
+
+Found.
+
+- Idle, the engine is 3.0, 3.9 and 9.1 times faster. Busy, 1.7, 3.9 and 3.5
+  times.
+- The weakest case is the busy two-core Linux machine: the engine's four
+  threads beat its own one thread by 1.5 times there (2,057 against 3,136
+  with the 4-bit file).
+- transcribe.cpp on four threads on a busy machine took 4,678 ms on Linux
+  and 17,786 ms on Windows, against 3,757 and 5,493 on one. That is the
+  stall its one-thread setting avoids.
+- The engine opens the model in 51 to 57 ms idle; transcribe.cpp takes 230
+  to 530 ms.
+
+## A2. Processors without AVX2, emulated
+
+Method (the same run, the Ubuntu 22.04 job, QEMU 6.2). The program the
+crate builds recognizes a 4.5 s Russian clip on three emulated processors.
+
+| Emulated processor | Kernels | Emulated time | Words |
+|---|---|---|---|
+| Opteron_G1, 2003, SSE2 only | `generic` | 207 s | the same |
+| Nehalem, 2008 | `sse` | 43 s | the same |
+| IvyBridge, 2012, AVX without AVX2 | `sse` | 43 s | the same |
+
+The times are the emulator's and say nothing about a real processor. The
+step runs only on Ubuntu 22.04: Ubuntu 26.04's own C library refuses a
+processor below x86-64-v3, so nothing starts under those emulated
+processors there. The IvyBridge line of the step's output shows a QEMU
+warning where the kernel name should be, because it prints the first line
+of standard error.
+
 ## Not done
 
-- **The engine is not in the app.** It is not behind `ramble-engine` or the
-  Swift adapter. Putting it there changes what ships and waits for Mik's
-  yes. Two things the adapter uses have no counterpart yet: a call that
-  recognizes several clips at once, and the detected language.
+- **Apple silicon.** The Mac app on Apple silicon still runs transcribe.cpp
+  on Metal, and Mik asked on 23 November for our engine there too. K8 is the
+  first measurement. Intel Macs are pull request 118. Two things the Swift
+  adapter uses have no counterpart in the engine yet: a call that recognizes
+  several clips at once, and the detected language.
 - **The kernel choice on Windows on an AMD Zen 4 processor.** The `avx512`
   set was 10% slower there than `avx2`. The change for it is in the code, and
   the engine picks the new table on that processor under Linux. It has not
   been timed under Windows (K7).
-- **Word errors with the Ultra Q8_0 file in the engine.** The four sample
-  clips give identical text. The 1,422 FLEURS clips were run with Q4_K_M,
-  which is the file S2 recommends.
-- **Four threads on a busy Windows or Linux machine.** T1 has three rounds
-  on the Mac.
 - **A fixed cost of 20 to 60 ms per recognition.** The engine decodes the
   headers of about 2 million weight blocks every time. It shows on short
   clips: 206 against 184 ms for 2 s on the EPYC 9V45. Keeping the decoded
@@ -815,9 +902,8 @@ computer would see if the app gave transcribe.cpp the same threads.
   multiply-adds a second where the 4-bit kernel does 42 to 134. They are 12%
   of the arithmetic and about 30% of the time. Quantizing them needs a
   converted model file and a word-error gate.
-- **Arm's 8-bit matrix extension**, which the M2 and later, Neoverse-N2 and
-  Snapdragon X have. The dot-product kernel is at the limit of two
-  multiplier units.
+- **Arm's 8-bit matrix extension** on Neoverse-N2 and Snapdragon X. On
+  Apple silicon it gave nothing (K8).
 - **A cache of the position projections.** They depend only on the clip's
   length and are 8% of the arithmetic.
 - **Smaller costs left as they are.** The mel step runs on one thread (14 ms
