@@ -40,6 +40,7 @@ final class AppModel {
         #if DEBUG
         setup.importFromLaunchArguments()
         #endif
+        IntentBridge.install()
     }
 
     /// Waits a few seconds for the model to open, for an intent that arrived

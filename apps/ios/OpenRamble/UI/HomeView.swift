@@ -12,9 +12,10 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            ZStack(alignment: .bottom) {
+            ZStack {
+                // While listening, the page clears for the voice alone.
                 TakeList()
-                    .opacity(dictation.isRecording ? 0.08 : 1)
+                    .opacity(dictation.isRecording ? 0 : 1)
                     .allowsHitTesting(!dictation.isRecording)
                     .accessibilityHidden(dictation.isRecording)
 
@@ -22,14 +23,16 @@ struct HomeView: View {
                     VoiceView(levels: dictation.levels)
                         .frame(height: 140)
                         .padding(.horizontal, Theme.margin)
-                        .frame(maxHeight: .infinity)
                         .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 }
-
+            }
+            // The glass floats over the words, which scroll beneath it.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 VStack(spacing: 18) {
                     NoticeView()
                     RecordControls()
                 }
+                .padding(.top, 12)
                 .padding(.bottom, 8)
             }
             .animation(.smooth(duration: 0.35), value: dictation.isRecording)
@@ -78,9 +81,14 @@ struct TakeList: View {
             EmptyPage()
         } else {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: Theme.takeSpacing) {
+                LazyVStack(alignment: .leading, spacing: Theme.takeSpacing * 1.5) {
                     ForEach(Self.days(takes), id: \.day) { group in
-                        Section {
+                        VStack(alignment: .leading, spacing: Theme.takeSpacing) {
+                            Text(Self.title(for: group.day))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .padding(.bottom, -Theme.takeSpacing / 2)
+                                .accessibilityAddTraits(.isHeader)
                             ForEach(group.takes) { take in
                                 NavigationLink(value: take.id) {
                                     TakeRow(take: take)
@@ -88,18 +96,12 @@ struct TakeList: View {
                                 .buttonStyle(.plain)
                                 .id(take.id)
                             }
-                        } header: {
-                            Text(Self.title(for: group.day))
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 8)
-                                .accessibilityAddTraits(.isHeader)
                         }
                     }
                 }
                 .padding(.horizontal, Theme.margin)
                 .padding(.top, 12)
-                .padding(.bottom, 150)
+                .padding(.bottom, 24)
             }
             // Opens at the newest take, and stays there as new words arrive.
             .defaultScrollAnchor(.bottom)
@@ -148,7 +150,6 @@ struct EmptyPage: View {
         }
         .padding(.horizontal, Theme.margin)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(.bottom, 120)
     }
 }
 

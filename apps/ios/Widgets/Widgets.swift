@@ -1,7 +1,13 @@
 import ActivityKit
 import AppIntents
+import OpenRambleKit
 import SwiftUI
 import WidgetKit
+
+/// The intents declared in OpenRambleKit, which the control and the buttons name.
+struct WidgetIntents: AppIntentsPackage {
+    static var includedPackages: [any AppIntentsPackage.Type] { [OpenRambleKitIntents.self] }
+}
 
 @main
 struct OpenRambleWidgets: WidgetBundle {

@@ -1,29 +1,37 @@
 import AppIntents
 import Foundation
+import OpenRambleKit
 import UniformTypeIdentifiers
 
 /// What the shared intents do inside the app.
 @MainActor
 enum IntentBridge {
-    static func dictate() async -> some IntentResult & ProvidesDialog {
+    /// Hands the framework's intents their actions; called at launch.
+    static func install() {
+        IntentActions.dictate = { await dictate() }
+        IntentActions.stop = { await AppModel.shared.dictation.finish() }
+    }
+
+    static func dictate() async -> String {
         let app = AppModel.shared
         if app.dictation.isRecording {
             await app.dictation.finish()
-            return .result(dialog: "Writing your words.")
+            return "Writing your words."
         }
         guard await app.waitUntilReady() else {
-            return .result(dialog: "Open OpenRamble once to download its voice model.")
+            return "Open OpenRamble once to download its voice model."
         }
         guard MicrophoneRecorder.permission == .granted else {
-            return .result(dialog: "Open OpenRamble once to allow the microphone.")
+            return "Open OpenRamble once to allow the microphone."
         }
         await app.dictation.start()
-        return .result(dialog: app.dictation.isRecording ? "Listening." : "The microphone did not start.")
+        return app.dictation.isRecording ? "Listening." : "The microphone did not start."
     }
+}
 
-    static func stop() async {
-        await AppModel.shared.dictation.finish()
-    }
+/// The intents declared in OpenRambleKit belong to the app too.
+struct OpenRambleIntents: AppIntentsPackage {
+    static var includedPackages: [any AppIntentsPackage.Type] { [OpenRambleKitIntents.self] }
 }
 
 /// Writes the words spoken in an audio file: a voice memo, a message, a

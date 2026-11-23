@@ -43,12 +43,12 @@ targets:
     platform: iOS
     sources:
       - path: OpenRamble
-      - path: Shared
       - path: ../../LICENSE
         buildPhase: resources
       - path: ../../THIRD_PARTY_LICENSES.md
         buildPhase: resources
     dependencies:
+      - target: OpenRambleKit
       - target: OpenRambleWidgets
         embed: true
       - package: DictationCore
@@ -94,20 +94,37 @@ targets:
             LSItemContentTypes: [public.audio]
         LSSupportsOpeningDocumentsInPlace: false
 
+  # The Live Activity's attributes and the intents its buttons and the
+  # Dictate control run. One module, linked by the app and the extension, so
+  # the system finds the same intent type in the app and runs it there.
+  OpenRambleKit:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.kit
+        PRODUCT_NAME: OpenRambleKit
+        GENERATE_INFOPLIST_FILE: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+        DEFINES_MODULE: YES
+
   OpenRambleWidgets:
     type: app-extension
     platform: iOS
     sources:
       - path: Widgets
-      - path: Shared
+    dependencies:
+      - target: OpenRambleKit
+        embed: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.widgets
         PRODUCT_NAME: OpenRambleWidgets
         INFOPLIST_FILE: Widgets/Info.plist
         SKIP_INSTALL: YES
-        # The shared intents compile here only to be named; the app performs them.
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) WIDGET_EXTENSION"
       configs:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.dev.widgets

@@ -7,23 +7,33 @@ import Foundation
 ///
 /// It never carries the words themselves: the Lock Screen is visible to anyone
 /// holding the phone. It says that the words were written and copied.
-struct DictationActivityAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable, Sendable {
-        enum Stage: String, Codable, Hashable, Sendable {
+public struct DictationActivityAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable, Sendable {
+        public enum Stage: String, Codable, Hashable, Sendable {
             case listening
             case writing
             case written
             case failed
         }
 
-        var stage: Stage
+        public var stage: Stage
         /// When recording began, so the system can count the time itself.
-        var startedAt: Date
+        public var startedAt: Date
         /// Seconds recorded, once recording has stopped.
-        var duration: TimeInterval?
+        public var duration: TimeInterval?
         /// How many words were written.
-        var wordCount: Int?
+        public var wordCount: Int?
         /// Whether the words are on the clipboard.
-        var copied: Bool
+        public var copied: Bool
+
+        public init(stage: Stage, startedAt: Date, duration: TimeInterval? = nil, wordCount: Int? = nil, copied: Bool) {
+            self.stage = stage
+            self.startedAt = startedAt
+            self.duration = duration
+            self.wordCount = wordCount
+            self.copied = copied
+        }
     }
+
+    public init() {}
 }

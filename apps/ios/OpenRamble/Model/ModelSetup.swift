@@ -23,13 +23,17 @@ final class ModelSetup {
     private(set) var phase: Phase = .checking
     /// The model's size in bytes, from the manifest the app ships with.
     let byteCount: Int64
+    /// The folder the engine opens: the installed revision's model folder, as
+    /// on the Mac (`ModelInstallLayout.engineDirectory`).
+    let engineDirectory: URL?
     private let store: ModelStore?
     private var observation: Task<Void, Never>?
     private var install: Task<Void, Never>?
 
-    init(store: ModelStore?, byteCount: Int64) {
+    init(store: ModelStore?, byteCount: Int64, engineDirectory: URL? = nil) {
         self.store = store
         self.byteCount = byteCount
+        self.engineDirectory = engineDirectory
         if store == nil { phase = .failed("The app's model description is missing.") }
     }
 
@@ -51,7 +55,11 @@ final class ModelSetup {
             return ModelSetup(store: nil, byteCount: 0)
         }
         let store = ModelStore(manifest: manifest, layout: layout, downloader: BackgroundModelDownloader.shared)
-        return ModelSetup(store: store, byteCount: manifest.files.reduce(0) { $0 + $1.byteCount })
+        return ModelSetup(
+            store: store,
+            byteCount: manifest.files.reduce(0) { $0 + $1.byteCount },
+            engineDirectory: layout.engineDirectory
+        )
     }
 
     var isReady: Bool {
@@ -66,7 +74,7 @@ final class ModelSetup {
         observation = Task { [weak self] in
             _ = await store.refreshState()
             for await state in await store.states() {
-                let phase = Self.phase(for: state)
+                let phase = Self.phase(for: state, engineDirectory: self?.engineDirectory)
                 guard let self, phase != self.phase || phase == .checking else { continue }
                 self.phase = phase
                 await onChange(phase)
@@ -109,7 +117,7 @@ final class ModelSetup {
     }
 
     /// The store's states, in the words the person reads.
-    static func phase(for state: ModelState) -> Phase {
+    static func phase(for state: ModelState, engineDirectory: URL? = nil) -> Phase {
         switch state {
         case .notInstalled:
             return .absent
@@ -118,7 +126,7 @@ final class ModelSetup {
         case .verifying:
             return .verifying
         case let .ready(directory):
-            return .ready(directory)
+            return .ready(engineDirectory ?? directory)
         case .repairRequired:
             // An install that was interrupted: downloading again repairs it.
             return .absent
