@@ -29,13 +29,27 @@ fi
 xcodegen=$(scripts/pinned-xcodegen.sh)
 (cd apps/ios && "$xcodegen" generate > /dev/null)
 
+# Booted first, on its own, so a slow boot is told apart from a slow build.
+echo "→ Booting the simulator $destination"
+xcrun simctl boot "$destination" 2>/dev/null || true
+xcrun simctl bootstatus "$destination" -b > /dev/null
+
+# Progress is printed as it happens: a run that a time limit ends still says
+# how far it got.
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
-if (cd apps/ios && xcodebuild -project OpenRambleiOS.xcodeproj -scheme OpenRamble \
-      -destination "id=$destination" CODE_SIGNING_ALLOWED=NO test) > "$log" 2>&1; then
-  grep -E "Executed [0-9]+ tests, with" "$log" | tail -1
-else
-  grep -E "error:|failed|Failing" "$log" | head -30
-  echo "The iPhone app's build or tests failed; full log above the summary." >&2
-  exit 1
-fi
+for action in build-for-testing test-without-building; do
+  echo "→ $action"
+  if ! (cd apps/ios && xcodebuild -project OpenRambleiOS.xcodeproj -scheme OpenRamble \
+        -destination "id=$destination" CODE_SIGNING_ALLOWED=NO "$action") 2>&1 \
+      | tee "$log" \
+      | grep --line-buffered -E "^(Resolve Package Graph|Fetching from|Test Suite '.*' (started|passed|failed)|Test Case '.*' failed|\*\* .* \*\*)|error:"; then
+    :
+  fi
+  if ! grep -qE "\*\* (BUILD|TEST BUILD|TEST EXECUTE) SUCCEEDED \*\*|\*\* TEST SUCCEEDED \*\*" "$log"; then
+    grep -E "error:|failed|Failing" "$log" | head -30
+    echo "The iPhone app's $action failed." >&2
+    exit 1
+  fi
+done
+grep -E "Executed [0-9]+ tests, with" "$log" | tail -1

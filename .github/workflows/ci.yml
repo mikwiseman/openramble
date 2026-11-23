@@ -96,8 +96,9 @@ jobs:
     name: iPhone app
     runs-on: macos-26
     # The tests run inside the app in the iOS Simulator; a hang ends here,
-    # not at GitHub's six-hour limit.
-    timeout-minutes: 40
+    # not at GitHub's six-hour limit. A cold runner resolves the packages,
+    # boots a simulator and builds everything before the first test.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
