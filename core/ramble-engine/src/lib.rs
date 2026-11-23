@@ -26,7 +26,9 @@ use transcribe_cpp::{
     Backend, Model, ModelOptions, RunOptions, Session, SessionOptions, TimestampKind,
 };
 
+mod processor;
 mod report;
+pub use processor::{Instructions, UnsupportedProcessor};
 pub use report::{BackendReport, Compiled};
 
 #[derive(Debug)]
@@ -37,6 +39,9 @@ pub enum EngineError {
     Run(String),
     /// The person pressed Escape.
     Cancelled,
+    /// This computer's processor lacks instructions the runtime was compiled
+    /// to use. Nothing was loaded and nothing on this computer will change it.
+    UnsupportedProcessor(UnsupportedProcessor),
 }
 
 impl std::fmt::Display for EngineError {
@@ -48,6 +53,7 @@ impl std::fmt::Display for EngineError {
             EngineError::Load(detail) => write!(f, "the recognizer could not start: {detail}"),
             EngineError::Run(detail) => write!(f, "the recognition failed: {detail}"),
             EngineError::Cancelled => write!(f, "cancelled"),
+            EngineError::UnsupportedProcessor(unsupported) => write!(f, "{unsupported}"),
         }
     }
 }
@@ -95,6 +101,21 @@ impl Engine {
     /// single `.gguf` inside is found here rather than making every caller know
     /// the filename.
     pub fn load(model_directory: &Path) -> Result<Self, EngineError> {
+        Self::load_unless(UnsupportedProcessor::on_this_computer(), model_directory)
+    }
+
+    /// Load the model, unless the processor cannot run it.
+    ///
+    /// Asked first, before the runtime is given anything to do. On such a
+    /// processor the runtime does not return an error: its first arithmetic
+    /// is an illegal instruction and the process is gone.
+    fn load_unless(
+        unsupported: Option<UnsupportedProcessor>,
+        model_directory: &Path,
+    ) -> Result<Self, EngineError> {
+        if let Some(unsupported) = unsupported {
+            return Err(EngineError::UnsupportedProcessor(unsupported));
+        }
         install_logging_policy();
         let model_path = model_file(model_directory)
             .ok_or_else(|| EngineError::NoModel(model_directory.to_path_buf()))?;
@@ -524,9 +545,31 @@ mod tests {
     #[test]
     fn a_directory_without_a_model_says_so_rather_than_panicking() {
         let directory = tempfile::tempdir().unwrap();
+        // About the directory, whatever processor runs the test.
         assert!(matches!(
-            Engine::load(directory.path()),
+            Engine::load_unless(None, directory.path()),
             Err(EngineError::NoModel(_))
+        ));
+    }
+
+    /// Checked first, with nothing else looked at: this directory holds no
+    /// model, and the answer is still the processor.
+    #[test]
+    fn a_processor_that_cannot_run_the_runtime_is_refused_before_anything_is_loaded() {
+        let directory = tempfile::tempdir().unwrap();
+        let packages = Instructions {
+            avx: true,
+            avx2: true,
+            fma: true,
+            f16c: true,
+            bmi2: true,
+            avx512: false,
+        };
+        let unsupported = UnsupportedProcessor::check(packages, Instructions::default());
+        assert!(unsupported.is_some());
+        assert!(matches!(
+            Engine::load_unless(unsupported, directory.path()),
+            Err(EngineError::UnsupportedProcessor(_))
         ));
     }
 
