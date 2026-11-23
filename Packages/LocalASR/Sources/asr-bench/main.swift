@@ -159,7 +159,7 @@ func resolveEngineDirectory() async throws -> URL {
 
 func prepareTranscriber() async throws -> LocalTranscriber {
     let engineDirectory = try await resolveEngineDirectory()
-    let transcriber = LocalTranscriber(engine: TranscribeCppAdapter())
+    let transcriber = LocalTranscriber()
     let started = ContinuousClock.now
     try await transcriber.prepare(modelDirectory: engineDirectory)
     print(String(format: "Model loaded in %.2f s", seconds(started.duration(to: .now))))

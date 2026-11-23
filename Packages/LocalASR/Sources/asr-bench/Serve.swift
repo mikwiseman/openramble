@@ -23,7 +23,7 @@ import LocalASR
 /// carries `idleSeconds` from before the request and the process's cumulative
 /// `diskReadBytes`. The process exits on end of input.
 func serve(directory: URL) async throws {
-    let transcriber = LocalTranscriber(engine: TranscribeCppAdapter())
+    let transcriber = LocalTranscriber()
     let loadStarted = ContinuousClock.now
     try await transcriber.prepare(modelDirectory: directory)
     let loadSeconds = seconds(loadStarted.duration(to: .now))

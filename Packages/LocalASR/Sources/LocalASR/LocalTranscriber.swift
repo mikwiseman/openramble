@@ -39,8 +39,19 @@ public actor LocalTranscriber {
     /// When the engine last finished running inference.
     private var lastRunEnded: ContinuousClock.Instant?
 
+    /// The recognizer this Mac ships with: transcribe.cpp on Metal on Apple
+    /// silicon, and our own engine on Intel, where both run on the processor
+    /// and ours is the faster of the two.
+    public static func shippingEngine() -> any ASREngineAdapting {
+        #if arch(x86_64)
+        OreAdapter()
+        #else
+        TranscribeCppAdapter()
+        #endif
+    }
+
     public init(
-        engine: any ASREngineAdapting = TranscribeCppAdapter(),
+        engine: any ASREngineAdapting = LocalTranscriber.shippingEngine(),
         reader: AudioFileReader = AudioFileReader()
     ) {
         self.engine = engine

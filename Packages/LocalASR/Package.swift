@@ -3,10 +3,11 @@ import PackageDescription
 
 // LocalASR — installing the model and recognizing speech with it.
 //
-// The only place in the entire project that touches the inference runtime is
-// TranscribeCppAdapter.swift. Everything else talks to ASREngineAdapting,
-// declared in DictationCore — which is what made replacing the previous engine
-// a contained change instead of a rewrite.
+// Two files in the entire project touch a recognition engine:
+// TranscribeCppAdapter.swift, which runs Apple silicon on Metal, and
+// OreAdapter.swift, which runs Intel Macs on our own engine. Everything else
+// talks to ASREngineAdapting, declared in DictationCore — which is what made
+// replacing the previous engine a contained change instead of a rewrite.
 let package = Package(
     name: "LocalASR",
     platforms: [.macOS(.v14)],
@@ -16,6 +17,10 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../DictationCore"),
+        // Our own recognition engine: plain C with no dependencies, compiled
+        // from the repository's `engine/` folder. Intel Macs recognize with
+        // it; Windows, Linux and the server compile the same files.
+        .package(name: "ORE", path: "../../engine"),
     ],
     targets: [
         // The transcribe.cpp inference runtime from our fork: release 0.4.1 plus
@@ -43,6 +48,7 @@ let package = Package(
             dependencies: [
                 .product(name: "DictationCore", package: "DictationCore"),
                 "CTranscribe",
+                .product(name: "ORE", package: "ORE"),
             ],
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v6)]
