@@ -1,0 +1,336 @@
+name: Linux compiler proof
+
+# Proof-only, on the proof branch, never on main. The Linux packages are built
+# on the 22.04 image for its C library, and that image's default compiler is
+# GCC 11. This builds the desktop app there with each compiler the image can
+# run, reads what each finished executable asks of a system, times the
+# recognition runtime of every build on one machine beside a GCC 13 build made
+# on 24.04, and starts every package on stock systems.
+on:
+  push:
+    branches: ["claude/linux-compiler-5e113d-proof"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The same settings desktop-release.yml gives the packaging job.
+  TRANSCRIBE_CMAKE_ARGS: >-
+    -DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON
+    -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON
+    -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF
+  CLIP_URL: https://raw.githubusercontent.com/mikwiseman/transcribe.cpp/dacdba09be2b8d4dfe97a9d7464c51f462d5f622/samples/dots.wav
+  Q4_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  Q4_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+  # The file the Windows and Linux app ships (apps/desktop/src-tauri/model-manifest.json).
+  Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
+  Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
+  VARIANTS: gcc-11 gcc-12 gcc-13 gcc-13-static clang clang-15
+
+jobs:
+  build:
+    name: Build, ${{ matrix.name }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Today's packages: nothing chosen, the image's default.
+          - name: gcc-11
+          # Ubuntu 22.04's own archive.
+          - name: gcc-12
+            cc: gcc-12
+            cxx: g++-12
+            apt: gcc-12 g++-12
+          # The toolchain PPA. Installing it replaces the build machine's
+          # libstdc++ with GCC 13's.
+          - name: gcc-13
+            cc: gcc-13
+            cxx: g++-13
+            ppa: true
+            apt: gcc-13 g++-13
+          # The same, with libstdc++ linked into the executable.
+          - name: gcc-13-static
+            cc: gcc-13
+            cxx: g++-13
+            ppa: true
+            apt: gcc-13 g++-13
+            static: true
+          # What the image has preinstalled.
+          - name: clang
+            cc: clang
+            cxx: clang++
+          - name: clang-15
+            cc: clang-15
+            cxx: clang++-15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Compiler
+        run: |
+          {
+            echo "## ${{ matrix.name }}"
+            echo '```'
+            echo "machine: $(lscpu | grep 'Model name' | sed 's/.*: *//')"
+            echo "the image before anything is installed:"
+            echo "  compilers: $(ls /usr/bin | grep -E '^(gcc|clang)-[0-9]+$' | tr '\n' ' ')"
+            echo "  gcc is $(gcc -dumpfullversion), clang is $(clang --version | head -1)"
+            echo "  libstdc++6 $(dpkg-query -W -f '${Version}' libstdc++6), offering up to $(objdump -p /usr/lib/x86_64-linux-gnu/libstdc++.so.6 | grep -oE 'GLIBCXX_[0-9.]+' | sort -uV | tail -1)"
+            echo "  toolchain PPA already configured: $(grep -rl toolchain /etc/apt/sources.list.d 2> /dev/null | wc -l) files"
+          } | tee about.txt
+          if [ -n "${{ matrix.ppa }}" ]; then sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test > /dev/null; fi
+          if [ -n "${{ matrix.apt }}" ]; then
+            sudo apt-get update > /dev/null
+            sudo apt-get install -y ${{ matrix.apt }} > /dev/null
+          fi
+          if [ -n "${{ matrix.cc }}" ]; then
+            echo "CC=${{ matrix.cc }}" >> "$GITHUB_ENV"
+            echo "CXX=${{ matrix.cxx }}" >> "$GITHUB_ENV"
+          fi
+          if [ -n "${{ matrix.static }}" ]; then
+            # A directory that holds libstdc++.a and no libstdc++.so, ahead of
+            # the compiler's own: the linker then takes the archive for
+            # -lstdc++. Its symbols stay out of the executable's exports so no
+            # shared library binds to this copy.
+            mkdir -p "$RUNNER_TEMP/static-cxx"
+            ln -s "$(g++-13 -print-file-name=libstdc++.a)" "$RUNNER_TEMP/static-cxx/libstdc++.a"
+            echo "RUSTFLAGS=-L native=$RUNNER_TEMP/static-cxx -C link-arg=-Wl,--exclude-libs,libstdc++.a" >> "$GITHUB_ENV"
+          fi
+          {
+            echo "chosen: CC=${{ matrix.cc || '(unset)' }} CXX=${{ matrix.cxx || '(unset)' }}"
+            echo "  $(${{ matrix.cc || 'cc' }} --version | head -1)"
+            echo "  libstdc++6 after installing: $(dpkg-query -W -f '${Version}' libstdc++6), offering up to $(objdump -p /usr/lib/x86_64-linux-gnu/libstdc++.so.6 | grep -oE 'GLIBCXX_[0-9.]+' | sort -uV | tail -1)"
+          } | tee -a about.txt
+
+      # From here on, the Linux leg of desktop-release.yml, with one package
+      # format instead of three: the executable inside is the same.
+      - name: Linux system dependencies
+        run: |
+          sudo apt-get update > /dev/null
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            libasound2-dev libxdo-dev libxkbcommon-dev > /dev/null
+
+      - name: Install the Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Bundle
+        run: cargo tauri build --config apps/desktop/src-tauri/tauri.conf.json --bundles deb
+
+      - name: The runtime must not need the build machine
+        run: scripts/check-desktop-portability.sh | tee -a about.txt
+
+      # In the same target directory, so the timed program holds the very
+      # runtime libraries that went into the package.
+      - name: The timing program
+        run: |
+          cargo build --release -p ramble-engine --example clock --locked
+          echo "runtime builds in the target directory: $(find target/release/build -maxdepth 2 -type d -path '*/transcribe-cpp-sys-*/out' | wc -l)" | tee -a about.txt
+
+      - name: What was compiled, and what it asks of a system
+        run: |
+          # Reading, not building: a search that finds nothing is an answer.
+          set +e +o pipefail
+          needs() {
+            echo "$1 ($(stat -c %s "$2") bytes)"
+            echo "  NEEDED: $(objdump -p "$2" | awk '/NEEDED/ { print $2 }' | sort | tr '\n' ' ')"
+            # The version references are what the loader checks before the
+            # program runs a single instruction.
+            for family in GLIBC GLIBCXX CXXABI GCC; do
+              top=$(objdump -p "$2" | grep -oE "\b${family}_[0-9][0-9.]*" | sort -uV | tail -1)
+              if [ -z "$top" ]; then echo "  highest $family: none"; continue; fi
+              echo "  highest $family: $top, for $(objdump -T "$2" | grep -cwF "$top") symbols, such as $(objdump -T "$2" | grep -wF "$top" | awk '{ print $NF }' | head -3 | c++filt | tr '\n' ';' | cut -c1-160)"
+            done
+          }
+          deb=$(ls target/release/bundle/deb/*.deb)
+          {
+            out=$(find target/release/build -maxdepth 2 -type d -path '*/transcribe-cpp-sys-*/out' | head -1)
+            echo "--- how the runtime was compiled"
+            grep -h '^CMAKE_C_COMPILER:\|^CMAKE_CXX_COMPILER:\|^CMAKE_BUILD_TYPE:\|^CMAKE_C_FLAGS:\|^CMAKE_CXX_FLAGS:\|^CMAKE_C_FLAGS_RELEASE:\|^CMAKE_CXX_FLAGS_RELEASE:' "$out/build/CMakeCache.txt" | sed 's/^/  /'
+            grep -h 'set(CMAKE_C_COMPILER_VERSION \|set(CMAKE_CXX_COMPILER_VERSION ' "$out"/build/CMakeFiles/*/CMake*Compiler.cmake | sed 's/^/  /'
+            flags=$(find "$out/build" -name flags.make -path '*ggml-cpu.dir*' | head -1)
+            grep -h '^C_FLAGS\|^CXX_FLAGS' "$flags" | cut -c1-400 | sed 's/^/  ggml-cpu /'
+            echo "--- what the finished programs ask for"
+            needs openramble-desktop target/release/openramble-desktop
+            needs clock target/release/examples/clock
+            echo "the .deb asks for: $(dpkg-deb -f "$deb" Depends)"
+            echo '```'
+          } | tee -a about.txt
+          set -e
+          cat about.txt >> "$GITHUB_STEP_SUMMARY"
+          mkdir keep
+          cp about.txt target/release/examples/clock target/release/openramble-desktop "$deb" keep/
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: build-${{ matrix.name }}
+          path: keep/*
+          if-no-files-found: error
+
+  # Every 22.04 build beside a build made here by this image's GCC 13, on one
+  # machine. Three machines, because a hosted machine is whichever one is free.
+  speed:
+    name: Speed, machine ${{ matrix.machine }}
+    needs: build
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        machine: [a, b, c]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: build-*
+          path: builds
+
+      - name: The same source built on this image
+        run: |
+          cargo build --release -p ramble-engine --example clock --locked
+          scripts/check-desktop-portability.sh | tail -1
+
+      - name: Models and clip
+        run: |
+          mkdir -p q8 q4
+          curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
+          curl -L --fail --retry 3 -o q4/model.gguf "$Q4_URL"
+          curl -L --fail --retry 3 -o dots.wav "$CLIP_URL"
+          echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
+          echo "$Q4_SHA256  q4/model.gguf" | sha256sum -c -
+
+      # One thread, as the app runs it. Two rounds, alternating, so drift on a
+      # shared machine shows.
+      - name: Speed
+        run: |
+          program() { if [ "$1" = here ]; then echo target/release/examples/clock; else echo "builds/build-$1/clock"; fi; }
+          {
+            echo "## Machine ${{ matrix.machine }}"
+            echo '```'
+            echo "machine: $(lscpu | grep 'Model name' | sed 's/.*: *//'); avx512f on $(grep -cw avx512f /proc/cpuinfo) of $(nproc) processors"
+            echo "here: $(gcc --version | head -1)"
+            echo "round | file | build | seconds | milliseconds, best of three | characters"
+            for round in 1 2; do
+              for model in q8 q4; do
+                for variant in $VARIANTS here; do
+                  clock=$(program "$variant")
+                  [ -f "$clock" ] || { echo "$round | $model | $variant | not built"; continue; }
+                  chmod +x "$clock"
+                  "$clock" $model dots.wav 3 2 8 16 30 2> "heard-$variant-$model.txt" \
+                    | awk -v r="$round" -v m="$model" -v v="$variant" '/^ *[0-9]+ \|/ { gsub(/ /, ""); split($0, a, "|"); print r " | " m " | " v " | " a[1] " | " a[2] " | " a[3] }' \
+                    || echo "$round | $model | $variant | FAILED"
+                done
+              done
+            done | tee times.txt
+            echo "--- the 8 s clip: Q8_0 round 1, round 2, Q4_K_M round 1, round 2"
+            for variant in $VARIANTS here; do
+              row="$variant"
+              for model in q8 q4; do
+                for round in 1 2; do
+                  row="$row | $(awk -F' [|] ' -v r="$round" -v m="$model" -v v="$variant" '$1 == r && $2 == m && $3 == v && $4 == 8 { print $5 }' times.txt)"
+                done
+              done
+              echo "$row"
+            done
+            echo "--- words"
+            for model in q8 q4; do
+              same=yes
+              for variant in $VARIANTS; do
+                [ -f "heard-$variant-$model.txt" ] || continue
+                cmp -s "heard-$variant-$model.txt" "heard-here-$model.txt" || same="no ($variant differs)"
+              done
+              echo "$model: text identical in every build: $same"
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: times-${{ matrix.machine }}
+          path: times.txt
+          if-no-files-found: error
+
+  # A stock system has the libstdc++ its distribution gave it, not the build
+  # machine's. Each package is installed into a fresh container, read by the
+  # loader, started, and its runtime asked to recognize the clip.
+  stock:
+    name: Starts on ${{ matrix.image }}
+    needs: build
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["ubuntu:22.04", "debian:12"]
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: build-*
+          path: builds
+
+      - name: Model and clip
+        run: |
+          mkdir q8
+          curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
+          curl -L --fail --retry 3 -o dots.wav "$CLIP_URL"
+          echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
+
+      - name: Install, load, start, recognize
+        run: |
+          cat > start.sh <<'EOF'
+          "$1" > app.out 2> app.err &
+          pid=$!
+          sleep 20
+          if kill -0 "$pid" 2> /dev/null; then
+            echo "  after 20 s: running, $(xwininfo -root -tree 2> /dev/null | grep -ci openramble) windows named OpenRamble"
+            kill "$pid"
+            wait "$pid" 2> /dev/null
+          else
+            wait "$pid"
+            echo "  after 20 s: NOT running, exit status $?"
+          fi
+          grep -hE 'not found|panicked|error while loading' app.err | head -3 | cut -c1-220 | sed 's/^/    /'
+          true
+          EOF
+          cat > inside.sh <<'EOF'
+          set -u
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update > /dev/null
+          apt-get install -y xvfb xauth dbus x11-utils binutils procps > /dev/null 2>&1
+          lib=/usr/lib/x86_64-linux-gnu/libstdc++.so.6
+          echo "## $(. /etc/os-release; echo "$PRETTY_NAME"), as it comes"
+          echo '```'
+          echo "libc6 $(dpkg-query -W -f '${Version}' libc6), libstdc++6 $(dpkg-query -W -f '${Version}' libstdc++6)"
+          echo "its libstdc++ offers up to $(objdump -p $lib | grep -oE 'GLIBCXX_[0-9.]+' | sort -uV | tail -1) and $(objdump -p $lib | grep -oE 'CXXABI_[0-9.]+' | sort -uV | tail -1)"
+          for variant in $VARIANTS; do
+            dir=builds/build-$variant
+            echo "$variant:"
+            deb=$(ls $dir/*.deb 2> /dev/null | head -1)
+            [ -n "$deb" ] || { echo "  not built"; continue; }
+            package=$(dpkg-deb -f "$deb" Package)
+            # The first install brings the libraries the package asks for.
+            # dpkg then puts this build's files in place whatever is there.
+            apt-get install -y "/work/$deb" > install.log 2>&1 || true
+            if dpkg -i "/work/$deb" >> install.log 2>&1; then echo "  installs: yes"; else echo "  installs: NO"; tail -3 install.log | sed 's/^/    /'; fi
+            exe=$(dpkg -L "$package" | grep '^/usr/bin/' | head -1)
+            if cmp -s "$exe" "$dir/openramble-desktop"; then echo "  installed executable is this build's: yes"; else echo "  installed executable is this build's: NO"; fi
+            missing=$(ldd -r "$exe" 2>&1 | grep -E 'not found|undefined symbol' | head -4 | cut -c1-200)
+            echo "  loader: ${missing:-every library and every symbol version found}"
+            dbus-run-session -- xvfb-run -a bash /work/start.sh "$exe"
+            pkill -9 -f -i webkit > /dev/null 2>&1
+            chmod +x "$dir/clock"
+            "$dir/clock" q8 dots.wav 1 2 > clock.out 2> clock.err
+            echo "  recognition: exit status $?"
+            grep -hE '^heard 2 s|not found' clock.err | cut -c1-200 | sed 's/^/    /'
+          done
+          echo '```'
+          EOF
+          docker run --rm -e VARIANTS -v "$PWD:/work" -w /work "${{ matrix.image }}" bash /work/inside.sh | tee -a "$GITHUB_STEP_SUMMARY"
