@@ -337,8 +337,8 @@
           ? "Installed and ready."
           : report.detail ?? "";
         el("model-detail").classList.toggle("bad", report.problem);
-        el("model-actions").hidden = report.ready;
-        el("size").textContent = report.ready ? "" : gigabytes(report.downloadBytes) + " to download";
+        el("model-actions").hidden = !report.canDownload;
+        el("size").textContent = report.canDownload ? gigabytes(report.downloadBytes) + " to download" : "";
       }
 
       el("install").addEventListener("click", async () => {

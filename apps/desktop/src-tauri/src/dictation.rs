@@ -9,7 +9,7 @@ use crate::adapters::inject::{self, InjectError};
 use crate::session::Outcome;
 use crate::take::{Ending, KeyJob, Waiting};
 use ramble_core::session::{Effect, Event, SessionMachine};
-use ramble_engine::Engine;
+use ramble_engine::{Engine, UnsupportedProcessor};
 use ramble_history::HistoryStore;
 use ramble_model::{Manifest, ModelState, ModelStore};
 use ramble_text::pipeline::TextPipeline;
@@ -101,6 +101,20 @@ fn recorded_duration(sample_count: usize, rate: u32) -> std::time::Duration {
     std::time::Duration::from_secs_f64(sample_count as f64 / rate as f64)
 }
 
+/// What a person is told when their processor cannot run the model.
+///
+/// What is wrong first, in plain words. The instruction names follow, for
+/// whoever wants to look them up. Then that nothing here changes it, so nobody
+/// downloads the model or searches the settings to find that out.
+pub fn processor_notice(unsupported: &UnsupportedProcessor) -> String {
+    format!(
+        "This computer's processor cannot run the speech model (it lacks {}). \
+         Dictation is not available on this computer, and no setting or download \
+         will change that.",
+        unsupported.missing()
+    )
+}
+
 /// How finished words leave the app.
 ///
 /// Handed in rather than called directly, so the rules about words that could
@@ -158,6 +172,9 @@ pub struct Dictation {
     /// Words that could not land. In memory only: they are in History as
     /// well, and keeping them anywhere else would be a third store.
     waiting: Mutex<Option<Waiting>>,
+    /// Why this computer's processor cannot run the model, when it cannot.
+    /// Asked once: a processor does not change while the app runs.
+    pub(crate) unsupported: Option<UnsupportedProcessor>,
 }
 
 impl Dictation {
@@ -182,6 +199,7 @@ impl Dictation {
             dictionary_directory: support_root()?,
             delivery: Delivery::system(),
             waiting: Mutex::new(None),
+            unsupported: UnsupportedProcessor::on_this_computer(),
         };
         // Their own terms are in effect from the first dictation, not from the
         // first time they open settings.
@@ -207,6 +225,7 @@ impl Dictation {
             dictionary_directory: root,
             delivery,
             waiting: Mutex::new(None),
+            unsupported: None,
         }
     }
 
@@ -243,6 +262,12 @@ impl Dictation {
 
     pub fn model_state(&self) -> ModelState {
         self.store.state()
+    }
+
+    /// Why this computer cannot dictate at all, when its processor cannot run
+    /// the model.
+    pub fn unsupported_processor(&self) -> Option<&UnsupportedProcessor> {
+        self.unsupported.as_ref()
     }
 
     pub fn store(&self) -> &ModelStore {
@@ -308,6 +333,11 @@ impl Dictation {
     /// microphone is opened, which is the moment the take block appears: a
     /// press that starts nothing must not flash a block.
     pub fn begin(&self, accepted: impl FnOnce()) -> Result<(), String> {
+        // Before the microphone opens: words recorded on a processor that
+        // cannot run the model could never be recognized.
+        if let Some(unsupported) = &self.unsupported {
+            return Err(processor_notice(unsupported));
+        }
         if self.advance(Event::Pressed).is_empty() {
             return Err(if self.model_is_ready() {
                 "A dictation is already in progress.".into()
@@ -594,6 +624,7 @@ impl Dictation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ramble_engine::Instructions;
 
     /// Windows and Linux follow the Mac's model and revision, differing only
     /// in the file, and keep a mirror like every shipped manifest.
@@ -747,6 +778,70 @@ mod tests {
         assert_eq!(unkept.waiting(), None);
     }
 
+    /// An Intel Core of 2012 under a runtime compiled as the packages are.
+    fn a_processor_without_avx2() -> Option<UnsupportedProcessor> {
+        let packages = Instructions {
+            avx: true,
+            avx2: true,
+            fma: true,
+            f16c: true,
+            bmi2: true,
+            avx512: false,
+        };
+        let processor = Instructions {
+            avx: true,
+            f16c: true,
+            ..Instructions::default()
+        };
+        UnsupportedProcessor::check(packages, processor)
+    }
+
+    /// Words recorded on a processor that cannot run the model could never be
+    /// recognized. The press is refused before the block appears and the
+    /// microphone opens, and the reason is the processor, in plain words.
+    #[test]
+    fn no_take_starts_on_a_processor_that_cannot_run_the_model() {
+        let mut dictation = dictation_delivering(typing(pastes));
+        dictation.unsupported = a_processor_without_avx2();
+        let refused = dictation
+            .begin(|| panic!("no take may start"))
+            .expect_err("the press must be refused");
+        assert_eq!(
+            refused,
+            "This computer's processor cannot run the speech model (it lacks AVX2, FMA and \
+             BMI2). Dictation is not available on this computer, and no setting or download \
+             will change that."
+        );
+    }
+
+    /// What is wrong comes first and in plain words. The instruction names
+    /// follow for whoever wants to look them up, and nobody is blamed.
+    #[test]
+    fn the_notice_opens_in_plain_words_and_says_nothing_will_change_it() {
+        let unsupported = a_processor_without_avx2().expect("no AVX2");
+        let notice = processor_notice(&unsupported);
+        assert!(
+            notice.starts_with("This computer's processor cannot run the speech model"),
+            "{notice}"
+        );
+        assert!(notice.contains("no setting or download"), "{notice}");
+        assert!(!notice.to_lowercase().contains("you"), "{notice}");
+    }
+
+    /// Asked of the machine running the tests: the service holds the answer
+    /// the engine gives, so the two cannot disagree about one processor.
+    #[test]
+    fn the_service_asks_about_this_computer_when_it_starts() {
+        let Some(dictation) = Dictation::new() else {
+            eprintln!("no support directory; skipping");
+            return;
+        };
+        assert_eq!(
+            dictation.unsupported_processor().cloned(),
+            UnsupportedProcessor::on_this_computer()
+        );
+    }
+
     fn dictation_keeping_history_in(history: PathBuf, root: &Path) -> Dictation {
         Dictation {
             machine: Mutex::new(SessionMachine::new()),
@@ -761,6 +856,7 @@ mod tests {
             dictionary_directory: root.to_path_buf(),
             delivery: typing(pastes),
             waiting: Mutex::new(None),
+            unsupported: None,
         }
     }
 
