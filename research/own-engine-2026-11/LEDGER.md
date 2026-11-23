@@ -986,17 +986,22 @@ clips (two unit threads, interactive workers).
 | Engine, NEON (P1) | 723 | 749 | 1,472 |
 | Unit, one scale per 256 columns (E2) | 734 | 739 | 1,473 |
 | Unit, one scale per frame | 736 | 753 | 1,489 |
+| Unit, one scale per 1,024 columns | 734 | 749 | 1,483 |
 
 Found. One scale per frame costs 17 errors in 29,586 words, 0.06 points,
-the same count as transcribe.cpp with the 4-bit file on x86 (P3). The
-encoder took 12 ms per second of audio on English under that load.
+the same count as transcribe.cpp with the 4-bit file on x86 (P3). A scale
+per 1,024 columns, which is one scale per frame for every matrix but the two
+that take 4,096 inputs, costs 11. So most of the cost is in the matrices of
+1,024 inputs, and a coarser scale only there would not recover it. These
+differences are near the size of the noise between implementations, but
+they all lean the same way.
 
 Where this stands. The unit keeps the words when activations keep a scale
 per 256 columns, and it is fast only when they do not. Neither variant beats
 Metal's 80 ms yet, so the Mac keeps Metal. What is left to try, in order:
-SME2's four-vector read-outs and conversions to cut the read-out cost, an
-activation scale per 1,024 columns (one read-out for most matrices, four for
-the two that take 4,096), and measuring on an idle Mac.
+SME2's four-vector read-outs and conversions to cut the read-out cost of the
+accurate variant (`-DORE_R8_ABLOCK=256` with `-DORE_R8_ROWSCALE=1` is that
+variant on the row path), and measuring on an idle Mac.
 
 ## E2. The matrix unit's words
 

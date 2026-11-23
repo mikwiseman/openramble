@@ -92,6 +92,10 @@ static void job_gemm_q80(void * v, int b, int e, int thread) {
 #ifndef ORE_R8_ROWSCALE
 #define ORE_R8_ROWSCALE 0
 #endif
+// Columns that share one activation scale on the matrix unit's row path.
+#ifndef ORE_R8_ABLOCK
+#define ORE_R8_ABLOCK (1 << 30)
+#endif
 static void job_quant_row(void * v, int b, int e, int thread) {
     lin_ctx * c = (lin_ctx *) v;
     (void) thread;
@@ -119,7 +123,7 @@ static void linear(struct ore_session * s, const ore_tensor * w, ore_lin_in * in
     if (s->oom || in->rows <= 0) return;
     if (w->r8 && s->k->gemm_r8 && ORE_R8_ROWSCALE) {
         if (!in->have_row) {
-            if (!ore_qact_reserve(&in->row, in->rows, in->n, in->n)) {
+            if (!ore_qact_reserve(&in->row, in->rows, in->n, in->n % ORE_R8_ABLOCK ? in->n : ORE_R8_ABLOCK)) {
                 s->oom = 1;
                 return;
             }

@@ -65,22 +65,24 @@ int ore_r8_make(ore_r8 * r, const uint8_t * w, int type, int n, int rows) {
 }
 
 void ore_quantize_rows(const float * x, size_t xstride, int tb0, int tb1, ore_qact * out) {
-    const int n = out->n;
+    const int n = out->n, nb = out->nb, block = n / nb;
     for (int tb = tb0; tb < tb1; ++tb) {
         for (int f = 0; f < ORE_FB; ++f) {
             const int     t   = tb * ORE_FB + f;
             const float * row = x + (size_t) t * xstride;
-            float         big = 0.0f;
-            if (t < out->rows) {
-                for (int k = 0; k < n; ++k) big = fmaxf(big, fabsf(row[k]));
+            int8_t *      dst = out->q + (size_t) tb * n * ORE_FB + (size_t) f * 4;
+            for (int b = 0; b < nb; ++b) {
+                float big = 0.0f;
+                if (t < out->rows) {
+                    for (int k = b * block; k < (b + 1) * block; ++k) big = fmaxf(big, fabsf(row[k]));
+                }
+                const float scale = big / 127.0f, inv = scale > 0.0f ? 1.0f / scale : 0.0f;
+                for (int k = b * block; k < (b + 1) * block; ++k) {
+                    const long v                         = t < out->rows ? lrintf(row[k] * inv) : 0;
+                    dst[(size_t) (k / 4) * 64 + (k % 4)] = (int8_t) (v > 127 ? 127 : v < -127 ? -127 : v);
+                }
+                out->d[((size_t) tb * nb + b) * ORE_FB + f] = scale;
             }
-            const float scale = big / 127.0f, inv = scale > 0.0f ? 1.0f / scale : 0.0f;
-            int8_t *    dst   = out->q + (size_t) tb * n * ORE_FB + (size_t) f * 4;
-            for (int k = 0; k < n; ++k) {
-                const long v                         = t < out->rows ? lrintf(row[k] * inv) : 0;
-                dst[(size_t) (k / 4) * 64 + (k % 4)] = (int8_t) (v > 127 ? 127 : v < -127 ? -127 : v);
-            }
-            out->d[(size_t) tb * ORE_FB + f] = scale;
         }
     }
 }

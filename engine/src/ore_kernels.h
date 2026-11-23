@@ -52,8 +52,8 @@ typedef struct ore_r8 {
     int      rows;   // a multiple of 16
 } ore_r8;
 
-// Activations with one scale per frame over all n columns, in the layout of
-// ore_qact with a single scale-block (reserve it with block = n).
+// Activations with one scale per frame for every out->n / out->nb columns, in
+// the layout of ore_qact (reserve it with that block).
 void ore_quantize_rows(const float * x, size_t xstride, int tb0, int tb1, ore_qact * out);
 
 // Fills `r` from a Q4_K or F16 tensor of `rows` rows of `n` columns. Returns
