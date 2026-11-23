@@ -9,7 +9,7 @@ import PackageDescription
 let package = Package(
     name: "DictationCore",
     defaultLocalization: "en",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
         .library(name: "DictationCore", targets: ["DictationCore"]),
         .library(name: "DictationAudio", targets: ["DictationAudio"]),

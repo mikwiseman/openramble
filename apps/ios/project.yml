@@ -1,0 +1,150 @@
+name: OpenRambleiOS
+
+# OpenRamble for iPhone: speak, and read your words. Recognition runs on the
+# iPhone with our own engine (engine/, through LocalASR's OreAdapter); the one
+# network area is the explicit model download in OpenRamble/System/ModelDownload.swift.
+#
+#   ./scripts/check.sh --ios    generates this project, builds it and runs its tests
+
+options:
+  bundleIdPrefix: is.waiwai
+  developmentLanguage: en
+  knownRegions: [en]
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+
+packages:
+  DictationCore:
+    path: ../../Packages/DictationCore
+  LocalASR:
+    path: ../../Packages/LocalASR
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Mik's team is set when the app is signed for a device or the App Store;
+    # the simulator and CI build unsigned.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    # iPhone only: the design is one column for one hand.
+    TARGETED_DEVICE_FAMILY: "1"
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+
+targets:
+  OpenRamble:
+    type: application
+    platform: iOS
+    sources:
+      - path: OpenRamble
+      - path: Shared
+      - path: ../../LICENSE
+        buildPhase: resources
+      - path: ../../THIRD_PARTY_LICENSES.md
+        buildPhase: resources
+    dependencies:
+      - target: OpenRambleWidgets
+        embed: true
+      - package: DictationCore
+        product: DictationCore
+      - package: LocalASR
+        product: LocalASR
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation
+        PRODUCT_NAME: OpenRamble
+        INFOPLIST_FILE: OpenRamble/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.dev
+    info:
+      path: OpenRamble/Info.plist
+      properties:
+        CFBundleDisplayName: OpenRamble
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleDevelopmentRegion: en
+        LSApplicationCategoryType: public.app-category.productivity
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # Recording goes on when the screen locks or another app comes forward.
+        UIBackgroundModes: [audio]
+        NSSupportsLiveActivities: true
+        NSMicrophoneUsageDescription: >-
+          OpenRamble listens while you record and turns your speech into text on
+          this iPhone. The recording is never sent anywhere.
+        # HTTPS to Hugging Face and GitHub for the model, and nothing else.
+        ITSAppUsesNonExemptEncryption: false
+        # Audio files can be opened in OpenRamble from Files or another app's
+        # share sheet, and are written down like a take.
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Audio
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.audio]
+        LSSupportsOpeningDocumentsInPlace: false
+
+  OpenRambleWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.widgets
+        PRODUCT_NAME: OpenRambleWidgets
+        INFOPLIST_FILE: Widgets/Info.plist
+        SKIP_INSTALL: YES
+        # The shared intents compile here only to be named; the app performs them.
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) WIDGET_EXTENSION"
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.dev.widgets
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: OpenRamble
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  OpenRambleTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: OpenRambleTests
+    dependencies:
+      - target: OpenRamble
+      - package: DictationCore
+        product: DictationCore
+      - package: LocalASR
+        product: LocalASR
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/OpenRamble.app/OpenRamble"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  OpenRamble:
+    build:
+      targets:
+        OpenRamble: all
+        OpenRambleTests: [test]
+    test:
+      targets:
+        - OpenRambleTests
+      gatherCoverageData: false

@@ -1,3 +1,6 @@
+// The Metal runtime ships for macOS only; on the iPhone this file compiles to
+// nothing and `OreAdapter` recognizes.
+#if canImport(CTranscribe)
 import CTranscribe
 import DictationCore
 import Foundation
@@ -22,9 +25,8 @@ private let runtimeLog = Logger(subsystem: "is.waiwai.dictation", category: "asr
 /// weights are data, and a reload is a file read. Apple Silicon uses Metal;
 /// the upstream Intel runtime is CPU-only.
 public actor TranscribeCppAdapter: BatchASREngineAdapting {
-    /// Sample rate the runtime requires. The recorder already produces this, so
-    /// nothing resamples on the way in.
-    public static let requiredSampleRate = 16_000
+    /// Sample rate the runtime requires; see `ParakeetInput`.
+    public static let requiredSampleRate = ParakeetInput.sampleRate
     public static var runtimeVersion: String { String(cString: transcribe_version()) }
 
     /// The file the runtime's code was loaded from, as the dynamic loader
@@ -42,10 +44,8 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
         return String(cString: path)
     }
 
-    /// The shortest clip the mel front-end will accept without producing NaNs:
-    /// 1.25 seconds, the same constant as `MINIMUM_ENGINE_SAMPLES` in
-    /// `core/ramble-audio/src/prepare.rs`. The two must move together.
-    public static let minimumEngineSamples = requiredSampleRate * 5 / 4
+    /// The shortest clip the mel front-end accepts; see `ParakeetInput`.
+    public static let minimumEngineSamples = ParakeetInput.minimumSamples
 
     /// The loaded runtime, or nothing.
     ///
@@ -554,31 +554,9 @@ public actor TranscribeCppAdapter: BatchASREngineAdapting {
         }, Unmanaged.passUnretained(cancellation).toOpaque())
     }
 
-    /// The single GGUF in a prepared revision directory.
-    ///
-    /// Fails loudly on none and on more than one. A directory holding two
-    /// models is an installer bug, and picking one of them arbitrarily would
-    /// turn that bug into a mysterious quality complaint months later.
+    /// The single GGUF in a prepared revision directory; see `ParakeetInput`.
     static func modelFile(in directory: URL) throws -> URL {
-        let candidates: [URL]
-        do {
-            candidates = try FileManager.default.contentsOfDirectory(
-                at: directory,
-                includingPropertiesForKeys: nil
-            ).filter { $0.pathExtension.lowercased() == "gguf" }
-        } catch {
-            throw ASREngineError.modelsUnavailable("the model directory is unreadable")
-        }
-        switch candidates.count {
-        case 1:
-            return candidates[0]
-        case 0:
-            throw ASREngineError.modelsUnavailable("no model file in the installed revision")
-        default:
-            throw ASREngineError.modelsUnavailable(
-                "the installed revision holds \(candidates.count) model files"
-            )
-        }
+        try ParakeetInput.modelFile(in: directory)
     }
 
     /// What a run produced, carried back as owned data.
@@ -628,3 +606,5 @@ private extension Duration {
         Double(components.seconds) + Double(components.attoseconds) / 1e18
     }
 }
+
+#endif
