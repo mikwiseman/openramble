@@ -9,7 +9,8 @@
 #
 # The iPhone app has one: apps/ios/OpenRamble/System/ModelDownload.swift, the
 # model download the person starts with a tap, run as a background transfer so
-# it carries on when they leave the app. Its widget extension has none.
+# it carries on when they leave the app. Its widget extension and the
+# OpenRambleKit package have none.
 #
 # The Linux transcription server (apps/cli) accepts connections and makes
 # none: exactly one file, apps/cli/src/listen.rs, may name a socket, and it
@@ -41,7 +42,7 @@ SHIPPING_PATHS=(
   apps/macos/OpenRamble
   apps/macos/OpenRambleCLI
   apps/ios/OpenRamble
-  apps/ios/Shared
+  apps/ios/Kit/Sources
   apps/ios/Widgets
 )
 
@@ -91,7 +92,7 @@ while IFS= read -r hit; do
     status=1
   fi
   echo "  $hit"
-done < <(grep -rnE "$FORBIDDEN_IOS_PASTEBOARD" apps/ios/OpenRamble apps/ios/Shared apps/ios/Widgets 2>/dev/null \
+done < <(grep -rnE "$FORBIDDEN_IOS_PASTEBOARD" apps/ios/OpenRamble apps/ios/Kit/Sources apps/ios/Widgets 2>/dev/null \
   | grep -vE ':[0-9]+: *//' \
   | grep -E 'UIPasteboard|pasteboard\.' \
   | grep -v 'localOnly: true' \

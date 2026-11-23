@@ -42,7 +42,7 @@ copy() {
   cp "$REPOSITORY_ROOT/apps/cli/Cargo.toml" "$tree/apps/cli/"
   cp -R "$REPOSITORY_ROOT/apps/cli/src" "$tree/apps/cli/src"
   mkdir -p "$tree/apps/ios"
-  cp -R "$REPOSITORY_ROOT/apps/ios/OpenRamble" "$REPOSITORY_ROOT/apps/ios/Shared" \
+  cp -R "$REPOSITORY_ROOT/apps/ios/OpenRamble" "$REPOSITORY_ROOT/apps/ios/Kit" \
     "$REPOSITORY_ROOT/apps/ios/Widgets" "$tree/apps/ios/"
   echo "$tree"
 }
@@ -133,6 +133,10 @@ expect_fail "$tree" "the iPhone app reaching the network outside ModelDownload.s
 tree=$(copy)
 printf '\nlet probe = URLSession.shared\n' >> "$tree/apps/ios/Widgets/Widgets.swift"
 expect_fail "$tree" "the widget extension reaching the network passed"
+
+tree=$(copy)
+printf '\nlet probe = URLSession.shared\n' >> "$tree/apps/ios/Kit/Sources/OpenRambleKit/DictationIntents.swift"
+expect_fail "$tree" "the shared intents package reaching the network passed"
 
 tree=$(copy)
 printf '\nfunc leak(_ text: String) { UIPasteboard.general.string = text }\n' >> "$tree/apps/ios/OpenRamble/UI/TakeView.swift"

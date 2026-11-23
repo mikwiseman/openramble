@@ -28,7 +28,7 @@ The iPhone app (`apps/ios`) has one:
 
 4. The explicit model download through
    `apps/ios/OpenRamble/System/ModelDownload.swift`, a background transfer.
-   Its widget extension and the `OpenRambleKit` framework have none.
+   Its widget extension and the `OpenRambleKit` package have none.
 
 The Linux server has one, inbound only:
 
@@ -53,8 +53,8 @@ the public privacy description in `README.md` if this boundary ever changes.
   HAL), recognizing with `OreAdapter`, because iOS forbids GPU work in the
   background and the transcribe.cpp binary has no iOS slice. Takes are kept by
   `TakeStore`, documented in README's privacy section. Intents that a widget
-  button or control runs live in `OpenRambleKit` so the app, not the
-  extension, performs them. `./scripts/test-ios.sh` builds and tests it.
+  button or control runs live in the `OpenRambleKit` package so the app,
+  not the extension, performs them. `./scripts/test-ios.sh` builds and tests it.
 - The recorder (`MeetingCapture`, `MeetingStore`, the Recordings window) is
   macOS-only and deliberately absent from `core/`. It rests on Core Audio
   process taps, which have no Windows or Linux counterpart, so there is nothing
