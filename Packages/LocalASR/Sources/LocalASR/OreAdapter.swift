@@ -2,13 +2,16 @@ import DictationCore
 import Foundation
 import ORE
 
-/// The recognizer for Intel Macs: OpenRamble's own engine in `engine/`.
+/// The recognizer for Intel Macs and the iPhone: OpenRamble's own engine in
+/// `engine/`.
 ///
 /// One of the two files that may talk to a recognition engine; the other is
-/// `TranscribeCppAdapter`, which runs Apple silicon on Metal. An Intel Mac has
-/// no Metal path in either engine, so recognition runs on the processor, and
-/// there this engine is about twice as fast as transcribe.cpp on the same four
-/// threads (research/own-engine-2026-11, the ledger's speed tables).
+/// `TranscribeCppAdapter`, which runs Apple silicon Macs on Metal. An Intel Mac
+/// has no Metal path in either engine, so recognition runs on the processor,
+/// and there this engine is about twice as fast as transcribe.cpp on the same
+/// four threads (research/own-engine-2026-11, the ledger's speed tables). The
+/// iPhone runs it because iOS forbids GPU work in the background and because
+/// the engine maps the model instead of copying it (research/ios-2026-11).
 ///
 /// It gives the same words: the engine follows transcribe.cpp's arithmetic,
 /// its long-audio cutting and its treatment of taught words, and the ledger
@@ -67,7 +70,7 @@ public actor OreAdapter: BatchASREngineAdapting {
         if engine != nil, loadedDirectory == directory { return }
         if engine != nil { await unload() }
 
-        let weights = try TranscribeCppAdapter.modelFile(in: directory)
+        let weights = try ParakeetInput.modelFile(in: directory)
         var reason: UnsafePointer<CChar>?
         guard let model = weights.path.withCString({ ore_model_open($0, &reason) }) else {
             throw ASREngineError.modelsUnavailable(reason.map { String(cString: $0) } ?? "the model file could not be opened")
@@ -184,8 +187,8 @@ public actor OreAdapter: BatchASREngineAdapting {
             // the other engine and on the other platforms: the front end
             // needs more than a few frames. The reported length stays the
             // real one.
-            let duration = Double(clip.count) / Double(TranscribeCppAdapter.requiredSampleRate)
-            let minimum = TranscribeCppAdapter.minimumEngineSamples
+            let duration = Double(clip.count) / Double(ParakeetInput.sampleRate)
+            let minimum = ParakeetInput.minimumSamples
             let padded = clip.count >= minimum ? clip : clip + [Float](repeating: 0, count: minimum - clip.count)
 
             let runStarted = ContinuousClock.now

@@ -2,10 +2,15 @@
 # Tests the core promise of the product: the network is only used where
 # this is declared to the user.
 #
-# Exactly two places may reach the network:
+# Exactly two places in the Mac app may reach the network:
 # • ModelDownloading.swift — downloading a model using a button
 # • SparkleUpdater.swift — update checks (on by default, can be turned off)
 #   and update downloads, which always need a click
+#
+# The iPhone app has one: apps/ios/OpenRamble/System/ModelDownload.swift, the
+# model download the person starts with a tap, run as a background transfer so
+# it carries on when they leave the app. Its widget extension and the
+# OpenRambleKit package have none.
 #
 # The Linux transcription server (apps/cli) accepts connections and makes
 # none: exactly one file, apps/cli/src/listen.rs, may name a socket, and it
@@ -26,7 +31,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Files that are allowed by the network.
-ALLOWED='^(Packages/LocalASR/Sources/LocalASR/ModelDownloading\.swift|apps/macos/OpenRamble/System/SparkleUpdater\.swift|apps/macos/OpenRamble/System/LocalRecordingAsset\.swift)$'
+ALLOWED='^(Packages/LocalASR/Sources/LocalASR/ModelDownloading\.swift|apps/macos/OpenRamble/System/SparkleUpdater\.swift|apps/macos/OpenRamble/System/LocalRecordingAsset\.swift|apps/ios/OpenRamble/System/ModelDownload\.swift)$'
 
 # We only check the shipping code. The tests intentionally create a URLSession, read
 # local fixture files via Data(contentsOf:) and raise control-connect;
@@ -36,6 +41,9 @@ SHIPPING_PATHS=(
   Packages/LocalASR/Sources
   apps/macos/OpenRamble
   apps/macos/OpenRambleCLI
+  apps/ios/OpenRamble
+  apps/ios/Kit/Sources
+  apps/ios/Widgets
 )
 
 # Symbols that can go online.
@@ -70,6 +78,32 @@ done < <(grep -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" 2>/dev/null \
   | grep -vE ':[0-9]+: *//' \
   | grep -vE 'URLSessionModelDownloader\(\)|: ModelDownloading' \
   || true)
+
+# On the iPhone the same leak has other spellings: the plain UIPasteboard
+# setters hand a take to Universal Clipboard. Words are copied only through
+# Clipboard.swift, with setItems(_:options:) and .localOnly.
+FORBIDDEN_IOS_PASTEBOARD='UIPasteboard\.general\.(string|strings|items|url|urls|image|images|color|colors)[[:space:]]*=|\.(setValue|setData|addItems|setItems)\('
+echo "Checking the iPhone clipboard entry..."
+while IFS= read -r hit; do
+  if [[ $status -eq 0 ]]; then
+    echo ""
+    echo "VIOLATION: a take reaches the iPhone's clipboard without .localOnly,"
+    echo "which hands it to every device on the Apple Account."
+    status=1
+  fi
+  echo "  $hit"
+done < <(grep -rnE "$FORBIDDEN_IOS_PASTEBOARD" apps/ios/OpenRamble apps/ios/Kit/Sources apps/ios/Widgets 2>/dev/null \
+  | grep -vE ':[0-9]+: *//' \
+  | grep -E 'UIPasteboard|pasteboard\.' \
+  | grep -v 'localOnly: true' \
+  || true)
+if ! grep -q 'options: \[\.localOnly: true\]' apps/ios/OpenRamble/System/Clipboard.swift 2>/dev/null; then
+  if [[ -d apps/ios ]]; then
+    echo ""
+    echo "VIOLATION: Clipboard.swift no longer copies with .localOnly."
+    status=1
+  fi
+fi
 
 # A plain clearContents()/declareTypes() puts dictation on Universal Clipboard,
 # where it reaches every device on the Apple ID. The definition used to sit

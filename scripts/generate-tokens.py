@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Writes the shared visual tokens into both platforms.
 
-macOS reads Swift constants and the desktop app reads CSS custom properties, so
-the same numbers have to exist twice in the built product. Typing them twice is
+macOS and the iPhone read Swift constants and the desktop app reads CSS custom
+properties, so the same numbers have to exist more than once in the built
+products. Typing them twice is
 what makes them drift; generating them means a change to design/tokens.json
 reaches both, and check.sh fails if either file no longer matches.
 """
@@ -15,6 +16,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TOKENS = ROOT / "design" / "tokens.json"
 SWIFT = ROOT / "apps/macos/OpenRamble/UI/GlassTokens.swift"
+IOS_SWIFT = ROOT / "apps/ios/OpenRamble/UI/GlassTokens.swift"
 CSS = ROOT / "apps/desktop/ui/tokens.css"
 
 BANNER = "Generated from design/tokens.json by scripts/generate-tokens.py. Do not edit."
@@ -153,7 +155,7 @@ def main() -> int:
     check = "--check" in sys.argv
     stale = []
 
-    for path, rendered in ((SWIFT, swift(tokens)), (CSS, css(tokens))):
+    for path, rendered in ((SWIFT, swift(tokens)), (IOS_SWIFT, swift(tokens)), (CSS, css(tokens))):
         current = path.read_text() if path.exists() else None
         if current == rendered:
             continue
@@ -170,7 +172,7 @@ def main() -> int:
         print("Run scripts/generate-tokens.py to bring them back.", file=sys.stderr)
         return 1
     if check:
-        print("Both platforms match design/tokens.json.")
+        print("Every platform matches design/tokens.json.")
     return 0
 
 

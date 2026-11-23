@@ -8,7 +8,9 @@ import Darwin
 /// swap-in to the process that faulted, so it lands here. Two readings around
 /// a take are the measurement; one alone means nothing.
 public enum ProcessDiskReads {
+    /// Always `nil` on iOS, whose SDK has no `proc_pid_rusage`.
     public static func bytesRead() -> UInt64? {
+        #if os(macOS)
         var info = rusage_info_current()
         let succeeded = withUnsafeMutablePointer(to: &info) { pointer in
             pointer.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) {
@@ -16,5 +18,8 @@ public enum ProcessDiskReads {
             }
         }
         return succeeded ? info.ri_diskio_bytesread : nil
+        #else
+        return nil
+        #endif
     }
 }

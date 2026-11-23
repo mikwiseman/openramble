@@ -39,14 +39,16 @@ public actor LocalTranscriber {
     /// When the engine last finished running inference.
     private var lastRunEnded: ContinuousClock.Instant?
 
-    /// The recognizer this Mac ships with: transcribe.cpp on Metal on Apple
-    /// silicon, and our own engine on Intel, where both run on the processor
-    /// and ours is the faster of the two.
+    /// The recognizer this device ships with: transcribe.cpp on Metal on an
+    /// Apple silicon Mac, and our own engine on Intel, where both run on the
+    /// processor and ours is the faster of the two, and on the iPhone, which
+    /// may not use its GPU while the app is in the background and gets no Metal
+    /// runtime binary at all (research/ios-2026-11).
     public static func shippingEngine() -> any ASREngineAdapting {
-        #if arch(x86_64)
-        OreAdapter()
-        #else
+        #if os(macOS) && arch(arm64)
         TranscribeCppAdapter()
+        #else
+        OreAdapter()
         #endif
     }
 

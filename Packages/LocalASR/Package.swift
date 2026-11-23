@@ -4,13 +4,15 @@ import PackageDescription
 // LocalASR — installing the model and recognizing speech with it.
 //
 // Two files in the entire project touch a recognition engine:
-// TranscribeCppAdapter.swift, which runs Apple silicon on Metal, and
-// OreAdapter.swift, which runs Intel Macs on our own engine. Everything else
+// TranscribeCppAdapter.swift, which runs Apple silicon Macs on Metal, and
+// OreAdapter.swift, which runs Intel Macs and the iPhone on our own engine.
+// The Metal runtime is a Mac-only binary, so on iOS the package builds without
+// it and that adapter compiles to nothing. Everything else
 // talks to ASREngineAdapting, declared in DictationCore — which is what made
 // replacing the previous engine a contained change instead of a rewrite.
 let package = Package(
     name: "LocalASR",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
         .library(name: "LocalASR", targets: ["LocalASR"]),
         .executable(name: "asr-bench", targets: ["asr-bench"]),
@@ -19,7 +21,8 @@ let package = Package(
         .package(path: "../DictationCore"),
         // Our own recognition engine: plain C with no dependencies, compiled
         // from the repository's `engine/` folder. Intel Macs recognize with
-        // it; Windows, Linux and the server compile the same files.
+        // it, and so does the iPhone; Windows, Linux and the server compile the
+        // same files.
         .package(name: "ORE", path: "../../engine"),
     ],
     targets: [
@@ -47,7 +50,7 @@ let package = Package(
             name: "LocalASR",
             dependencies: [
                 .product(name: "DictationCore", package: "DictationCore"),
-                "CTranscribe",
+                .target(name: "CTranscribe", condition: .when(platforms: [.macOS])),
                 .product(name: "ORE", package: "ORE"),
             ],
             resources: [.process("Resources")],

@@ -4,6 +4,8 @@
 # ./scripts/check.sh both packages + application + network gate
 # ./scripts/check.sh --fast packets and gate only (seconds, no Xcode)
 # ./scripts/check.sh --app application only
+# ./scripts/check.sh --ios the iPhone app, in the iOS Simulator (CI runs it on
+#                          every pull request; it needs an iOS simulator here)
 #
 # The script itself fixes the build freeze, which everyone else stumbles over: SwiftPM
 # asks Keychain for credentials for the binary artifact download host
@@ -219,6 +221,11 @@ run_app() {
   [[ -d "$framework" ]] || fail "The inference runtime is missing from the application."
 }
 
+run_ios() {
+  echo "→ iPhone app"
+  ./scripts/test-ios.sh || fail "The iPhone app's build or tests failed."
+}
+
 run_network_gate() {
   echo "→ Network Surface"
   ./scripts/check-network-surface.sh > /dev/null || fail "Network gate failed."
@@ -231,6 +238,7 @@ run_network_gate() {
 case "$MODE" in
   --fast) run_packages; run_shared_core; run_network_gate ;;
   --app)  run_app ;;
+  --ios)  run_ios ;;
   all|*)  run_packages; run_shared_core; run_app; run_network_gate ;;
 esac
 
