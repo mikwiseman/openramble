@@ -20,20 +20,6 @@ jobs:
     name: Build
     runs-on: ${{ inputs.os }}
     timeout-minutes: 60
-    env:
-      # Nothing of the build machine goes into the packages. Left alone, the
-      # recognition runtime is compiled for the processor of whichever machine
-      # this job is given and linked against that machine's BLAS library.
-      # 0.37.0 for Linux got both: it needs AVX-512, which most computers
-      # lack, and libblas.so.3, which the package does not ask for. So the
-      # instruction set is fixed at x86-64-v3 (AVX2, FMA, F16C and BMI2, in
-      # Intel Core since 2013 and AMD since 2015) and the system BLAS is left
-      # out. The fork's build script passes this variable to CMake after its
-      # own settings.
-      TRANSCRIBE_CMAKE_ARGS: >-
-        -DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON
-        -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON
-        -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
@@ -56,8 +42,11 @@ jobs:
         shell: bash
         run: cargo tauri build --config apps/desktop/src-tauri/tauri.conf.json
 
-      # The setting above is a request. This reads what was compiled.
-      - name: The runtime must not need the build machine
+      # Nothing of the build machine may go into the packages: 0.37.0 for
+      # Linux needed AVX-512, which most computers lack. The engine chooses
+      # its kernels on the computer it runs on, and this reads what was
+      # compiled to make sure nothing else needs a newer processor.
+      - name: The engine must not need the build machine
         shell: bash
         run: scripts/check-desktop-portability.sh
 

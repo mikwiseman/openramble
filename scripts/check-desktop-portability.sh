@@ -1,14 +1,14 @@
 #!/bin/bash
-# Fails when the recognition runtime built for the Windows and Linux packages
+# Fails when the recognition engine built for the Windows and Linux packages
 # would only run on a computer like the one that built it.
 #
-# Three things are read from the build, not from the workflow that asked for
-# them: that CMake was told not to tune for the build machine's processor, that
-# the runtime links no BLAS library of the build machine, and that the compiled
-# libraries name no AVX-512 register. The libraries are read before they are
-# linked because they still carry only the runtime's own code there. The
-# finished executable cannot be judged this way: the TLS library brings AVX-512
-# routines that it calls only after asking the processor, and those are fine.
+# The engine carries its own kernels for AVX2 and AVX-512 and for processors
+# that have neither, and picks one set when a model is opened. That is only
+# safe if everything outside the kernel files is compiled for the first
+# x86-64 processors, so this reads what was compiled, file by file: the two
+# kernel files may use newer instructions, nothing else may. 0.37.0 for Linux
+# is why the build is read and not trusted: its runtime was tuned for the
+# build machine and needed AVX-512.
 #
 # Usage: check-desktop-portability.sh [cargo target directory]
 set -euo pipefail
@@ -16,44 +16,61 @@ cd "$(dirname "$0")/.."
 
 TARGET="${1:-target}"
 
-OUT=$(find "$TARGET/release/build" -maxdepth 2 -type d -path '*/transcribe-cpp-sys-*/out' | head -1)
-[[ -n "$OUT" ]] || { echo "No transcribe-cpp-sys build under $TARGET/release/build." >&2; exit 1; }
+OUT=$(find "$TARGET/release/build" -maxdepth 2 -type d -path '*/ramble-engine-*/out' | head -1)
+[[ -n "$OUT" ]] || { echo "No ramble-engine build under $TARGET/release/build." >&2; exit 1; }
 
-grep -q '^GGML_NATIVE:[A-Z]*=OFF' "$OUT/build/CMakeCache.txt" || {
-  echo "The runtime was tuned for this build machine's processor (GGML_NATIVE is not OFF)." >&2
-  exit 1
-}
+OBJECTS=()
+while IFS= read -r object; do OBJECTS+=("$object"); done < <(
+  find "$OUT" -maxdepth 1 -type f \( -name '*-ore*.o' -o -name '*-ore*.obj' \) | sort)
+[[ ${#OBJECTS[@]} -ge 13 ]] || { echo "Expected the engine's 13 compiled files under $OUT, found ${#OBJECTS[@]}." >&2; exit 1; }
 
-# What the runtime tells its users to link, written by its own install step.
-MANIFEST=$(find "$OUT" -path "$OUT/build" -prune -o -type f -name transcribe-link.json -print | head -1)
-[[ -n "$MANIFEST" ]] || { echo "No transcribe-link.json under $OUT." >&2; exit 1; }
-if grep -qi 'blas' "$MANIFEST"; then
-  echo "The runtime links this build machine's BLAS library, which the packages do not carry." >&2
-  exit 1
-fi
+# Instructions the first x86-64 processors lack and that carry no AVX prefix:
+# SSSE3, SSE4 and the bit-manipulation sets. Every AVX and AVX-512 mnemonic
+# starts with "v", and nothing older does in compiled code.
+NEWER='^(pshufb|palignr|pabs[bwd]|pmaddubsw|phadd[wd]|phaddsw|phsub[wd]|phsubsw|psign[bwd]|pmulhrsw|pmulld|pmuldq|pblendw|pblendvb|blendvp[sd]|blendp[sd]|ptest|pextr[bdq]|pinsr[bdq]|extractps|insertps|pmovzx[a-z]+|pmovsx[a-z]+|pminu[wd]|pmaxu[wd]|pmins[bd]|pmaxs[bd]|round[ps][sd]|dpp[sd]|mpsadbw|packusdw|pcmpeqq|pcmpgtq|popcnt[wlq]?|crc32[bwlq]?|lzcnt[wlq]?|andn[lq]?|bextr[lq]?|bzhi[lq]?|pdep[lq]?|pext[lq]?|mulx[lq]?|sarx[lq]?|shlx[lq]?|shrx[lq]?|rorx[lq]?|movbe[wlq]?)$'
 
-LIBRARIES=()
-while IFS= read -r library; do LIBRARIES+=("$library"); done < <(
-  find "$OUT" -path "$OUT/build" -prune -o -type f \( -name '*.a' -o -name '*.lib' \) -print | sort)
-[[ ${#LIBRARIES[@]} -gt 0 ]] || { echo "No runtime libraries under $OUT." >&2; exit 1; }
-
+status=0
+AVX=0
 WIDE=0
-AVX2=0
-for library in "${LIBRARIES[@]}"; do
-  counts=$(objdump -d --no-show-raw-insn "$library" | awk '
-    /^ *[0-9a-f]+:/ { total++ }
-    /%zmm/          { wide++ }
-    /%k[0-7]/       { mask++ }
-    /%ymm/          { avx2++ }
-    END { printf "%d %d %d %d", total, wide, mask, avx2 }')
-  read -r total wide mask avx2 <<< "$counts"
-  echo "${library#"$OUT"/}: $total instructions, $wide on AVX-512 registers, $mask on mask registers, $avx2 on 256-bit registers"
-  WIDE=$((WIDE + wide + mask))
-  AVX2=$((AVX2 + avx2))
+for object in "${OBJECTS[@]}"; do
+  name=$(basename "$object")
+  counts=$(objdump -d --no-show-raw-insn "$object" | awk -v newer="$NEWER" '
+    /^ *[0-9a-f]+:/ {
+      total++
+      if ($2 ~ /^v/)      avx++
+      if ($2 ~ newer)     later++
+      if ($0 ~ /zmm/)     wide++
+    }
+    END { printf "%d %d %d %d", total, avx, later, wide }')
+  read -r total avx later wide <<< "$counts"
+  echo "$name: $total instructions, $avx with an AVX prefix ($wide on 512-bit registers), $later from SSSE3, SSE4 or the bit sets"
+  case "$name" in
+    *ore_kernels_neon.*)
+      # The Arm kernels: an empty file on this processor family.
+      continue
+      ;;
+  esac
+  [[ "$total" -gt 0 ]] || { echo "  The disassembler read nothing from $name." >&2; status=1; }
+  case "$name" in
+    *ore_kernels_avx2.*)
+      AVX=$((AVX + avx))
+      WIDE=$((WIDE + wide))
+      ;;
+    *ore_kernels_sse.*)
+      [[ "$avx" -eq 0 ]] || { echo "  The SSE kernels contain AVX instructions." >&2; status=1; }
+      ;;
+    *)
+      [[ "$avx" -eq 0 && "$later" -eq 0 ]] || {
+        echo "  $name runs before any kernel is chosen and needs a newer processor than the first x86-64 ones." >&2
+        status=1
+      }
+      ;;
+  esac
 done
 
-[[ "$WIDE" -eq 0 ]] || { echo "The runtime contains instructions that need AVX-512." >&2; exit 1; }
 # Also the proof that the disassembler read the code at all, and that the
-# build did not fall to the slow baseline with AVX2 switched off.
-[[ "$AVX2" -gt 0 ]] || { echo "The runtime contains no AVX2 instructions." >&2; exit 1; }
-echo "The runtime uses AVX2, no AVX-512, and no BLAS library of this machine."
+# fast kernels were compiled in.
+[[ "$AVX" -gt 0 ]] || { echo "The engine contains no AVX2 kernels." >&2; status=1; }
+[[ "$WIDE" -gt 0 ]] || { echo "The engine contains no AVX-512 kernels." >&2; status=1; }
+[[ "$status" -eq 0 ]] || exit 1
+echo "Only the kernel files use instructions newer than the first x86-64 processors."
