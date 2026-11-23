@@ -55,6 +55,17 @@ final class BackgroundModelDownloader: NSObject, ModelDownloading, @unchecked Se
         arrivedFolder.appending(path: url.lastPathComponent)
     }
 
+    /// Reconnects to the system's transfer when the app launches, so a
+    /// download that went on, or finished, while the app was not running is
+    /// handed over. True when there is one: the person had started a download
+    /// that has not been installed yet.
+    func reconnect() async -> Bool {
+        let tasks = await session.allTasks
+        if !tasks.isEmpty { return true }
+        return FileManager.default.fileExists(atPath: arrivedFolder.path)
+            && ((try? FileManager.default.contentsOfDirectory(atPath: arrivedFolder.path))?.isEmpty == false)
+    }
+
     /// Called by the app delegate when the system wakes the app for this
     /// session's events.
     func handleEvents(completion: @escaping @Sendable () -> Void) {
@@ -85,10 +96,22 @@ final class BackgroundModelDownloader: NSObject, ModelDownloading, @unchecked Se
             try? FileManager.default.removeItem(at: arrived)
         }
 
-        // A transfer the system kept going while the app was away.
-        let running = await session.allTasks
-            .compactMap { $0 as? URLSessionDownloadTask }
-            .first { $0.originalRequest?.url == url && $0.state != .completed && $0.state != .canceling }
+        // A transfer the system kept going while the app was away. One that
+        // finished meanwhile is handed over by the delegate a moment after
+        // the session reconnects; wait for that rather than start again.
+        let tasks = await session.allTasks.compactMap { $0 as? URLSessionDownloadTask }
+            .filter { $0.originalRequest?.url == url }
+        if tasks.contains(where: { $0.state == .completed }) {
+            for _ in 0..<50 where Self.fileSize(arrived) == nil {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            if Self.fileSize(arrived) == expectedBytes {
+                let handed = FileManager.default.temporaryDirectory.appending(path: "model-\(UUID().uuidString)")
+                try FileManager.default.moveItem(at: arrived, to: handed)
+                return handed
+            }
+        }
+        let running = tasks.first { $0.state == .running || $0.state == .suspended }
         let task = running ?? session.downloadTask(with: url)
 
         return try await withTaskCancellationHandler {

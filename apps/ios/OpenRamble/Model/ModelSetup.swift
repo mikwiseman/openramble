@@ -27,11 +27,18 @@ final class ModelSetup {
     /// on the Mac (`ModelInstallLayout.engineDirectory`).
     let engineDirectory: URL?
     private let store: ModelStore?
+    /// Whether a download the person started is still with the system, or
+    /// has finished, and only needs installing.
+    private let pendingDownload: @Sendable () async -> Bool
     private var observation: Task<Void, Never>?
     private var install: Task<Void, Never>?
 
-    init(store: ModelStore?, byteCount: Int64, engineDirectory: URL? = nil) {
+    init(
+        store: ModelStore?, byteCount: Int64, engineDirectory: URL? = nil,
+        pendingDownload: @escaping @Sendable () async -> Bool = { false }
+    ) {
         self.store = store
+        self.pendingDownload = pendingDownload
         self.byteCount = byteCount
         self.engineDirectory = engineDirectory
         if store == nil { phase = .failed("The app's model description is missing.") }
@@ -58,7 +65,8 @@ final class ModelSetup {
         return ModelSetup(
             store: store,
             byteCount: manifest.files.reduce(0) { $0 + $1.byteCount },
-            engineDirectory: layout.engineDirectory
+            engineDirectory: layout.engineDirectory,
+            pendingDownload: { await BackgroundModelDownloader.shared.reconnect() }
         )
     }
 
@@ -71,8 +79,15 @@ final class ModelSetup {
     /// about every new phase.
     func start(onChange: @escaping @MainActor (Phase) async -> Void) {
         guard let store, observation == nil else { return }
+        let pendingDownload = pendingDownload
         observation = Task { [weak self] in
-            _ = await store.refreshState()
+            let found = await store.refreshState()
+            // Reconnecting on every launch is what lets the system hand over
+            // a download that went on while the app was not running. If the
+            // app was ended during a download the person started, carry on
+            // with it, or install the file that arrived meanwhile.
+            let pending = await pendingDownload()
+            if !found.isReady, pending { self?.download() }
             for await state in await store.states() {
                 let phase = Self.phase(for: state, engineDirectory: self?.engineDirectory)
                 guard let self, phase != self.phase || phase == .checking else { continue }

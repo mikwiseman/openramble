@@ -96,3 +96,55 @@ final class LayoutTests: XCTestCase {
         XCTAssertEqual(MicrophoneRecorder.normalized(decibels: -.infinity), 0)
     }
 }
+
+/// Records what the store asked for and refuses, so nothing is fetched.
+final class RecordingDownloader: ModelDownloading, @unchecked Sendable {
+    private let lock = NSLock()
+    private var urls: [URL] = []
+    var requested: [URL] { lock.withLock { urls } }
+
+    func download(from url: URL, expectedBytes: Int64, onProgress: @escaping @Sendable (Int64) -> Void) async throws -> URL {
+        lock.withLock { urls.append(url) }
+        throw ModelDownloadError.cancelled
+    }
+}
+
+final class ModelResumeTests: XCTestCase {
+    private func setup(pending: Bool) throws -> (ModelSetup, RecordingDownloader, URL) {
+        let root = URL.temporaryDirectory.appending(path: "models-\(UUID().uuidString)", directoryHint: .isDirectory)
+        let manifest = ModelManifest(
+            modelID: "test-model", repository: "handy-computer/test-model", revision: "abc",
+            runtimeVersion: "test", quantization: "Q4_K_M", license: "MIT",
+            files: [.init(path: "model.gguf", byteCount: 10, sha256: String(repeating: "0", count: 64))]
+        )
+        let downloader = RecordingDownloader()
+        let store = ModelStore(
+            manifest: manifest, layout: try ModelInstallLayout(manifest: manifest, root: root),
+            downloader: downloader, retryDelay: .zero
+        )
+        return (MainActor.assumeIsolated {
+            ModelSetup(store: store, byteCount: 10, pendingDownload: { pending })
+        }, downloader, root)
+    }
+
+    @MainActor
+    func testADownloadStartedBeforeTheAppEndedIsCarriedOn() async throws {
+        let (setup, downloader, root) = try setup(pending: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        setup.start { _ in }
+        for _ in 0..<100 where downloader.requested.isEmpty {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertFalse(downloader.requested.isEmpty, "the install the person started goes on by itself")
+    }
+
+    @MainActor
+    func testNothingIsDownloadedUnasked() async throws {
+        let (setup, downloader, root) = try setup(pending: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        setup.start { _ in }
+        try await Task.sleep(for: .milliseconds(500))
+        XCTAssertTrue(downloader.requested.isEmpty, "the model is fetched only when the person asks")
+        XCTAssertEqual(setup.phase, .absent)
+    }
+}
