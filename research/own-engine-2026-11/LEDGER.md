@@ -310,6 +310,50 @@ five clip lengths and three thread counts. The 2 s clip is the slow end
 the 4-bit product is what remains, and the float kernel is the largest part
 of it.
 
+## K8. The M4's matrix unit against NEON, the 8-bit matrix extension and Accelerate
+
+Question. On Apple silicon the engine loses to the Metal runtime the Mac app
+ships (S1: 133 ms on eight threads against 80 ms for an 8 s clip on the M4
+Pro). Is there an instruction set on the processor that closes the gap?
+
+Method. `tools/apple_matmul_probe.c` multiplies one encoder matrix, 4096 rows
+of 1024 8-bit weights, by 112 frames of 8-bit activations (470 M
+multiply-adds) four ways and checks every integer result against a plain
+loop. M4 Pro, 23 November 2026, load average 4, best of 5 to 7.
+
+| Way | Time | Multiply-adds a second |
+|---|---|---|
+| NEON dot products, one thread | 4.14 ms | 114 G |
+| 8-bit matrix extension (`smmla`), one thread, packing counted | 4.81 ms | 98 G |
+| Matrix unit (SME `smopa`), one thread | 0.26 ms | 1,786 G |
+| Matrix unit, two threads | 0.28 ms | 1,696 G |
+| Matrix unit, four threads | 0.18 ms | 2,595 G |
+| Matrix unit, eight threads | 0.17 ms | 2,780 G |
+| Accelerate `cblas_sgemm`, single precision | 0.41 ms | 1,146 G |
+
+Found.
+
+- One thread on the matrix unit does 16 times the work of one NEON thread,
+  and twice the work of all eight NEON threads of S1 together.
+- The 8-bit matrix extension is no faster than dot products here, so the
+  "Not done" item for it is closed for Apple silicon. It may still pay on
+  Neoverse-N2 and Snapdragon X, which was not measured.
+- More threads add little (1.5 times at four), which fits one matrix unit
+  per group of cores.
+- The activations the engine already makes (`ore_qact.q`, 16 frames by 4
+  columns in 64 bytes) are exactly one operand of `smopa`. The weights are
+  not: the instruction wants 16 rows by 4 columns, and the file stores rows.
+
+What it does not show. The probe multiplies plain 8-bit numbers. The Q4_K
+arithmetic the engine keeps bit for bit has a 6-bit scale and a minimum for
+every 32 columns of every row. Counted on paper, keeping it on the matrix
+unit takes two passes of products and about as many side instructions again,
+which lands near four NEON threads, not above them. The gain needs weights
+stored as 8-bit numbers with one scale for a row. That is a new model file
+and changes the numbers, so it has to pass the word-error gate before
+anything ships. M1, M2 and M3 have no matrix unit, so this is a path for M4
+and later only.
+
 ## T1. A thread pool that waits for no one
 
 Background. Windows and Linux ship one thread because ggml's four threads
