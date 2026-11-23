@@ -114,7 +114,7 @@ struct TakeList: View {
         let takes: [Take]
     }
 
-    static func days(_ takes: [Take], calendar: Calendar = .current) -> [Day] {
+    nonisolated static func days(_ takes: [Take], calendar: Calendar = .current) -> [Day] {
         var groups: [Day] = []
         for take in takes {
             let day = calendar.startOfDay(for: take.recordedAt)
@@ -127,7 +127,7 @@ struct TakeList: View {
         return groups
     }
 
-    static func title(for day: Date, calendar: Calendar = .current, now: Date = .now) -> String {
+    nonisolated static func title(for day: Date, calendar: Calendar = .current, now: Date = .now) -> String {
         if calendar.isDateInToday(day) { return "Today" }
         if calendar.isDateInYesterday(day) { return "Yesterday" }
         let sameYear = calendar.isDate(day, equalTo: now, toGranularity: .year)
