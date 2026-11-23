@@ -6,33 +6,25 @@ import UniformTypeIdentifiers
 /// What the shared intents do inside the app.
 @MainActor
 enum IntentBridge {
-    /// Hands the framework's intents their actions; called at launch.
+    /// Hands OpenRambleKit's intents their actions; called at launch.
     static func install() {
-        IntentActions.dictate = { await dictate() }
+        IntentActions.dictate = { try await dictate() }
         IntentActions.stop = { await AppModel.shared.dictation.finish() }
     }
 
-    static func dictate() async -> String {
+    static func dictate() async throws {
         let app = AppModel.shared
         if app.dictation.isRecording {
             await app.dictation.finish()
-            return "Writing your words."
+            return
         }
-        guard await app.waitUntilReady() else {
-            return "Open OpenRamble once to download its voice model."
-        }
-        guard MicrophoneRecorder.permission == .granted else {
-            return "Open OpenRamble once to allow the microphone."
-        }
+        guard await app.waitUntilReady() else { throw IntentFailure.modelMissing }
+        guard app.dictation.canRecordUnasked else { throw IntentFailure.microphone }
         await app.dictation.start()
-        return app.dictation.isRecording ? "Listening." : "The microphone did not start."
+        guard app.dictation.isRecording else { throw IntentFailure.failed("The microphone did not start.") }
     }
 }
 
-/// The intents declared in OpenRambleKit belong to the app too.
-struct OpenRambleIntents: AppIntentsPackage {
-    static var includedPackages: [any AppIntentsPackage.Type] { [OpenRambleKitIntents.self] }
-}
 
 /// Writes the words spoken in an audio file: a voice memo, a message, a
 /// lecture. The file becomes a take in the app too.
@@ -83,6 +75,7 @@ struct LatestTakeIntent: AppIntent {
 
 enum IntentFailure: Error, CustomLocalizedStringResourceConvertible {
     case modelMissing
+    case microphone
     case unreadable
     case noTakes
     case failed(String)
@@ -90,6 +83,7 @@ enum IntentFailure: Error, CustomLocalizedStringResourceConvertible {
     var localizedStringResource: LocalizedStringResource {
         switch self {
         case .modelMissing: "Open OpenRamble once to download its voice model."
+        case .microphone: "Open OpenRamble once to allow the microphone."
         case .unreadable: "That audio could not be read."
         case .noTakes: "There are no takes yet."
         case let .failed(reason): "\(reason)"

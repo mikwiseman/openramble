@@ -19,6 +19,8 @@ packages:
     path: ../../Packages/DictationCore
   LocalASR:
     path: ../../Packages/LocalASR
+  OpenRambleKit:
+    path: Kit
 
 settings:
   base:
@@ -48,7 +50,7 @@ targets:
       - path: ../../THIRD_PARTY_LICENSES.md
         buildPhase: resources
     dependencies:
-      - target: OpenRambleKit
+      - package: OpenRambleKit
       - target: OpenRambleWidgets
         embed: true
       - package: DictationCore
@@ -94,31 +96,13 @@ targets:
             LSItemContentTypes: [public.audio]
         LSSupportsOpeningDocumentsInPlace: false
 
-  # The Live Activity's attributes and the intents its buttons and the
-  # Dictate control run. One module, linked by the app and the extension, so
-  # the system finds the same intent type in the app and runs it there.
-  OpenRambleKit:
-    type: framework
-    platform: iOS
-    sources:
-      - path: Shared
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.kit
-        PRODUCT_NAME: OpenRambleKit
-        GENERATE_INFOPLIST_FILE: YES
-        APPLICATION_EXTENSION_API_ONLY: YES
-        SKIP_INSTALL: YES
-        DEFINES_MODULE: YES
-
   OpenRambleWidgets:
     type: app-extension
     platform: iOS
     sources:
       - path: Widgets
     dependencies:
-      - target: OpenRambleKit
-        embed: false
+      - package: OpenRambleKit
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: is.waiwai.dictation.widgets

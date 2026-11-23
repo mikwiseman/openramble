@@ -24,9 +24,15 @@ The desktop app (Windows, Linux) has one:
 3. Explicit model downloads through
    `apps/desktop/src-tauri/src/adapters/download.rs`.
 
+The iPhone app (`apps/ios`) has one:
+
+4. The explicit model download through
+   `apps/ios/OpenRamble/System/ModelDownload.swift`, a background transfer.
+   Its widget extension and the `OpenRambleKit` framework have none.
+
 The Linux server has one, inbound only:
 
-4. `apps/cli/src/listen.rs`. ffmpeg is spawned only from
+5. `apps/cli/src/listen.rs`. ffmpeg is spawned only from
    `apps/cli/src/decode.rs` with a file-only protocol whitelist.
 
 No other shipping code may access the network. The complete denied API list is
@@ -42,6 +48,13 @@ the public privacy description in `README.md` if this boundary ever changes.
   recognition. Only `TranscribeCppAdapter.swift` and `OreAdapter.swift` may
   import a recognition engine.
 - `apps/macos` contains the thin SwiftUI/AppKit application layer.
+- `apps/ios` is the iPhone app: SwiftUI for iOS 26 on the same two packages
+  (DictationCore's pure logic, not DictationAudio, whose capture is Core Audio
+  HAL), recognizing with `OreAdapter`, because iOS forbids GPU work in the
+  background and the transcribe.cpp binary has no iOS slice. Takes are kept by
+  `TakeStore`, documented in README's privacy section. Intents that a widget
+  button or control runs live in `OpenRambleKit` so the app, not the
+  extension, performs them. `./scripts/test-ios.sh` builds and tests it.
 - The recorder (`MeetingCapture`, `MeetingStore`, the Recordings window) is
   macOS-only and deliberately absent from `core/`. It rests on Core Audio
   process taps, which have no Windows or Linux counterpart, so there is nothing

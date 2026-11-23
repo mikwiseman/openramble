@@ -1,0 +1,11 @@
+647 clips in every file
+en_us.tcpp-cpu.tsv: word errors 727 of 14481 = 5.02%
+en_us.ore-ios.tsv: word errors 723 of 14481 = 4.99%; against the first file: 61 clips differ in text, 62 in token ids, 325 in tokens or times; of the clips whose text differs, 15 have fewer word errors and 9 have more
+775 clips in every file
+ru_ru.tcpp-cpu.all.tsv: word errors 746 of 15105 = 4.94%
+ru_ru.ore-ios.tsv: word errors 749 of 15105 = 4.96%; against the first file: 69 clips differ in text, 73 in token ids, 445 in tokens or times; of the clips whose text differs, 12 have fewer word errors and 15 have more
+200 clips in every file
+en200.tcpp-ios.tsv: word errors 231 of 4547 = 5.08%
+en_us.ore-ios.tsv: word errors 230 of 4547 = 5.06%; against the first file: 18 clips differ in text, 18 in token ids, 106 in tokens or times; of the clips whose text differs, 4 have fewer word errors and 2 have more
+en_us: the iOS dump is byte-identical to the Mac's (68719c4b601e4e74)
+ru_ru: the iOS dump is byte-identical to the Mac's (24912b53a3515d44)

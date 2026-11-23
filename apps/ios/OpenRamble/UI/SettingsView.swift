@@ -17,6 +17,7 @@ struct SettingsView: View {
                         Toggle(isOn: $dictation.copiesEachTake) {
                             Text("Copy each take")
                         }
+                        .tint(.primary)
                         note("The words are ready to paste the moment they are written. They stay on this iPhone and are not shared with your other devices.")
                     }
                     row {

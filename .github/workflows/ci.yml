@@ -92,6 +92,23 @@ jobs:
           xcodebuild -project OpenRamble.xcodeproj -scheme OpenRamble \
             -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO test
 
+  ios:
+    name: iPhone app
+    runs-on: macos-26
+    # The tests run inside the app in the iOS Simulator; a hang ends here,
+    # not at GitHub's six-hour limit.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Check pinned XcodeGen
+        run: ./scripts/pinned-xcodegen.sh >/dev/null
+
+      # The app links DictationCore and LocalASR, which now build for iOS: a
+      # change that breaks them there fails here, not on someone's iPhone.
+      - name: Build and test in the iOS Simulator
+        run: ./scripts/test-ios.sh
+
   shared-core:
     name: Shared core
     # Three runners because the point of this crate is that it behaves the same

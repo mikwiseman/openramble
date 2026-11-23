@@ -146,9 +146,9 @@ The Mac app connects to the internet only to download a speech model and to chec
 | Check for updates | About once a day, unless you turn it off in Settings → About | GitHub Pages | Your IP address and the app version |
 | Download an update | Only after you click | GitHub Releases | Your IP address and the download request |
 
-The update check sends no report about your Mac, its system version or its language. OpenRamble downloads fixed versions of the model files and checks each file against its SHA-256 checksum before it installs the model. The early Windows and Linux version connects to the internet only to download the speech model when you start the download. The Linux transcription server in `apps/cli` accepts connections from your own applications and makes none.
+The update check sends no report about your Mac, its system version or its language. OpenRamble downloads fixed versions of the model files and checks each file against its SHA-256 checksum before it installs the model. The early Windows and Linux version connects to the internet only to download the speech model when you start the download. The iPhone version in `apps/ios` connects to the internet only to download the same speech model, from the same places, when you tap Download. It asks iOS to carry on with that download while you use other apps, and it checks the file the same way. The Linux transcription server in `apps/cli` accepts connections from your own applications and makes none.
 
-You can verify the network limits yourself. On every pull request and every push to main, an automated check runs [`scripts/check-network-surface.sh`](scripts/check-network-surface.sh). The check fails the build if any app code uses a network API outside the model download code, the update code and one file that opens local recordings for playback. With a model installed, the first script below runs recognition with the network blocked. The second script records every network call and fails if recognition makes one.
+You can verify the network limits yourself. On every pull request and every push to main, an automated check runs [`scripts/check-network-surface.sh`](scripts/check-network-surface.sh). The check fails the build if any app code uses a network API outside the model download code, the update code and one file that opens local recordings for playback. In the iPhone app, the one file it allows is the model download. With a model installed, the first script below runs recognition with the network blocked. The second script records every network call and fails if recognition makes one.
 
 ```bash
 ./scripts/test-zero-network.sh
@@ -169,6 +169,8 @@ OpenRamble stores audio and text from your dictations and recordings only on you
 | Technical journal, with no speech or text in it | On by default, for 7 days and at most 5 MB, and cleared when you turn it off |
 | Settings and dictionary | Until you change or delete them |
 | The words of your last three dictations, kept so that ⌃⌘V and the menu can paste them again | In memory only, until later dictations replace them, you delete their History entries, or you quit. Dictation history keeps its own copy. While words that could not be pasted are on screen, the panel that shows them is left out of screenshots and screen recordings. |
+
+On iPhone, OpenRamble keeps each take in its own storage on the iPhone: the words, the audio and when you recorded it. A take stays until you delete it, and deleting it removes its words and its audio. A recording whose words were not written yet, for example because the app was closed, is kept and written the next time the app opens. A file you open in OpenRamble or pass to its Shortcuts action is copied in and kept as a take the same way, and the original stays where it was. The takes and the speech model are left out of iCloud Backup, and both are deleted with the app. When "Copy each take" is on, which it is unless you turn it off, the words of each new take are copied to this iPhone's clipboard only, never to the clipboard your other Apple devices share. The Lock Screen and the Dynamic Island show that a take is recording or written, and how many words it has, never the words.
 
 To report a problem, choose Settings → About → Save Error Report. OpenRamble saves a ZIP file on your Mac, and you decide whether to send it to the developer. The file holds technical events, timings, error codes, the app and macOS versions, the app's architecture (arm64 or x86_64), and up to five recent Apple crash reports rebuilt without your file paths or device identifiers. It never holds audio, transcripts or clipboard contents, and OpenRamble does not upload it. [docs/diagnostics.md](docs/diagnostics.md) lists exactly what it contains.
 
@@ -280,6 +282,10 @@ OpenRamble needs Microphone access to hear you and Accessibility access to notic
 
 An early Windows and Linux version is in [`apps/desktop`](apps/desktop), and its latest installers are in the [desktop-v0.43.0 release](https://github.com/mikwiseman/openramble/releases/tag/desktop-v0.43.0) from November 2026. It shows the same dictation panel as the Mac, and words that cannot be pasted wait on it. Automated checks build and test this version on both systems; nobody has yet tried it by hand on either. It needs Windows 10 or later on x86_64, or Linux with X11 or Wayland. It recognizes speech on the processor with OpenRamble's own engine, about three times as fast as the version before it. A processor without AVX2, older than Intel Core from 2013 or AMD from 2015, still recognizes, more slowly, and the settings window says so. It has no meeting or screen recorder and no automatic updates. Its only network use is the model download you start.
 
+### Is there an OpenRamble for iPhone?
+
+An iPhone version is in [`apps/ios`](apps/ios). It is not in the App Store yet. Tap the button, speak, and tap it again: OpenRamble writes your words on the iPhone with the same model and the same cleanup as the Mac, and copies them so you can paste them anywhere. It needs iOS 26. It recognizes speech on the iPhone's processor with OpenRamble's own engine, so it keeps working when you leave the app or lock the phone, and in a test on 1,422 English and Russian clips it got as many words wrong as the Mac app, about 5%. You can start and stop a take from the Dynamic Island, the Lock Screen, Control Center, the Action button (Settings → Action Button → Controls → Dictate), Siri and Shortcuts, and a shortcut can turn any audio file into text.
+
 ## Requirements
 
 - macOS 14 or later. Recording what your Mac plays needs macOS 14.2 or later. On 14.0 and 14.1, recordings capture only your microphone.
@@ -329,6 +335,14 @@ swift test --package-path Packages/LocalASR
 "$(./scripts/pinned-xcodegen.sh)" generate --spec apps/macos/project.yml
 xcodebuild -project apps/macos/OpenRamble.xcodeproj -scheme OpenRamble \
   -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
+```
+
+The iPhone app needs Xcode 26 or later and runs on iOS 26:
+
+```bash
+"$(./scripts/pinned-xcodegen.sh)" generate --spec apps/ios/project.yml
+xcodebuild -project apps/ios/OpenRambleiOS.xcodeproj -scheme OpenRamble \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO test
 ```
 
 Run `./scripts/check.sh` before you commit, because it runs every test and check. `./scripts/build-dmg.sh` builds a development DMG. Development builds are named OpenRambleDev and use the bundle identifier `is.waiwai.dictation.dev`, so they do not touch the permissions of the released app.

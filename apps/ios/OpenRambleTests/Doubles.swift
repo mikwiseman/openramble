@@ -8,6 +8,7 @@ import LocalASR
 @MainActor
 final class FakeRecorder: VoiceRecording {
     var onInterruption: (() -> Void)?
+    var isAllowed = true
     var seconds: TimeInterval = 2
     var failure: (any Error)?
     private(set) var url: URL?

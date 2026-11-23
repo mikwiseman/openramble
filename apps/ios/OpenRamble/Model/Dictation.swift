@@ -77,6 +77,9 @@ final class Dictation {
         return false
     }
 
+    /// Whether a take can start without asking for the microphone first.
+    var canRecordUnasked: Bool { recorder.isAllowed }
+
     /// The take being recorded, which the list does not show yet.
     var recordingID: Take.ID? { current?.id }
 

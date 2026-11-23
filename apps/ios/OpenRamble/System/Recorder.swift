@@ -15,6 +15,9 @@ protocol VoiceRecording: AnyObject {
     func level() -> Float
     /// Called when the system takes the microphone away (a call, Siri).
     var onInterruption: (() -> Void)? { get set }
+    /// Whether recording can start without asking the person first, which
+    /// an intent running in the background cannot do.
+    var isAllowed: Bool { get }
 }
 
 enum RecordingError: Error, Equatable {
@@ -33,8 +36,8 @@ final class MicrophoneRecorder: NSObject, VoiceRecording {
     private var recorder: AVAudioRecorder?
     private var interruptionObserver: (any NSObjectProtocol)?
 
-    static var permission: AVAudioApplication.recordPermission {
-        AVAudioApplication.shared.recordPermission
+    var isAllowed: Bool {
+        AVAudioApplication.shared.recordPermission == .granted
     }
 
     func start(to url: URL) async throws {
@@ -121,6 +124,7 @@ final class MicrophoneRecorder: NSObject, VoiceRecording {
 @MainActor
 final class ReplayRecorder: VoiceRecording {
     var onInterruption: (() -> Void)?
+    let isAllowed = true
     private let source: URL
     private var envelope: [Float] = []
     private var started: Date?

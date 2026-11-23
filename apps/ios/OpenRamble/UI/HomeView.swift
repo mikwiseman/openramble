@@ -43,7 +43,7 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button("Write an Audio File", systemImage: "waveform") { choosesFile = true }
+                        Button("Open Audio File", systemImage: "waveform") { choosesFile = true }
                         Button("Settings", systemImage: "gearshape") { showsSettings = true }
                     } label: {
                         Label("More", systemImage: "ellipsis")

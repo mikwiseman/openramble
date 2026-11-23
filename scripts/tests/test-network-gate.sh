@@ -41,6 +41,9 @@ copy() {
   cp -R "$REPOSITORY_ROOT/engine/src" "$REPOSITORY_ROOT/engine/include" "$tree/engine/"
   cp "$REPOSITORY_ROOT/apps/cli/Cargo.toml" "$tree/apps/cli/"
   cp -R "$REPOSITORY_ROOT/apps/cli/src" "$tree/apps/cli/src"
+  mkdir -p "$tree/apps/ios"
+  cp -R "$REPOSITORY_ROOT/apps/ios/OpenRamble" "$REPOSITORY_ROOT/apps/ios/Shared" \
+    "$REPOSITORY_ROOT/apps/ios/Widgets" "$tree/apps/ios/"
   echo "$tree"
 }
 
@@ -121,6 +124,27 @@ expect_fail "$tree" "the engine including a socket header passed"
 tree=$(copy)
 echo 'static const char * where(void) { return getenv("HOME"); }' >> "$tree/engine/src/ore.c"
 expect_fail "$tree" "the engine reading the environment passed"
+
+# The iPhone app: one network file, and the clipboard only with .localOnly.
+tree=$(copy)
+printf '\nlet probe = URLSession.shared\n' >> "$tree/apps/ios/OpenRamble/UI/HomeView.swift"
+expect_fail "$tree" "the iPhone app reaching the network outside ModelDownload.swift passed"
+
+tree=$(copy)
+printf '\nlet probe = URLSession.shared\n' >> "$tree/apps/ios/Widgets/Widgets.swift"
+expect_fail "$tree" "the widget extension reaching the network passed"
+
+tree=$(copy)
+printf '\nfunc leak(_ text: String) { UIPasteboard.general.string = text }\n' >> "$tree/apps/ios/OpenRamble/UI/TakeView.swift"
+expect_fail "$tree" "a take copied to Universal Clipboard passed"
+
+tree=$(copy)
+printf '\nfunc leak(_ text: String) { UIPasteboard.general.setItems([["public.text": text]]) }\n' >> "$tree/apps/ios/OpenRamble/UI/TakeView.swift"
+expect_fail "$tree" "setItems without .localOnly passed"
+
+tree=$(copy)
+sed -i.bak 's/options: \[\.localOnly: true\]/options: [:]/' "$tree/apps/ios/OpenRamble/System/Clipboard.swift"
+expect_fail "$tree" "Clipboard.swift without .localOnly passed"
 
 tree=$(copy)
 expect_pass "$tree" "the clean tree fails with cargo available"
