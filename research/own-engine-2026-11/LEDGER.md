@@ -882,6 +882,48 @@ processors there. The IvyBridge line of the step's output shows a QEMU
 warning where the kernel name should be, because it prints the first line
 of standard error.
 
+## E1. Eight bits with one scale per row: the words
+
+Question. K8 found the M4's matrix unit fast only on 8-bit weights with one
+scale for a whole row. Does the model keep its words in that layout?
+
+Method (23 November). `tools/row8_convert.py` turns every Q4_K and Q8_0
+matrix of the Mac's file, `parakeet-ultra-Q4_K_M.gguf`, into Q8_0 blocks
+that carry the same scale along a row: the row's largest magnitude over 127,
+in half precision, with the numbers rounded to it. The engine's Q8_0 kernels
+then compute what a row-scaled kernel would. The weights move by 0.74% to
+2.87% of their size, 0.86% for the middle tensor, and the file is 740 MB,
+as large as Q8_0. All 1,422 FLEURS clips ran through the engine on four
+threads of the M4 Pro, scored by `tools/parity.py`.
+
+| | English, 14,481 words | Russian, 15,105 words | Both |
+|---|---|---|---|
+| Engine, Q4_K_M (P1) | 723 | 749 | 1,472, 4.98% |
+| Engine, one scale per row | 740 | 739 | 1,479, 5.00% |
+| transcribe.cpp on Metal, what ships (P1) | 735 | 735 | 1,470, 4.97% |
+
+Against the engine on the 4-bit file, 79 English clips read differently (8
+with fewer errors, 23 with more) and 87 Russian clips (24 fewer, 16 more).
+
+Found.
+
+- Over both languages the layout costs 7 errors in 29,586 words, 0.02
+  points, the size of the gap between transcribe.cpp's own two backends.
+- English leans the wrong way: of the 31 English clips whose error count
+  changed, 23 got worse, which chance gives about 1% of the time. So the
+  layout costs English about 0.1 points. Russian leans the other way, within
+  chance.
+- The file was made from the 4-bit weights and carries their rounding too.
+  Made from full-precision weights it would likely do better. No such copy
+  of Parakeet Ultra is on this Mac, so that was not tried.
+- The conversion reads the file the Mac already has and takes about 3 s in
+  NumPy. Done in C when the model opens, an M4 needs no new download, at the
+  price of about 250 MB more memory than the mapped 4-bit file.
+
+Next. The layout holds well enough to build the kernel: weights repacked at
+load into the matrix unit's tiles of 16 rows by 4 columns, and streaming mode
+around each product. M1 to M3 have no matrix unit and keep Metal.
+
 ## Not done
 
 - **Apple silicon.** The Mac app on Apple silicon still runs transcribe.cpp
