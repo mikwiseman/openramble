@@ -6,9 +6,18 @@ name: Engine bench
 # Runs on demand and on pushes to the engine's own branches, never on main.
 on:
   workflow_dispatch:
+    inputs:
+      fleurs:
+        description: "Also run all 1,422 FLEURS test clips through both on Linux x86_64 (about two hours)"
+        type: boolean
+        default: false
   push:
     branches: ["claude/own-engine-*"]
-    paths: ["engine/**", ".github/workflows/engine-bench.yml"]
+    paths:
+      - "engine/**"
+      - "core/ramble-engine/**"
+      - "scripts/check-desktop-portability.sh"
+      - ".github/workflows/engine-bench.yml"
 
 permissions:
   contents: read
@@ -43,15 +52,17 @@ jobs:
             os: windows-latest
             tcpp_args: ""
             q8: true
-          # A build of transcribe.cpp that could be given to everyone with a
-          # processor from 2013 on: AVX2, not whatever the build machine has.
-          - name: Linux x86_64 (transcribe.cpp built for AVX2)
-            os: ubuntu-latest
-            tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON"
+          # transcribe.cpp as the desktop-v0.42.1 packages carry it: the
+          # instruction set fixed at AVX2, no BLAS of the build machine, and
+          # for Linux the system the packages are built on (the settings of
+          # desktop-package.yml at that tag).
+          - name: Linux x86_64 (as desktop-v0.42.1 ships)
+            os: ubuntu-22.04
+            tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF"
             q8: true
-          - name: Windows x86_64 (transcribe.cpp built for AVX2)
+          - name: Windows x86_64 (as desktop-v0.42.1 ships)
             os: windows-latest
-            tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON"
+            tcpp_args: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF"
             q8: true
           - name: Linux arm64
             os: ubuntu-24.04-arm
@@ -174,6 +185,38 @@ jobs:
           cmp -s <(cut -f1,2 ore.tsv) <(cut -f1,2 tcpp.tsv)
           cmp -s ore-best.tsv ore-generic.tsv
 
+      # The app does not use the CMake build above: the Rust crate compiles
+      # the same files itself. Its words must be the same ones.
+      - name: The crate the app links
+        run: |
+          mkdir -p model-dir
+          ln model.gguf model-dir/model.gguf 2> /dev/null || cp model.gguf model-dir/model.gguf
+          cargo build --release --locked -p ramble-engine --example recognize
+          target/release/examples/recognize model-dir \
+            tcpp/samples/fleurs-en.wav tcpp/samples/fleurs-ru.wav tcpp/samples/fleurs-de.wav | tr -d '\r' > crate.tsv
+          rm -rf model-dir
+          head -3 ore.tsv | tr -d '\r' | cut -f2 > tool-text.txt
+          {
+            echo "### The crate the app links"
+            echo '```'
+            cut -f1,2 crate.tsv
+            if cmp -s <(cut -f3 crate.tsv) tool-text.txt; then echo "crate text: identical"; else echo "crate text: DIFFERENT"; fi
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          cmp -s <(cut -f3 crate.tsv) tool-text.txt
+
+      # The same check the package build runs: outside the kernel files the
+      # crate may need nothing newer than the first x86-64 processors.
+      - name: The crate must not need the build machine
+        if: runner.os != 'macOS' && runner.arch == 'X64'
+        run: |
+          {
+            echo "### Instruction sets in the crate's build"
+            echo '```'
+            scripts/check-desktop-portability.sh
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
       # Longer than the model's 30 s limit: both runtimes cut it at pauses.
       - name: A long clip
         run: |
@@ -239,24 +282,60 @@ jobs:
             diff <(cut -f1,2 ore-q8.tsv) <(cut -f1,2 tcpp-q8.tsv) | head -20 || true
           fi
 
-  # transcribe.cpp is built for whatever processor the build machine has
-  # (ggml's GGML_NATIVE default), so a package can end up needing instructions
-  # a buyer's computer lacks. This looks at the packages that were actually
-  # published and counts the instructions that need AVX-512 or AVX2.
+      # Every processor kept busy by another program, which is why the app
+      # gives transcribe.cpp one thread. The engine is timed at the count the
+      # app ships (as many threads as the machine has processors, at most
+      # four) and at one and two; transcribe.cpp at the one thread it ships
+      # with and at four.
+      - name: Under load
+        run: |
+          bin=engine/build; [ -d engine/build/Release ] && bin=engine/build/Release
+          cpus=${NUMBER_OF_PROCESSORS:-$(getconf _NPROCESSORS_ONLN)}
+          pids=""
+          for _ in $(seq "$cpus"); do
+            ( while :; do :; done ) &
+            pids="$pids $!"
+          done
+          trap 'kill $pids 2> /dev/null || true' EXIT
+          sleep 2
+          {
+            echo "### Under load: $cpus busy processes on $cpus processors, an 8 s clip, milliseconds"
+            echo '```'
+            for threads in 1 2 4; do
+              "$bin/ore-cli" time model.gguf tcpp/samples/dots.wav "$threads" 5 8 | sed 's/^/LOAD | /'
+            done
+            for threads in 1 4; do
+              "$bin/tcpp-probe" time model.gguf tcpp/samples/dots.wav "$threads" 5 8 | sed 's/^/LOAD | /'
+            done
+            if [ -f q8.gguf ]; then
+              for threads in 1 4; do
+                "$bin/tcpp-probe" time q8.gguf tcpp/samples/dots.wav "$threads" 5 8 | sed 's/^/LOAD Q8_0 | /'
+              done
+              "$bin/ore-cli" time q8.gguf tcpp/samples/dots.wav 4 5 8 | sed 's/^/LOAD Q8_0 | /'
+            fi
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # Before 0.42.1 transcribe.cpp was built for whatever processor the build
+  # machine had (ggml's GGML_NATIVE default), so a package could end up
+  # needing instructions a buyer's computer lacks. This looks at the packages
+  # that were actually published and counts the instructions that need
+  # AVX-512 or AVX2.
   shipped:
     name: Published packages, instruction sets
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      RELEASE: desktop-v0.37.0
+      VERSION: 0.42.1
     steps:
       - name: Inspect
         run: |
           set -u
+          RELEASE="desktop-v$VERSION"
           base="https://github.com/mikwiseman/openramble/releases/download/$RELEASE"
           mkdir deb exe
-          curl -L --fail --retry 3 -o deb/pkg.deb "$base/OpenRamble_0.37.0_amd64.deb"
-          curl -L --fail --retry 3 -o exe/setup.exe "$base/OpenRamble_0.37.0_x64-setup.exe"
+          curl -L --fail --retry 3 -o deb/pkg.deb "$base/OpenRamble_${VERSION}_amd64.deb"
+          curl -L --fail --retry 3 -o exe/setup.exe "$base/OpenRamble_${VERSION}_x64-setup.exe"
           (cd deb && ar x pkg.deb && mkdir root && tar -xf data.tar.* -C root)
           (cd exe && 7z x -y setup.exe > /dev/null || true)
           {
@@ -275,3 +354,114 @@ jobs:
             done
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # Every FLEURS test clip in English and Russian, 1,422 of them, through
+  # transcribe.cpp as the packages carry it and through the engine, on the
+  # processor family the packages run on. On demand: it takes about two hours.
+  fleurs:
+    name: FLEURS, Linux x86_64
+    if: github.event_name == 'workflow_dispatch' && inputs.fleurs
+    runs-on: ubuntu-22.04
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Processor
+        run: lscpu | grep -E 'Model name|^CPU\(s\)|Thread|Core' | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Models
+        run: |
+          curl -L --fail --retry 3 -o model.gguf "$MODEL_URL"
+          curl -L --fail --retry 3 -o q8.gguf "$Q8_URL"
+          printf '%s  model.gguf\n%s  q8.gguf\n' "$MODEL_SHA256" "$Q8_SHA256" | sha256sum -c -
+
+      - name: Build transcribe.cpp as the packages carry it
+        run: |
+          git clone --quiet https://github.com/mikwiseman/transcribe.cpp tcpp
+          git -C tcpp checkout --quiet "$TCPP_COMMIT"
+          cmake -S tcpp -B tcpp/build -DCMAKE_BUILD_TYPE=Release \
+            -DTRANSCRIBE_BUILD_TESTS=OFF -DTRANSCRIBE_BUILD_EXAMPLES=OFF \
+            -DTRANSCRIBE_BUILD_SHARED=OFF -DTRANSCRIBE_METAL=OFF -DTRANSCRIBE_INSTALL=ON \
+            -DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON \
+            -DGGML_FMA=ON -DGGML_BMI2=ON -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF > tcpp-configure.log
+          cmake --build tcpp/build --config Release --parallel 4 > tcpp-build.log 2>&1 || { tail -50 tcpp-build.log; exit 1; }
+          cmake --install tcpp/build --config Release --prefix "$PWD/tcpp-prefix" > /dev/null
+
+      - name: Build the engine
+        run: |
+          cmake -S engine -B engine/build -DCMAKE_BUILD_TYPE=Release -DORE_TCPP_PREFIX="$PWD/tcpp-prefix"
+          cmake --build engine/build --config Release --parallel 4
+
+      # The public test sets, with each clip named for its language so the
+      # two sets cannot share a name.
+      - name: Clips
+        run: |
+          mkdir -p fleurs
+          for lang in en_us ru_ru; do
+            base="https://huggingface.co/datasets/google/fleurs/resolve/main/data/$lang"
+            curl -L --fail --retry 3 -o "$lang.tar.gz" "$base/audio/test.tar.gz"
+            curl -L --fail --retry 3 -o "$lang.tsv" "$base/test.tsv"
+            mkdir -p "raw/$lang"
+            tar -xzf "$lang.tar.gz" -C "raw/$lang"
+            rm "$lang.tar.gz"
+          done
+          python3 - << 'EOF'
+          import csv, json, os
+          refs, clips = {}, []
+          for lang in ("en_us", "ru_ru"):
+              found = {}
+              for root, _, names in os.walk(os.path.join("raw", lang)):
+                  for name in names:
+                      found[name] = os.path.join(root, name)
+              with open(lang + ".tsv", encoding="utf-8", newline="") as f:
+                  for row in csv.reader(f, delimiter="\t", quoting=csv.QUOTE_NONE):
+                      if len(row) < 3 or row[1] not in found:
+                          continue
+                      name = lang + "-" + row[1]
+                      os.rename(found.pop(row[1]), os.path.join("fleurs", name))
+                      refs[name] = row[2]
+                      clips.append(os.path.join("fleurs", name))
+          json.dump(refs, open("refs.json", "w", encoding="utf-8"), ensure_ascii=False)
+          open("clips.txt", "w").write("\n".join(clips) + "\n")
+          print(len(clips), "clips")
+          EOF
+          test "$(wc -l < clips.txt)" -eq 1422
+
+      # transcribe.cpp on one thread, as the app runs it; four of them side
+      # by side only to finish sooner. The engine on four threads.
+      - name: Recognize
+        run: |
+          bin=engine/build
+          split -n l/4 -d clips.txt part.
+          for file in q8 model; do
+            for part in part.0*; do
+              "$bin/tcpp-probe" dump "$file.gguf" "$part" 1 > "tcpp-$file.$part.tsv" 2> /dev/null &
+            done
+            wait
+            cat "tcpp-$file".part.0*.tsv > "tcpp-$file.tsv"
+            "$bin/ore-cli" dump "$file.gguf" clips.txt 4 > "ore-$file.tsv" 2> /dev/null
+          done
+          wc -l tcpp-q8.tsv tcpp-model.tsv ore-q8.tsv ore-model.tsv
+
+      - name: Compare
+        run: |
+          {
+            echo "## FLEURS, 1,422 clips, Linux x86_64"
+            echo "The first file is transcribe.cpp with the Q8_0 file, which is what the packages run today. \"model\" is the Q4_K_M file."
+            echo '```'
+            python3 research/own-engine-2026-11/tools/parity.py refs.json tcpp-q8.tsv ore-q8.tsv ore-model.tsv tcpp-model.tsv
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fleurs-linux-x86_64
+          path: |
+            refs.json
+            tcpp-q8.tsv
+            tcpp-model.tsv
+            ore-q8.tsv
+            ore-model.tsv
