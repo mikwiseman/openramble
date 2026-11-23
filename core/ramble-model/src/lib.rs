@@ -7,11 +7,13 @@
 //! install is.
 
 pub mod layout;
+pub mod lineup;
 pub mod manifest;
 pub mod marker;
 pub mod store;
 
 pub use layout::InstallLayout;
+pub use lineup::{ModelLineup, Slot};
 pub use manifest::{Manifest, ManifestFile, Source};
 pub use marker::{ReadyMarker, ReferenceDate};
 pub use store::{ModelState, ModelStore, StoreError};

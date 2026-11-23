@@ -333,12 +333,13 @@
 
       async function refresh() {
         const report = await invoke("model_report");
-        el("model-detail").textContent = report.ready
-          ? "Installed and ready."
-          : report.detail ?? "";
+        // A model that works can still have something to download: a newer
+        // file of it, which the detail then names.
+        const offered = !report.ready || report.upgrade;
+        el("model-detail").textContent = report.detail ?? "Installed and ready.";
         el("model-detail").classList.toggle("bad", report.problem);
-        el("model-actions").hidden = report.ready;
-        el("size").textContent = report.ready ? "" : gigabytes(report.downloadBytes) + " to download";
+        el("model-actions").hidden = !offered;
+        el("size").textContent = offered ? gigabytes(report.downloadBytes) + " to download" : "";
       }
 
       el("install").addEventListener("click", async () => {

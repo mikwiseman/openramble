@@ -11,7 +11,7 @@ use crate::take::{Ending, KeyJob, Waiting};
 use ramble_core::session::{Effect, Event, SessionMachine};
 use ramble_engine::Engine;
 use ramble_history::HistoryStore;
-use ramble_model::{Manifest, ModelState, ModelStore};
+use ramble_model::{Manifest, ModelLineup, ModelState, ModelStore, Slot};
 use ramble_text::pipeline::TextPipeline;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
@@ -20,10 +20,16 @@ use std::sync::{Mutex, MutexGuard};
 const MAC_MANIFEST: &str =
     include_str!("../../../../Packages/LocalASR/Sources/LocalASR/Resources/model-manifest.json");
 
-/// The same Ultra revision in Q8_0. Windows and Linux recognize on the CPU
-/// backend, where Q4_K_M measured 1.29 times slower than v3 and Q8_0 within 3%
-/// of it (`research/model-upgrade-2026-10/HYPOTHESES.md`, H13 and H13b).
+/// The same file for Windows and Linux, from a manifest of their own, so a
+/// change to the Mac's does not reach them unmeasured. On x86 processors
+/// Q4_K_M is the faster of the two Ultra files and as accurate
+/// (`research/model-upgrade-2026-10/HYPOTHESES.md`, H17).
 const CPU_MANIFEST: &str = include_str!("../model-manifest.json");
+
+/// The Q8_0 file of the same revision, which Windows and Linux downloaded
+/// through 0.42.1. A computer that holds it keeps dictating with it until the
+/// person downloads the current file; see `ramble_model::lineup`.
+const PREVIOUS_CPU_MANIFEST: &str = include_str!("../previous-model-manifest.json");
 
 /// A Mac running this app shares the Swift app's install, which is keyed by
 /// model and revision rather than by file, so it must ask for the same file.
@@ -151,7 +157,10 @@ pub struct Dictation {
     /// cold load from a broken app.
     engine: Mutex<Option<Engine>>,
     pipeline: Mutex<TextPipeline>,
+    /// The model a download installs.
     store: ModelStore,
+    /// The model this app downloaded before, in the same folder.
+    previous: ModelStore,
     history: HistoryStore,
     dictionary_directory: PathBuf,
     pub(crate) delivery: Delivery,
@@ -164,6 +173,8 @@ impl Dictation {
     pub fn new() -> Option<Self> {
         let manifest = Manifest::parse(SHIPPING_MANIFEST).ok()?;
         let store = ModelStore::new(manifest, models_root()?);
+        let previous =
+            ModelStore::new(Manifest::parse(PREVIOUS_CPU_MANIFEST).ok()?, models_root()?);
         // Anything an interrupted install left behind is settled before the
         // person is shown a state.
         let _ = store.recover_interrupted_promotion();
@@ -178,6 +189,7 @@ impl Dictation {
                 ramble_text::starter::developer(),
             )),
             store,
+            previous,
             history: HistoryStore::new(support_root()?.join("History")),
             dictionary_directory: support_root()?,
             delivery: Delivery::system(),
@@ -201,6 +213,10 @@ impl Dictation {
             pipeline: Mutex::new(TextPipeline::default()),
             store: ModelStore::new(
                 Manifest::parse(SHIPPING_MANIFEST).expect("the shipping manifest parses"),
+                root.join("Models"),
+            ),
+            previous: ModelStore::new(
+                Manifest::parse(PREVIOUS_CPU_MANIFEST).expect("the previous manifest parses"),
                 root.join("Models"),
             ),
             history: HistoryStore::new(root.join("History")),
@@ -237,10 +253,17 @@ impl Dictation {
         self.machine().handle(event, ready)
     }
 
-    pub fn model_is_ready(&self) -> bool {
-        self.store.state() == ModelState::Ready
+    /// Which installed model serves: the current one, or the previous one
+    /// on a computer that has not downloaded the current one yet.
+    pub fn lineup(&self) -> ModelLineup {
+        ModelLineup::new(&self.store.state(), &self.previous.state())
     }
 
+    pub fn model_is_ready(&self) -> bool {
+        self.lineup().recognizer != Slot::None
+    }
+
+    /// The state of the model a download installs.
     pub fn model_state(&self) -> ModelState {
         self.store.state()
     }
@@ -580,6 +603,16 @@ impl Dictation {
     /// ggml's static destructors abort with signal 6 when a model is still alive
     /// at exit, so quitting cleanly depends on this being called.
     pub fn shutdown(&self) {
+        self.release_model();
+    }
+
+    /// Let go of the loaded model. The next take loads what is installed then.
+    ///
+    /// Called after an install. The engine serves the weights from a mapping
+    /// of the model file, so it would go on recognizing with the file the
+    /// install replaced, and keep that file's space on disk, until the app
+    /// quit. Measured on Windows and Linux with the real files.
+    pub fn release_model(&self) {
         if let Some(engine) = self
             .engine
             .lock()
@@ -595,19 +628,101 @@ impl Dictation {
 mod tests {
     use super::*;
 
-    /// Windows and Linux follow the Mac's model and revision, differing only
-    /// in the file, and keep a mirror like every shipped manifest.
+    /// Windows and Linux follow the Mac's model and revision, name their
+    /// file in a manifest of their own, and keep a mirror like every shipped
+    /// manifest.
     #[test]
-    fn the_cpu_manifest_is_the_macs_model_in_q8() {
+    fn the_cpu_manifest_is_the_macs_model_in_q4_k_m() {
         let mac = Manifest::parse(MAC_MANIFEST).expect("the Mac manifest must parse");
         let cpu = Manifest::parse(CPU_MANIFEST).expect("the CPU manifest must parse");
         assert_eq!(cpu.model_id, mac.model_id);
         assert_eq!(cpu.revision, mac.revision);
         assert_eq!(cpu.mirror, mac.mirror);
-        assert_eq!(cpu.quantization, "Q8_0");
+        assert_eq!(cpu.quantization, "Q4_K_M");
         assert_eq!(cpu.files.len(), 1);
-        assert_eq!(cpu.files[0].path, "parakeet-ultra-Q8_0.gguf");
-        assert_eq!(cpu.total_byte_count(), 740_363_168);
+        assert_eq!(cpu.files[0].path, "parakeet-ultra-Q4_K_M.gguf");
+        assert_eq!(cpu.total_byte_count(), 486_280_096);
+    }
+
+    /// The previous manifest is the one 0.42.1 installed from, to the letter.
+    /// The runtime version is part of that: an install whose marker names
+    /// another one is hashed in full every time its state is asked for, and
+    /// its state is asked for on every key press.
+    #[test]
+    fn the_previous_cpu_manifest_is_what_0_42_1_installed() {
+        let previous = Manifest::parse(PREVIOUS_CPU_MANIFEST).expect("it must parse");
+        assert_eq!(previous.quantization, "Q8_0");
+        assert_eq!(previous.runtime_version, "transcribe.cpp 0.4.0");
+        assert_eq!(previous.files.len(), 1);
+        assert_eq!(previous.files[0].path, "parakeet-ultra-Q8_0.gguf");
+        assert_eq!(previous.total_byte_count(), 740_363_168);
+        assert_eq!(
+            previous.files[0].sha256,
+            "007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59"
+        );
+    }
+
+    /// Both are files of one revision, so they install into one folder. That
+    /// is why the engine needs no telling which of the two to load, and why
+    /// installing the current file is what removes the previous one.
+    #[test]
+    fn the_previous_file_lives_in_the_folder_the_current_one_installs_into() {
+        let current = ModelStore::new(Manifest::parse(CPU_MANIFEST).unwrap(), "/models");
+        let previous = ModelStore::new(Manifest::parse(PREVIOUS_CPU_MANIFEST).unwrap(), "/models");
+        assert_eq!(current.engine_directory(), previous.engine_directory());
+        assert_eq!(
+            current.layout.ready_marker(),
+            previous.layout.ready_marker()
+        );
+    }
+
+    /// One small file as a finished download leaves it, and the store whose
+    /// manifest names it, so an install can be made in a test.
+    fn staged(models: &Path, name: &str, bytes: &[u8]) -> (ModelStore, PathBuf) {
+        let mut manifest = Manifest::parse(CPU_MANIFEST).unwrap();
+        let store = ModelStore::new(manifest.clone(), models);
+        let staging = store.layout.staging_directory(name);
+        let file = store.layout.engine_directory_inside(&staging).join(name);
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(&file, bytes).unwrap();
+        manifest.files[0].path = name.into();
+        manifest.files[0].byte_count = bytes.len() as i64;
+        manifest.files[0].sha256 = ramble_model::store::digest_of(&file).unwrap();
+        (ModelStore::new(manifest, models), staging)
+    }
+
+    /// A computer that installed the Q8_0 file with 0.42.1 and then updated
+    /// the app: it must go on dictating, and be offered the current file.
+    #[test]
+    fn a_computer_with_the_previous_file_keeps_dictating_and_can_move_to_the_current_one() {
+        let root = std::env::temp_dir().join(format!(
+            "openramble-previous-file-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let models = root.join("Models");
+        let mut dictation = dictation_keeping_history_in(root.join("History"), &root);
+        let (previous, larger) = staged(&models, "q8.gguf", b"the larger");
+        let (current, smaller) = staged(&models, "q4.gguf", b"smaller");
+        dictation.store = current;
+        dictation.previous = previous;
+        assert!(!dictation.model_is_ready());
+
+        dictation.previous.promote(&larger).unwrap();
+        assert!(dictation.model_is_ready());
+        assert!(dictation.lineup().offers_upgrade());
+
+        dictation.store().promote(&smaller).unwrap();
+        assert!(dictation.model_is_ready());
+        assert!(!dictation.lineup().offers_upgrade());
+        let left: Vec<_> = std::fs::read_dir(dictation.store().engine_directory())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(left, ["q4.gguf"]);
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     /// Quitting calls this from the tray menu, and the exit handler calls it
@@ -755,6 +870,10 @@ mod tests {
             pipeline: Mutex::new(TextPipeline::default()),
             store: ModelStore::new(
                 Manifest::parse(SHIPPING_MANIFEST).expect("the shipping manifest parses"),
+                root.join("Models"),
+            ),
+            previous: ModelStore::new(
+                Manifest::parse(PREVIOUS_CPU_MANIFEST).expect("the previous manifest parses"),
                 root.join("Models"),
             ),
             history: HistoryStore::new(history),

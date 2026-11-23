@@ -9,7 +9,7 @@ use crate::adapters::hotkey::Hotkey;
 use crate::dictation::Dictation;
 use crate::runner::Runner;
 use crate::take::Block;
-use ramble_model::ModelState;
+use ramble_model::{ModelLineup, ModelState, Slot};
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -30,7 +30,38 @@ pub struct ModelReport {
     /// that should mean "look at this" — so when a real repair is needed, they
     /// have already learned to ignore it.
     pub problem: bool,
+    /// The model works, and a newer file of it can be downloaded.
+    pub upgrade: bool,
     pub download_bytes: i64,
+}
+
+impl ModelReport {
+    /// `state` is the state of the model a download installs.
+    fn new(state: &ModelState, lineup: ModelLineup, download_bytes: i64) -> Self {
+        let serves = lineup.recognizer != Slot::None;
+        ModelReport {
+            ready: serves,
+            // A computer dictating with the previous file sees the current
+            // one as the wrong files. That is an offer, not a fault.
+            problem: !serves && matches!(state, ModelState::NeedsRepair(_)),
+            upgrade: lineup.offers_upgrade(),
+            detail: match (lineup.recognizer, state) {
+                (Slot::Current, _) => None,
+                (Slot::Previous, _) => Some(
+                    "Installed and ready. A smaller, faster version of the model is available. \
+                     Dictation keeps using the installed one until the new one is ready."
+                        .into(),
+                ),
+                // Said plainly, including why, because "needs repair" alone tells a
+                // person nothing about what to do next.
+                (Slot::None, ModelState::NeedsRepair(reason)) => Some(format!(
+                    "The installed model is not usable ({reason}). Downloading it again will fix this."
+                )),
+                (Slot::None, _) => Some("The speech model is not installed yet.".into()),
+            },
+            download_bytes,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -47,21 +78,11 @@ static CANCEL: AtomicBool = AtomicBool::new(false);
 
 #[tauri::command]
 pub fn model_report(dictation: State<'_, Arc<Dictation>>) -> ModelReport {
-    let state = dictation.model_state();
-    ModelReport {
-        ready: state == ModelState::Ready,
-        problem: matches!(state, ModelState::NeedsRepair(_)),
-        detail: match &state {
-            ModelState::Ready => None,
-            ModelState::NotInstalled => Some("The speech model is not installed yet.".into()),
-            // Said plainly, including why, because "needs repair" alone tells a
-            // person nothing about what to do next.
-            ModelState::NeedsRepair(reason) => Some(format!(
-                "The installed model is not usable ({reason}). Downloading it again will fix this."
-            )),
-        },
-        download_bytes: dictation.download_byte_count(),
-    }
+    ModelReport::new(
+        &dictation.model_state(),
+        dictation.lineup(),
+        dictation.download_byte_count(),
+    )
 }
 
 /// What this desktop session will not let the app do.
@@ -232,6 +253,10 @@ pub fn install_model(
             },
             &|| CANCEL.load(Ordering::SeqCst),
         );
+        if result.is_ok() {
+            // The new file is used from the next take on.
+            dictation.release_model();
+        }
         DOWNLOADING.store(false, Ordering::SeqCst);
 
         let message = match result {
@@ -301,6 +326,40 @@ mod tests {
             ModelState::NeedsRepair("truncated".into()),
             ModelState::NeedsRepair(_)
         ));
+    }
+
+    /// A computer that holds the Q8_0 file 0.42.1 downloaded: the current
+    /// model's own state says the folder holds the wrong files.
+    #[test]
+    fn a_working_previous_model_is_ready_with_an_offer_and_no_fault() {
+        let wrong_files = ModelState::NeedsRepair("different model files".into());
+        let lineup = ModelLineup::new(&wrong_files, &ModelState::Ready);
+        let report = ModelReport::new(&wrong_files, lineup, 486_280_096);
+        assert!(report.ready);
+        assert!(report.upgrade);
+        assert!(!report.problem);
+        assert!(report.detail.unwrap().starts_with("Installed and ready."));
+        assert_eq!(report.download_bytes, 486_280_096);
+    }
+
+    #[test]
+    fn the_current_model_is_ready_with_nothing_to_offer() {
+        let lineup = ModelLineup::new(&ModelState::Ready, &ModelState::NotInstalled);
+        let report = ModelReport::new(&ModelState::Ready, lineup, 486_280_096);
+        assert!(report.ready && !report.upgrade && !report.problem);
+        assert_eq!(report.detail, None);
+    }
+
+    #[test]
+    fn with_no_working_model_a_first_run_is_no_fault_and_a_damaged_install_is() {
+        let fresh = ModelLineup::new(&ModelState::NotInstalled, &ModelState::NotInstalled);
+        let report = ModelReport::new(&ModelState::NotInstalled, fresh, 1);
+        assert!(!report.ready && !report.upgrade && !report.problem);
+
+        let cut = ModelState::NeedsRepair("truncated".into());
+        let report = ModelReport::new(&cut, ModelLineup::new(&cut, &cut), 1);
+        assert!(!report.ready && !report.upgrade && report.problem);
+        assert!(report.detail.unwrap().contains("truncated"));
     }
 
     #[test]
