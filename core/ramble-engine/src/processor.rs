@@ -18,11 +18,12 @@
 
 use std::fmt;
 
-/// The instruction sets the runtime can be compiled to use on x86-64, beyond
-/// what every such processor has.
+/// Instruction sets the runtime may be compiled to use on x86-64 and a
+/// processor still in use may lack.
 ///
 /// Read twice: once for what the runtime uses, once for what the processor
-/// has.
+/// has. The packages are compiled for the first five. SSE4.2, which they
+/// also use, is not listed: no processor has AVX without it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Instructions {
     pub avx: bool,
