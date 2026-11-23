@@ -1,0 +1,72 @@
+name: Moving from Q8_0 to Q4_K_M (H17)
+
+# Proof-only, on the proof branch, never on main. On the systems the desktop
+# app runs on, with the real files and a loaded engine: a computer that holds
+# the Q8_0 file installs Q4_K_M through the app's own install call, and
+# nothing of the old file is left.
+on:
+  push:
+    branches: ["claude/desktop-q4km-proof-install"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TRANSCRIBE_CMAKE_ARGS: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF"
+  CLIP_URL: https://raw.githubusercontent.com/mikwiseman/transcribe.cpp/dacdba09be2b8d4dfe97a9d7464c51f462d5f622/samples/dots.wav
+  Q4_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  Q4_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+  Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
+  Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
+
+jobs:
+  swap:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            libasound2-dev libxdo-dev libxkbcommon-dev
+
+      - name: Files
+        run: |
+          mkdir -p proof
+          curl -L --fail --retry 3 -o proof/q8.gguf "$Q8_URL"
+          curl -L --fail --retry 3 -o proof/q4.gguf "$Q4_URL"
+          curl -L --fail --retry 3 -o proof/dots.wav "$CLIP_URL"
+          echo "$Q8_SHA256  proof/q8.gguf" | sha256sum -c -
+          echo "$Q4_SHA256  proof/q4.gguf" | sha256sum -c -
+
+      - name: The app's own tests, and the swap with the real files
+        run: |
+          here=$(pwd -W 2> /dev/null || pwd)
+          export PROOF_Q8="$here/proof/q8.gguf" PROOF_Q4="$here/proof/q4.gguf" PROOF_CLIP="$here/proof/dots.wav" PROOF_ROOT="$here/proof/root"
+          cargo test -p openramble-desktop -p ramble-model --locked 2>&1 | grep -E '^test result|FAILED|panicked' | tee tests.txt
+          ! grep -q 'FAILED\|panicked' tests.txt
+          cargo test -p openramble-desktop --locked the_real_files_swap_under_a_loaded_engine -- --ignored --nocapture 2>&1 | tee swap.txt
+          grep -q 'test result: ok. 1 passed' swap.txt
+          {
+            echo "## ${{ matrix.os }}"
+            echo '```'
+            cat tests.txt
+            sed -n '/^PROOF/,$p' swap.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

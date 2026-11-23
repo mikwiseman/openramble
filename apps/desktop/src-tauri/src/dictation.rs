@@ -928,6 +928,110 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
     }
 
+    /// Proof only, on the proof branch: the real files, a loaded engine, and
+    /// the move from Q8_0 to Q4_K_M. First as the installer made it before
+    /// this change, promoting while the engine still holds the old file, to
+    /// see what each system does; then as `install` makes it.
+    #[test]
+    #[ignore = "needs both model files; run by the proof workflow"]
+    fn the_real_files_swap_under_a_loaded_engine() {
+        let given = |name: &str| PathBuf::from(std::env::var(name).expect(name));
+        let (q8, q4, clip) = (given("PROOF_Q8"), given("PROOF_Q4"), given("PROOF_CLIP"));
+        let (samples, rate) = ramble_audio::read_wav(&clip).unwrap();
+        let samples = ramble_audio::resample(&samples, rate).unwrap();
+        let samples = &samples[..8 * 16_000];
+        let stage = |store: &ModelStore, attempt: &str, file: &Path| {
+            let staging = store.layout.staging_directory(attempt);
+            let engine = store.layout.engine_directory_inside(&staging);
+            std::fs::create_dir_all(&engine).unwrap();
+            std::fs::copy(file, engine.join(&store.manifest.files[0].path)).unwrap();
+            staging
+        };
+        let listing = |root: &Path, label: &str| {
+            let mut found = Vec::new();
+            let mut folders = vec![root.join("Models")];
+            while let Some(folder) = folders.pop() {
+                for entry in std::fs::read_dir(&folder).unwrap().flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        folders.push(path);
+                    } else {
+                        found.push(format!(
+                            "{} ({} bytes)",
+                            path.strip_prefix(root).unwrap().display(),
+                            entry.metadata().unwrap().len()
+                        ));
+                    }
+                }
+            }
+            found.sort();
+            println!("PROOF files {label}: {found:#?}");
+            found
+        };
+        // A computer as 0.42.1 left it, with the engine loaded by a take.
+        let a_computer_dictating_with_q8 = |name: &str| {
+            let root = given("PROOF_ROOT").join(name);
+            let _ = std::fs::remove_dir_all(&root);
+            let dictation = dictation_keeping_history_in(root.join("History"), &root);
+            dictation
+                .previous
+                .promote(&stage(&dictation.previous, "first", &q8))
+                .unwrap();
+            assert!(dictation.model_is_ready());
+            assert!(dictation.lineup().offers_upgrade());
+            let heard = dictation.transcribe(samples).unwrap();
+            (root, dictation, heard)
+        };
+
+        // 1. Promoting while the engine holds the old file.
+        let (root, dictation, before) = a_computer_dictating_with_q8("held");
+        println!(
+            "PROOF current model's own state: {:?}",
+            dictation.model_state()
+        );
+        println!("PROOF heard with Q8_0: {before}");
+        let staging = stage(&dictation.store, "second", &q4);
+        let held = dictation.store.promote(&staging);
+        println!("PROOF promoting while the engine holds the old file: {held:?}");
+        println!(
+            "PROOF then: current {:?}, previous {:?}, ready {}",
+            dictation.model_state(),
+            dictation.previous.state(),
+            dictation.model_is_ready()
+        );
+        listing(&root, "after promoting under a loaded engine");
+        println!(
+            "PROOF the loaded engine still recognizes: {:?}",
+            dictation.transcribe(samples).map(|text| text == before)
+        );
+        dictation.shutdown();
+        println!(
+            "PROOF what the next start settles: {:?}",
+            dictation.store.recover_interrupted_promotion()
+        );
+        listing(&root, "after the next start");
+        let _ = std::fs::remove_dir_all(&root);
+
+        // 2. As the app installs it now.
+        let (root, dictation, _) = a_computer_dictating_with_q8("released");
+        let staging = stage(&dictation.store, "second", &q4);
+        dictation.install(&staging).unwrap();
+        assert!(dictation.model_is_ready());
+        assert!(!dictation.lineup().offers_upgrade());
+        assert_eq!(dictation.model_state(), ModelState::Ready);
+        let left = listing(&root, "after install");
+        assert_eq!(left.len(), 2, "the model file and the ready marker");
+        assert!(left
+            .iter()
+            .any(|file| file.contains("parakeet-ultra-Q4_K_M.gguf (486280096 bytes)")));
+        assert!(!left.iter().any(|file| file.contains("Q8_0")));
+        let after = dictation.transcribe(samples).unwrap();
+        println!("PROOF heard with Q4_K_M: {after}");
+        assert!(!after.trim().is_empty());
+        dictation.shutdown();
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
     /// A held key with a silent microphone must read as no audio, not as a
     /// take as long as the hold.
     #[test]
