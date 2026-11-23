@@ -310,6 +310,50 @@ five clip lengths and three thread counts. The 2 s clip is the slow end
 the 4-bit product is what remains, and the float kernel is the largest part
 of it.
 
+## K8. The M4's matrix unit against NEON, the 8-bit matrix extension and Accelerate
+
+Question. On Apple silicon the engine loses to the Metal runtime the Mac app
+ships (S1: 133 ms on eight threads against 80 ms for an 8 s clip on the M4
+Pro). Is there an instruction set on the processor that closes the gap?
+
+Method. `tools/apple_matmul_probe.c` multiplies one encoder matrix, 4096 rows
+of 1024 8-bit weights, by 112 frames of 8-bit activations (470 M
+multiply-adds) four ways and checks every integer result against a plain
+loop. M4 Pro, 23 November 2026, load average 4, best of 5 to 7.
+
+| Way | Time | Multiply-adds a second |
+|---|---|---|
+| NEON dot products, one thread | 4.14 ms | 114 G |
+| 8-bit matrix extension (`smmla`), one thread, packing counted | 4.81 ms | 98 G |
+| Matrix unit (SME `smopa`), one thread | 0.26 ms | 1,786 G |
+| Matrix unit, two threads | 0.28 ms | 1,696 G |
+| Matrix unit, four threads | 0.18 ms | 2,595 G |
+| Matrix unit, eight threads | 0.17 ms | 2,780 G |
+| Accelerate `cblas_sgemm`, single precision | 0.41 ms | 1,146 G |
+
+Found.
+
+- One thread on the matrix unit does 16 times the work of one NEON thread,
+  and twice the work of all eight NEON threads of S1 together.
+- The 8-bit matrix extension is no faster than dot products here, so the
+  "Not done" item for it is closed for Apple silicon. It may still pay on
+  Neoverse-N2 and Snapdragon X, which was not measured.
+- More threads add little (1.5 times at four), which fits one matrix unit
+  per group of cores.
+- The activations the engine already makes (`ore_qact.q`, 16 frames by 4
+  columns in 64 bytes) are exactly one operand of `smopa`. The weights are
+  not: the instruction wants 16 rows by 4 columns, and the file stores rows.
+
+What it does not show. The probe multiplies plain 8-bit numbers. The Q4_K
+arithmetic the engine keeps bit for bit has a 6-bit scale and a minimum for
+every 32 columns of every row. Counted on paper, keeping it on the matrix
+unit takes two passes of products and about as many side instructions again,
+which lands near four NEON threads, not above them. The gain needs weights
+stored as 8-bit numbers with one scale for a row. That is a new model file
+and changes the numbers, so it has to pass the word-error gate before
+anything ships. M1, M2 and M3 have no matrix unit, so this is a path for M4
+and later only.
+
 ## T1. A thread pool that waits for no one
 
 Background. Windows and Linux ship one thread because ggml's four threads
@@ -747,21 +791,260 @@ Limits. One run, three clip lengths, and one processor of each kind. The
 1.5 to 1.7 times on the AMD machines is the gain a person with a two-core
 computer would see if the app gave transcribe.cpp the same threads.
 
+## W1. The engine in the app: Windows, Linux and the server
+
+Change (23 November, pull request 116). `core/ramble-engine` compiles
+`engine/` with the `cc` crate (`build.rs`) and no longer depends on
+transcribe.cpp. `src/ore.rs` is the only unsafe code and mirrors `ore.h`.
+
+- **Threads.** `Engine::load` asks for the number of processors, at most
+  four. The server's pool calls `Engine::load_with_threads(dir, 1)`.
+- **Long audio.** `ramble-engine` still cuts at 30 s itself, at the quietest
+  20 ms of the last 5 s, as it did for transcribe.cpp.
+- **Older processors.** Pull request 114 had made the desktop app refuse a
+  processor without AVX2. That is removed: `processor.rs`,
+  `UnsupportedProcessor`, the refusal in `Dictation::begin`, the tray text
+  and the settings window opening at launch. `processor_notice()` is added
+  to the session's notices instead, and says recognition will be slower.
+- **Checks.** `scripts/check-desktop-portability.sh` reads every object the
+  crate compiled and allows newer instructions only in the two kernel files.
+  `scripts/check-network-surface.sh` reads `engine/src` and `engine/include`
+  for sockets, processes and the environment.
+
+Not seen: the settings window's notice on such a processor. It was read in
+`index.html`, not looked at.
+
+## P3. Word errors on x86 with the file the packages ship
+
+Question. P1 compared the engine with transcribe.cpp on the M4 with the
+4-bit file. Windows and Linux download the Q8_0 file. Is the engine as
+accurate with it on x86?
+
+Method (run 45206608695, job "FLEURS, Linux x86_64", Ubuntu 22.04, commit
+`dcacf2f`; the arithmetic did not change after it). All 1,422 English and
+Russian FLEURS test clips, 29,586 words, through four setups, compared by
+`tools/parity.py`. The baseline is transcribe.cpp built as the 0.42.1
+packages build it, with Q8_0.
+
+| Setup | Word errors | Rate | Clips whose text differs from the baseline | Fewer errors, more errors |
+|---|---|---|---|---|
+| transcribe.cpp, Q8_0 | 1,440 | 4.87% | | |
+| Engine, Q8_0 | 1,437 | 4.86% | 47 | 11, 8 |
+| Engine, Q4_K_M | 1,472 | 4.98% | 381 | 79, 97 |
+| transcribe.cpp, Q4_K_M | 1,489 | 5.03% | 380 | 74, 107 |
+
+Found. With the shipped file the engine is as accurate as the shipped
+runtime. The 4-bit file costs 32 to 49 more errors in either runtime, which
+agrees with pull request 115 (H17). So the packages keep Q8_0, and the gain
+that matters is the engine's with Q8_0.
+
+## S3. Against the packages as built, idle and busy
+
+Method (run 45225801224, commit `300ac80`). An 8 s clip, the Q8_0 file,
+milliseconds, best of the job. "Ships" is transcribe.cpp built with the
+0.42.1 packages' settings on one thread. Busy means one busy process on
+every processor of the machine.
+
+| Machine | Ships, idle | Engine, 4 threads, idle | Ships, busy | Engine, 4 threads, busy |
+|---|---|---|---|---|
+| Linux, EPYC 7763, Ubuntu 22.04 | 2,541 | 851 | 3,757 | 2,166 |
+| Windows, Xeon 8573C | 3,284 | 833 | 5,493 | 1,418 |
+| Linux arm64, Neoverse-N2 | 5,070 | 557 | 5,807 | 1,646 |
+
+Found.
+
+- Idle, the engine is 3.0, 3.9 and 9.1 times faster. Busy, 1.7, 3.9 and 3.5
+  times.
+- The weakest case is the busy two-core Linux machine: the engine's four
+  threads beat its own one thread by 1.5 times there (2,057 against 3,136
+  with the 4-bit file).
+- transcribe.cpp on four threads on a busy machine took 4,678 ms on Linux
+  and 17,786 ms on Windows, against 3,757 and 5,493 on one. That is the
+  stall its one-thread setting avoids.
+- The engine opens the model in 51 to 57 ms idle; transcribe.cpp takes 230
+  to 530 ms.
+
+## A2. Processors without AVX2, emulated
+
+Method (the same run, the Ubuntu 22.04 job, QEMU 6.2). The program the
+crate builds recognizes a 4.5 s Russian clip on three emulated processors.
+
+| Emulated processor | Kernels | Emulated time | Words |
+|---|---|---|---|
+| Opteron_G1, 2003, SSE2 only | `generic` | 207 s | the same |
+| Nehalem, 2008 | `sse` | 43 s | the same |
+| IvyBridge, 2012, AVX without AVX2 | `sse` | 43 s | the same |
+
+The times are the emulator's and say nothing about a real processor. The
+step runs only on Ubuntu 22.04: Ubuntu 26.04's own C library refuses a
+processor below x86-64-v3, so nothing starts under those emulated
+processors there. The IvyBridge line of the step's output shows a QEMU
+warning where the kernel name should be, because it prints the first line
+of standard error.
+
+## E1. Eight bits with one scale per row: the words
+
+Question. K8 found the M4's matrix unit fast only on 8-bit weights with one
+scale for a whole row. Does the model keep its words in that layout?
+
+Method (23 November). `tools/row8_convert.py` turns every Q4_K and Q8_0
+matrix of the Mac's file, `parakeet-ultra-Q4_K_M.gguf`, into Q8_0 blocks
+that carry the same scale along a row: the row's largest magnitude over 127,
+in half precision, with the numbers rounded to it. The engine's Q8_0 kernels
+then compute what a row-scaled kernel would. The weights move by 0.74% to
+2.87% of their size, 0.86% for the middle tensor, and the file is 740 MB,
+as large as Q8_0. All 1,422 FLEURS clips ran through the engine on four
+threads of the M4 Pro, scored by `tools/parity.py`.
+
+| | English, 14,481 words | Russian, 15,105 words | Both |
+|---|---|---|---|
+| Engine, Q4_K_M (P1) | 723 | 749 | 1,472, 4.98% |
+| Engine, one scale per row | 740 | 739 | 1,479, 5.00% |
+| transcribe.cpp on Metal, what ships (P1) | 735 | 735 | 1,470, 4.97% |
+
+Against the engine on the 4-bit file, 79 English clips read differently (8
+with fewer errors, 23 with more) and 87 Russian clips (24 fewer, 16 more).
+
+Found.
+
+- Over both languages the layout costs 7 errors in 29,586 words, 0.02
+  points, the size of the gap between transcribe.cpp's own two backends.
+- English leans the wrong way: of the 31 English clips whose error count
+  changed, 23 got worse, which chance gives about 1% of the time. So the
+  layout costs English about 0.1 points. Russian leans the other way, within
+  chance.
+- The file was made from the 4-bit weights and carries their rounding too.
+  Made from full-precision weights it would likely do better. No such copy
+  of Parakeet Ultra is on this Mac, so that was not tried.
+- The conversion reads the file the Mac already has and takes about 3 s in
+  NumPy. Done in C when the model opens, an M4 needs no new download, at the
+  price of about 250 MB more memory than the mapped 4-bit file.
+
+Next. The layout holds well enough to build the kernel: weights repacked at
+load into the matrix unit's tiles of 16 rows by 4 columns, and streaming mode
+around each product. M1 to M3 have no matrix unit and keep Metal.
+
+## K9. A kernel for the matrix unit
+
+Change (23 November, branch `claude/engine-notes-m4`). A table named `sme`,
+chosen only by name so far: the NEON table plus `gemm_r8`
+(`src/ore_kernels_sme.c`). When a session on it opens, `ore_model_prepare_r8`
+makes a copy of every encoder matrix stored as Q4_K or F16 (the two 1x1
+convolutions included) as 8-bit numbers with one scale per row, packed in
+the unit's tiles of 16 rows by 4 columns (`src/ore_r8.c`). The product runs
+in streaming mode: one SMOPA adds 16 rows by 16 frames over 4 columns, four
+tiles take 64 frames per weight load, and the tiles are read out frame by
+frame, scaled and summed in single precision after every scale-block of the
+activations. `tests/selftest.c` checks it bit for bit against the same
+arithmetic written plainly, on 1 to 70 frames and a split row range.
+
+Profile, one thread, 8 s clip, `sample` (self time):
+
+| | Q4_K products | Half-precision products | Everything |
+|---|---|---|---|
+| NEON | 61% | 27% | about 635 ms |
+| Matrix unit, Q4_K only | 4.3 times faster | now over half of the time | about 490 ms |
+
+So the half-precision 1x1 convolutions went onto the unit too, and with
+them the gain shows.
+
+Threads. The M4 Pro has ten performance cores in two clusters and four
+efficiency cores. More threads on the unit than it serves only queue, and a
+thread the system puts on an efficiency core holds every product up. With
+the workers at `QOS_CLASS_USER_INITIATED`, one thread on the unit was
+fastest: encoder 87 ms on eight threads against 95 ms for NEON. With the
+workers at `QOS_CLASS_USER_INTERACTIVE` two threads help.
+
+Activations. Read-outs after every 256 columns cost about as much as the
+products. One scale per frame for the whole row (`ore_quantize_rows`) needs
+one read-out per product.
+
+Speed, 8 s clip, eight threads, best of three rounds that took turns so
+that every variant met the same load. Other chats were booting simulators,
+and the load average stayed near 25, so this is a busy Mac, not an idle one.
+
+| Variant | Wall, ms | Encoder, ms |
+|---|---|---|
+| NEON | 122 | 107 |
+| Unit, one scale per 256 columns, one thread | 337 | 321 |
+| Unit, one scale per 256 columns, two threads, interactive workers | 206 | 182 |
+| Unit, one scale per frame, one thread | 93 | 78 |
+| Unit, one scale per frame, two threads, interactive workers | 103 | 82 |
+
+On the quieter Mac earlier the first unit variant took 87 ms against 95 ms
+for NEON. The variant with one scale per 256 columns suffers most from the
+load, because its read-outs are long stretches of streaming-mode work that a
+busy core is taken away from.
+
+## E3. One activation scale per frame: the words
+
+The fast variant above changes the arithmetic, so it was run on all 1,422
+clips (two unit threads, interactive workers).
+
+| | English | Russian | Both |
+|---|---|---|---|
+| Engine, NEON (P1) | 723 | 749 | 1,472 |
+| Unit, one scale per 256 columns (E2) | 734 | 739 | 1,473 |
+| Unit, one scale per frame | 736 | 753 | 1,489 |
+| Unit, one scale per 1,024 columns | 734 | 749 | 1,483 |
+
+Found. One scale per frame costs 17 errors in 29,586 words, 0.06 points,
+the same count as transcribe.cpp with the 4-bit file on x86 (P3). A scale
+per 1,024 columns, which is one scale per frame for every matrix but the two
+that take 4,096 inputs, costs 11. So most of the cost is in the matrices of
+1,024 inputs, and a coarser scale only there would not recover it. These
+differences are near the size of the noise between implementations, but
+they all lean the same way.
+
+Where this stands. The unit keeps the words when activations keep a scale
+per 256 columns, and it is fast only when they do not. Neither variant beats
+Metal's 80 ms yet, so the Mac keeps Metal. What is left to try:
+SME2's four-vector read-outs and conversions to cut the read-out cost of the
+accurate variant (`-DORE_R8_ABLOCK=256` with `-DORE_R8_ROWSCALE=1` is that
+variant on the row path), or activations split into a high and a low 8-bit
+part with one scale per frame (two products, one read-out, about 15 bits),
+and measuring on an idle Mac.
+
+The ceiling, counted. The matrices the unit takes hold about 600 million
+weights, so an 8 s clip (112 frames after padding) is about 67 billion
+multiply-adds. At the 1.8 to 2.7 trillion a second K8 measured, that is 25
+to 37 ms even with no read-out at all. The rest of the encoder (attention,
+layer norms, convolutions, the position terms) took about 40 ms on eight
+NEON threads. So a perfect kernel lands the encoder near 65 to 80 ms, about
+where Metal is, and not far below it. On Apple silicon the matrix unit can
+make the engine a match for Metal, which would still be worth having for
+the load time (about 50 ms against Metal's model load) and for a Mac whose
+graphics processor is busy. It cannot make it much faster. What would cut the
+person's wait further on every Mac is recognizing closed stretches of a take
+while they still speak (see Not done).
+
+## E2. The matrix unit's words
+
+Method. All 1,422 FLEURS clips through the `sme` table with one unit and one
+activation scale per 256 columns, Q4_K and F16 matrices on the unit.
+
+| | English | Russian | Both |
+|---|---|---|---|
+| Engine, NEON, Q4_K_M (P1) | 723 | 749 | 1,472 |
+| Engine, matrix unit | 734 | 739 | 1,473 |
+| transcribe.cpp on Metal, what ships (P1) | 735 | 735 | 1,470 |
+
+Found. The matrix unit keeps the words: one error more than NEON, three
+more than Metal, in 29,586 words. English leans slightly worse (8 clips
+better, 18 worse) and Russian slightly better (25 better, 17 worse), as in
+E1, and the half-precision convolutions in 8 bits cost nothing visible.
+
 ## Not done
 
-- **The engine is not in the app.** It is not behind `ramble-engine` or the
-  Swift adapter. Putting it there changes what ships and waits for Mik's
-  yes. Two things the adapter uses have no counterpart yet: a call that
-  recognizes several clips at once, and the detected language.
+- **Apple silicon.** The Mac app on Apple silicon still runs transcribe.cpp
+  on Metal, and Mik asked on 23 November for our engine there too. K8 is the
+  first measurement. Intel Macs are pull request 118. Two things the Swift
+  adapter uses have no counterpart in the engine yet: a call that recognizes
+  several clips at once, and the detected language.
 - **The kernel choice on Windows on an AMD Zen 4 processor.** The `avx512`
   set was 10% slower there than `avx2`. The change for it is in the code, and
   the engine picks the new table on that processor under Linux. It has not
   been timed under Windows (K7).
-- **Word errors with the Ultra Q8_0 file in the engine.** The four sample
-  clips give identical text. The 1,422 FLEURS clips were run with Q4_K_M,
-  which is the file S2 recommends.
-- **Four threads on a busy Windows or Linux machine.** T1 has three rounds
-  on the Mac.
 - **A fixed cost of 20 to 60 ms per recognition.** The engine decodes the
   headers of about 2 million weight blocks every time. It shows on short
   clips: 206 against 184 ms for 2 s on the EPYC 9V45. Keeping the decoded
@@ -771,9 +1054,8 @@ computer would see if the app gave transcribe.cpp the same threads.
   multiply-adds a second where the 4-bit kernel does 42 to 134. They are 12%
   of the arithmetic and about 30% of the time. Quantizing them needs a
   converted model file and a word-error gate.
-- **Arm's 8-bit matrix extension**, which the M2 and later, Neoverse-N2 and
-  Snapdragon X have. The dot-product kernel is at the limit of two
-  multiplier units.
+- **Arm's 8-bit matrix extension** on Neoverse-N2 and Snapdragon X. On
+  Apple silicon it gave nothing (K8).
 - **A cache of the position projections.** They depend only on the clip's
   length and are 8% of the arithmetic.
 - **Smaller costs left as they are.** The mel step runs on one thread (14 ms
