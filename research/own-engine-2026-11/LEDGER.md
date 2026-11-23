@@ -957,11 +957,46 @@ workers at `QOS_CLASS_USER_INTERACTIVE` two threads help.
 
 Activations. Read-outs after every 256 columns cost about as much as the
 products. One scale per frame for the whole row (`ore_quantize_rows`) needs
-one read-out per product. Timed on a loaded Mac (other chats were booting
-simulators, load 18 to 70), so only the order is worth anything: NEON 581
-ms, one scale per 256 columns 554 ms (one unit) and 324 ms (two units), one
-scale per frame 162 ms (one unit) and 92 ms (two units, interactive). The
-same comparison on a quiet Mac is still to be run.
+one read-out per product.
+
+Speed, 8 s clip, eight threads, best of three rounds that took turns so
+that every variant met the same load. Other chats were booting simulators,
+and the load average stayed near 25, so this is a busy Mac, not an idle one.
+
+| Variant | Wall, ms | Encoder, ms |
+|---|---|---|
+| NEON | 122 | 107 |
+| Unit, one scale per 256 columns, one thread | 337 | 321 |
+| Unit, one scale per 256 columns, two threads, interactive workers | 206 | 182 |
+| Unit, one scale per frame, one thread | 93 | 78 |
+| Unit, one scale per frame, two threads, interactive workers | 103 | 82 |
+
+On the quieter Mac earlier the first unit variant took 87 ms against 95 ms
+for NEON. The variant with one scale per 256 columns suffers most from the
+load, because its read-outs are long stretches of streaming-mode work that a
+busy core is taken away from.
+
+## E3. One activation scale per frame: the words
+
+The fast variant above changes the arithmetic, so it was run on all 1,422
+clips (two unit threads, interactive workers).
+
+| | English | Russian | Both |
+|---|---|---|---|
+| Engine, NEON (P1) | 723 | 749 | 1,472 |
+| Unit, one scale per 256 columns (E2) | 734 | 739 | 1,473 |
+| Unit, one scale per frame | 736 | 753 | 1,489 |
+
+Found. One scale per frame costs 17 errors in 29,586 words, 0.06 points,
+the same count as transcribe.cpp with the 4-bit file on x86 (P3). The
+encoder took 12 ms per second of audio on English under that load.
+
+Where this stands. The unit keeps the words when activations keep a scale
+per 256 columns, and it is fast only when they do not. Neither variant beats
+Metal's 80 ms yet, so the Mac keeps Metal. What is left to try, in order:
+SME2's four-vector read-outs and conversions to cut the read-out cost, an
+activation scale per 1,024 columns (one read-out for most matrices, four for
+the two that take 4,096), and measuring on an idle Mac.
 
 ## E2. The matrix unit's words
 
