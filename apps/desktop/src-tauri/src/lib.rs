@@ -152,14 +152,6 @@ pub fn run() {
             app.manage(Arc::clone(&runner));
             spawn_hotkey_listener(runner, Hotkey::default());
 
-            // A computer that cannot dictate at all is told when the app
-            // starts. The window is otherwise opened from the tray, the
-            // tray's tooltip is not drawn on every desktop, and a dictation
-            // key that does nothing gives no reason.
-            if for_setup.unsupported_processor().is_some() {
-                present_settings(app.handle());
-            }
-
             let handle = app.handle().clone();
             let dictation = Arc::clone(&for_setup);
             TrayIconBuilder::with_id("main")
@@ -275,49 +267,9 @@ fn present_settings(app: &tauri::AppHandle) {
 
 /// What the tray says about itself.
 fn tray_tooltip(dictation: &Dictation) -> String {
-    if dictation.unsupported_processor().is_some() {
-        "OpenRamble — this computer's processor cannot run the speech model".into()
-    } else if dictation.model_is_ready() {
+    if dictation.model_is_ready() {
         format!("OpenRamble — hold {} to dictate", Hotkey::default().title())
     } else {
         "OpenRamble — the speech model is not installed yet".into()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use dictation::Delivery;
-    use ramble_engine::{Instructions, UnsupportedProcessor};
-
-    fn lands(_: &str) -> Result<(), adapters::inject::InjectError> {
-        Ok(())
-    }
-
-    /// The tray must not invite a hold of the key where the key can do
-    /// nothing, and "not installed yet" would point at a download that
-    /// cannot help.
-    #[test]
-    fn the_tray_says_when_the_processor_cannot_run_the_model() {
-        let mut dictation = Dictation::for_tests(Delivery {
-            paste: lands,
-            copy: lands,
-            types_for_you: true,
-        });
-        assert_eq!(
-            tray_tooltip(&dictation),
-            "OpenRamble — the speech model is not installed yet"
-        );
-
-        let packages = Instructions {
-            avx: true,
-            avx2: true,
-            ..Instructions::default()
-        };
-        dictation.unsupported = UnsupportedProcessor::check(packages, Instructions::default());
-        assert_eq!(
-            tray_tooltip(&dictation),
-            "OpenRamble — this computer's processor cannot run the speech model"
-        );
     }
 }

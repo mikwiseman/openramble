@@ -62,7 +62,7 @@ No package depends on the application layer.
 - `core/` is a Cargo workspace holding the dictation logic every platform
   shares: `ramble-core` (session machine, policies, gesture), `ramble-text`
   (pipeline, dictionary), `ramble-model` (installs), `ramble-audio`,
-  `ramble-engine` (the only crate touching the inference runtime),
+  `ramble-engine` (the only crate touching the recognition engine),
   `ramble-history`, and `ramble-ffi` (the Swift boundary).
 - `ramble-core` and `ramble-text` perform no I/O whatsoever: no files, no
   devices, no network, no clock of their own. Time arrives as a parameter and
@@ -75,11 +75,17 @@ No package depends on the application layer.
   module and the gate checks it by filename.
 - `scripts/build-ffi.sh` produces `Packages/RambleCoreFFI`, a Swift package whose
   implementation is Rust. Its output is generated, never committed.
-- One transcription runtime: the Mac runs the CTranscribe framework LocalASR
-  pins, and `ramble-engine` builds the same commit of our transcribe.cpp fork,
-  `mikwiseman/transcribe.cpp` (a test compares them). `ramble-ffi` must not
-  depend on `ramble-engine`: its static copy would answer the Swift adapter's
-  calls instead of the framework.
+- Two recognizers, each where it is faster. The Mac runs the CTranscribe
+  framework LocalASR pins, our transcribe.cpp fork, on Metal. Windows, Linux
+  and the Linux server run our own engine in `engine/`: plain C with no
+  dependencies, compiled into `ramble-engine` by its `build.rs`. It chooses its
+  kernels for the processor it finds when a model is opened, so every file
+  outside `engine/src/ore_kernels_*.c` is compiled for the first x86-64
+  processors and `scripts/check-desktop-portability.sh` reads the build to
+  prove it. The engine follows transcribe.cpp's arithmetic where it must give
+  the same words; `research/own-engine-2026-11/` holds the design note and the
+  measurements, and `.github/workflows/engine-bench.yml` repeats them on
+  hosted machines. `ramble-ffi` must not depend on `ramble-engine`.
 - One way to cut a file: the server's `apps/cli/src/plan.rs` and the Mac's
   `FileAudioChunks.swift` carry the same planner, and both test suites pin the
   same cut frames. Change both or neither.

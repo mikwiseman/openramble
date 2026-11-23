@@ -1,0 +1,101 @@
+100% tests passed out of 1
+frames 100, reps 7, best table: neon
+Q4_K 1024 -> 4096 (enc.blocks.0.ff1.linear1.weight), 419 M multiply-adds
+  generic  prepare    0.41 ms, product    59.73 ms,     7.0 G multiply-adds/s
+  neon     prepare    0.03 ms, product     4.91 ms,    85.3 G multiply-adds/s
+    against the reference:       0 of 409600 differ, max |diff| 0 (max |value| 98.9)
+Q4_K 4096 -> 1024 (enc.blocks.0.ff1.linear2.weight), 419 M multiply-adds
+  generic  prepare    1.88 ms, product    90.14 ms,     4.7 G multiply-adds/s
+  neon     prepare    0.12 ms, product     4.91 ms,    85.4 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 242)
+Q4_K 1024 -> 1024 (enc.blocks.0.attn.linear_q.weight), 105 M multiply-adds
+  generic  prepare    0.41 ms, product    14.99 ms,     7.0 G multiply-adds/s
+  neon     prepare    0.03 ms, product     1.19 ms,    88.0 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 28.7)
+Q8_0 1024 -> 1024 (enc.blocks.0.attn.linear_out.weight), 105 M multiply-adds
+  generic  prepare    0.13 ms, product    36.15 ms,     2.9 G multiply-adds/s
+  neon     prepare    0.02 ms, product     1.11 ms,    94.2 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 155)
+F16  1024 -> 2048 (enc.blocks.0.conv.pointwise1.weight), 210 M multiply-adds
+  generic  prepare    0.04 ms, product   282.46 ms,     0.7 G multiply-adds/s
+  neon     prepare    0.04 ms, product     5.53 ms,    37.9 G multiply-adds/s
+    against the reference:       0 of 204800 differ, max |diff| 0 (max |value| 86.4)
+element-wise steps
+  neon
+    against the reference:       0 of 4096 differ, max |diff| 0 (max |value| 2.15e+03)
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+audio 58 s  encode 5519 ms  decode 460 ms
+audio 58 s  encode 32999 ms  decode 704 ms
+audio 8 s  encode 503 ms  decode 57 ms
+audio 8 s  encode 7965 ms  decode 233 ms
+### Same words
+fleurs-en.wav	However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.
+fleurs-ru.wav	В различных местах Рима были установлены большие телевизионные экраны, с помощью которых люди могли наблюдать за церемонией.
+fleurs-de.wav	Er griff auch alles an, was ins Wasser kam. Selbst ein großer Dinosaurier wie der T-Rex war ihm nicht gewachsen.
+dots.wav	Of course, it was impossible to connect the dots looking forward when I was in college, but it was very, very clear looking backwards ten years later. Again, you can't connect the dots looking forward. You can only connect them looking backwards. So you have to trust that the dots will somehow connect in your future. You have to trust in something, your gut, destiny, life, karma, whatever, because believing that the dots will connect down the road will give you the confidence.
+--- transcribe.cpp ---
+fleurs-en.wav	However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.
+fleurs-ru.wav	В различных местах Рима были установлены большие телевизионные экраны, с помощью которых люди могли наблюдать за церемонией.
+fleurs-de.wav	Er griff auch alles an, was ins Wasser kam. Selbst ein großer Dinosaurier wie der T-Rex war ihm nicht gewachsen.
+dots.wav	Of course, it was impossible to connect the dots looking forward when I was in college, but it was very, very clear looking backwards ten years later. Again, you can't connect the dots looking forward. You can only connect them looking backwards. So you have to trust that the dots will somehow connect in your future. You have to trust in something, your gut, destiny, life, karma, whatever, because believing that the dots will connect down the road will give you the confidence.
+text: identical
+tokens and times: DIFFERENT
+kernel tables: identical output
+engine output checksum (compare across machines):
+30b41b143a18db2d
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+audio 70 s  encode 4847 ms  decode 555 ms
+audio 70 s  encode 20088 ms  decode 812 ms
+### A 70 s clip
+words:      170 and      170
+long clip text: identical
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+### Speed by clip length, CPU, milliseconds
+ore 0.1.0, neon, threads 1, load 65 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    393.0 |  398.6 |  1.8 |  359.2 |   32.0 | 28
+    4.0 |    648.4 |  660.1 |  3.3 |  607.1 |   49.7 | 78
+    8.0 |   1102.5 | 1121.1 |  6.6 | 1033.3 |   81.1 | 150
+   16.0 |   2226.2 | 2246.4 | 14.0 | 2041.3 |  171.0 | 267
+   30.0 |   4702.3 | 4780.6 | 29.4 | 4434.6 |  316.5 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 1, load 256 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    541.4 |  547.2 |  1.1 |  500.6 |   35.4 | 28
+    4.0 |   1108.7 | 1134.7 |  2.1 | 1040.6 |   48.9 | 78
+    8.0 |   2112.0 | 2311.4 |  2.6 | 2011.0 |   88.7 | 150
+   16.0 |   4243.4 | 4359.0 |  3.9 | 4084.6 |  151.5 | 267
+   30.0 |   9101.8 | 9895.2 |  9.2 | 8690.5 |  395.9 | 502
+ore 0.1.0, neon, threads 2, load 75 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    225.4 |  235.9 |  1.7 |  201.3 |   22.4 | 28
+    4.0 |    478.5 |  489.9 |  3.4 |  409.4 |   65.6 | 78
+    8.0 |    741.8 |  806.9 |  6.6 |  673.2 |   62.0 | 150
+   16.0 |   1362.4 | 1364.6 | 12.9 | 1259.1 |   90.3 | 267
+   30.0 |   2520.8 | 2566.8 | 24.8 | 2317.7 |  178.4 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 2, load 111 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    424.7 |  424.8 |  1.0 |  383.3 |   38.6 | 28
+    4.0 |    787.1 |  856.9 |  1.0 |  713.6 |   70.6 | 78
+    8.0 |   1671.9 | 1761.9 |  3.8 | 1619.5 |  132.8 | 150
+   16.0 |   3902.3 | 4047.3 |  6.8 | 3611.5 |  274.9 | 267
+   30.0 |   4965.9 | 5193.0 | 17.5 | 4641.1 |  299.7 | 502
+ore 0.1.0, neon, threads 4, load 42 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    156.8 |  169.7 |  2.2 |  137.8 |   16.9 | 28
+    4.0 |    275.5 |  423.4 |  3.3 |  240.5 |   31.7 | 78
+    8.0 |    474.1 |  475.1 |  6.4 |  415.3 |   52.3 | 150
+   16.0 |    998.8 | 1002.5 | 12.7 |  896.9 |   89.3 | 267
+   30.0 |   1915.8 | 1928.5 | 23.8 | 1702.5 |  189.4 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 4, load 114 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    264.9 |  273.7 |  0.9 |  234.0 |   27.6 | 28
+    4.0 |    433.8 |  457.1 |  1.3 |  384.3 |   46.4 | 78
+    8.0 |    853.9 |  863.9 |  1.4 |  765.9 |   94.5 | 150
+   16.0 |   1725.0 | 1726.7 |  2.9 | 1560.1 |  159.1 | 267
+   30.0 |   3354.4 | 3450.6 |  7.3 | 3184.1 |  254.7 | 502

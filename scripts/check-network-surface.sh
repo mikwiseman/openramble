@@ -193,6 +193,26 @@ fi
 # ---------------------------------------------------------------------------
 # The same promise, on the Rust side.
 #
+# The recognition engine is C that the server, the desktop app and the Rust
+# tests compile from engine/. It reads one model file and computes, so its
+# sources may include no header of the network, of starting a process or of
+# loading code, and may call none of their functions or read the environment.
+# engine/scripts/check-symbols.sh checks the same promise on the built library
+# on every platform the engine is built for.
+if [[ -d engine/src ]]; then
+  echo ""
+  echo "Checking the recognition engine..."
+  ENGINE_FORBIDDEN='#[[:space:]]*include[[:space:]]*<(sys/socket|netinet/|arpa/|netdb|winsock|ws2tcpip|wininet|winhttp|curl/|spawn|dlfcn)|\b(socket|connect|getaddrinfo|gethostbyname|system|popen|fork|execve?|execvp|posix_spawnp?|CreateProcess[AW]?|ShellExecute[AW]?|LoadLibrary[AW]?|dlopen|getenv)[[:space:]]*\('
+  while IFS= read -r hit; do
+    if [[ $status -eq 0 ]]; then
+      echo ""
+      echo "VIOLATION: the recognition engine names the network, a process or the environment."
+      status=1
+    fi
+    echo "  $hit"
+  done < <(grep -rnE "$ENGINE_FORBIDDEN" engine/src engine/include || true)
+fi
+
 # The shared core carries dictation logic for every platform, and it performs no
 # I/O at all — bytes move through ports the shell implements. Adding an HTTP
 # client here would put a network call inside code that macOS, Windows and Linux
@@ -396,6 +416,6 @@ fi
 
 if [[ $status -eq 0 ]]; then
   echo ""
-  echo "Network source surface is limited to model downloads and update checks; the inference runtime and the shared Rust core cannot reach the network at all; the Linux server only accepts connections, in apps/cli/src/listen.rs, and makes none."
+  echo "Network source surface is limited to model downloads and update checks; the inference runtime, the recognition engine and the shared Rust core cannot reach the network at all; the Linux server only accepts connections, in apps/cli/src/listen.rs, and makes none."
 fi
 exit $status

@@ -23,8 +23,7 @@ let package = Package(
         // per-step products on Accelerate, and phrase boosting for the words a
         // person taught (upstream pull request #221), built from commit
         // dacdba09 by scripts/build-transcribe-xcframework.sh and published
-        // with the fork's release. core/ramble-engine builds the same commit;
-        // its tests compare the two. Pinned by exact URL and checksum for the
+        // with the fork's release. Pinned by exact URL and checksum for the
         // same reason every other dependency here is: a build must not be able
         // to change what it links without the change being visible in a diff.
         //

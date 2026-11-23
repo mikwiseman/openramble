@@ -1,0 +1,143 @@
+-- Adding CPU backend variant ggml-cpu: -msse4.2;-mf16c;-mavx GGML_SSE42;GGML_F16C;GGML_AVX
+100% tests passed out of 1
+frames 100, reps 7, best table: avx2
+Q4_K 1024 -> 4096 (enc.blocks.0.ff1.linear1.weight), 419 M multiply-adds
+  generic  prepare    0.67 ms, product   168.88 ms,     2.5 G multiply-adds/s
+  avx2     prepare    0.06 ms, product     9.52 ms,    44.1 G multiply-adds/s
+    against the reference:       0 of 409600 differ, max |diff| 0 (max |value| 98.9)
+  sse      prepare    0.07 ms, product    14.48 ms,    29.0 G multiply-adds/s
+    against the reference:       287185 of 409600 differ, max |diff| 2.36e-05 (max |value| 98.9)
+      first values: 13.2405 -6.73816 -25.4605 -16.2418  against  13.2405 -6.73816 -25.4605 -16.2418
+Q4_K 4096 -> 1024 (enc.blocks.0.ff1.linear2.weight), 419 M multiply-adds
+  generic  prepare    1.35 ms, product   178.20 ms,     2.4 G multiply-adds/s
+  avx2     prepare    0.25 ms, product     9.61 ms,    43.6 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 242)
+  sse      prepare    0.35 ms, product    15.42 ms,    27.2 G multiply-adds/s
+    against the reference:       81560 of 102400 differ, max |diff| 9.16e-05 (max |value| 242)
+      first values: 14.2258 53.1011 -47.6684 42.6837  against  14.2258 53.1011 -47.6684 42.6837
+Q4_K 1024 -> 1024 (enc.blocks.0.attn.linear_q.weight), 105 M multiply-adds
+  generic  prepare    0.34 ms, product    38.21 ms,     2.7 G multiply-adds/s
+  avx2     prepare    0.05 ms, product     2.32 ms,    45.3 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 28.7)
+  sse      prepare    0.08 ms, product     6.11 ms,    17.2 G multiply-adds/s
+    against the reference:       71417 of 102400 differ, max |diff| 5.25e-06 (max |value| 28.7)
+      first values: 3.36617 -2.87711 -3.20546 4.08128  against  3.36617 -2.87711 -3.20546 4.08128
+Q8_0 1024 -> 1024 (enc.blocks.0.attn.linear_out.weight), 105 M multiply-adds
+  generic  prepare    0.24 ms, product    91.81 ms,     1.1 G multiply-adds/s
+  avx2     prepare    0.05 ms, product     2.79 ms,    37.6 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 155)
+  sse      prepare    0.09 ms, product     4.96 ms,    21.1 G multiply-adds/s
+    against the reference:       68418 of 102400 differ, max |diff| 1.53e-05 (max |value| 155)
+      first values: -44.1251 29.4596 3.77943 -7.51838  against  -44.1251 29.4596 3.77943 -7.51838
+F16  1024 -> 2048 (enc.blocks.0.conv.pointwise1.weight), 210 M multiply-adds
+  generic  prepare    0.15 ms, product  2025.10 ms,     0.1 G multiply-adds/s
+  avx2     prepare    0.13 ms, product     6.28 ms,    33.4 G multiply-adds/s
+    against the reference:       0 of 204800 differ, max |diff| 0 (max |value| 86.4)
+  sse      prepare    0.14 ms, product    23.64 ms,     8.9 G multiply-adds/s
+    against the reference:       176258 of 204800 differ, max |diff| 2.29e-05 (max |value| 86.4)
+      first values: 42.0726 11.8017 -19.7098 3.54183  against  42.0726 11.8017 -19.7098 3.54184
+element-wise steps
+  avx2
+    against the reference:       0 of 4096 differ, max |diff| 0 (max |value| 2.15e+03)
+  sse
+    against the reference:       275 of 4096 differ, max |diff| 6.1e-05 (max |value| 2.15e+03)
+      first values: -3.24427 2.06123 3.62526 3.54678  against  -3.24427 2.06123 3.62526 3.54678
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+  Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
+  Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
+audio 58 s  encode 6628 ms  decode 1079 ms
+audio 58 s  encode 13761 ms  decode 855 ms
+audio 8 s  encode 1047 ms  decode 176 ms
+audio 8 s  encode 36114 ms  decode 2920 ms
+### Same words
+fleurs-en.wav	However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.
+fleurs-ru.wav	В различных местах Рима были установлены большие телевизионные экраны, с помощью которых люди могли наблюдать за церемонией.
+fleurs-de.wav	Er griff auch alles an, was ins Wasser kam. Selbst ein großer Dinosaurier wie der T-Rex war ihm nicht gewachsen.
+dots.wav	Of course, it was impossible to connect the dots looking forward when I was in college, but it was very, very clear looking backwards ten years later. Again, you can't connect the dots looking forward. You can only connect them looking backwards. So you have to trust that the dots will somehow connect in your future. You have to trust in something, your gut, destiny, life, karma, whatever, because believing that the dots will connect down the road will give you the confidence.
+--- transcribe.cpp ---
+fleurs-en.wav	However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.
+fleurs-ru.wav	В различных местах Рима были установлены большие телевизионные экраны, с помощью которых люди могли наблюдать за церемонией.
+fleurs-de.wav	Er griff auch alles an, was ins Wasser kam. Selbst ein großer Dinosaurier wie der T-Rex war ihm nicht gewachsen.
+dots.wav	Of course, it was impossible to connect the dots looking forward when I was in college, but it was very, very clear looking backwards ten years later. Again, you can't connect the dots looking forward. You can only connect them looking backwards. So you have to trust that the dots will somehow connect in your future. You have to trust in something, your gut, destiny, life, karma, whatever, because believing that the dots will connect down the road will give you the confidence.
+text: identical
+tokens and times: DIFFERENT
+kernel tables: identical output
+sse kernels: identical text
+engine output checksum (compare across machines):
+30b41b143a18db2d
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+  Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
+  Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
+audio 70 s  encode 8035 ms  decode 1067 ms
+audio 70 s  encode 20779 ms  decode 1281 ms
+### A 70 s clip
+words:      170 and      170
+long clip text: identical
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+  Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
+  Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
+### Speed by clip length, CPU, milliseconds
+ore 0.1.0, avx2, threads 1, load 82 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    594.2 |  604.0 |  2.0 |  528.3 |   63.8 | 28
+    4.0 |   1065.7 | 1184.1 |  4.4 | 1021.8 |  157.9 | 78
+    8.0 |   2289.1 | 2628.8 | 11.4 | 2051.2 |  226.5 | 150
+   16.0 |   5698.3 | 5762.0 | 20.0 | 5180.3 |  498.1 | 267
+   30.0 |   9753.6 | 10169.4 | 39.1 | 9271.7 |  858.7 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 1, load 547 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |   1532.1 | 1533.2 |  1.8 | 1485.5 |   40.0 | 28
+    4.0 |   3204.8 | 3249.7 |  2.7 | 3156.4 |   84.1 | 78
+    8.0 |   5571.8 | 5612.3 |  3.9 | 5397.8 |  160.3 | 150
+   16.0 |  11190.3 | 11211.2 | 12.0 | 10843.3 |  315.1 | 267
+   30.0 |  18683.3 | 20784.3 | 16.0 | 18153.7 |  485.1 | 502
+ore 0.1.0, avx2, threads 2, load 124 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    336.3 |  358.0 |  2.0 |  289.7 |   44.6 | 28
+    4.0 |    689.8 |  703.2 |  4.4 |  563.0 |  122.4 | 78
+    8.0 |   1272.3 | 1295.9 |  9.1 | 1056.7 |  206.5 | 150
+   16.0 |   2565.9 | 2620.7 | 17.7 | 2190.6 |  357.6 | 267
+   30.0 |   5705.1 | 5760.9 | 44.6 | 5025.9 |  634.5 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 2, load 639 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |   1016.9 | 1051.9 |  1.8 |  969.4 |   41.2 | 28
+    4.0 |   1775.4 | 1870.4 |  2.6 | 1678.1 |   88.9 | 78
+    8.0 |   3093.9 | 3299.8 |  3.4 | 2932.0 |  151.1 | 150
+   16.0 |   5506.3 | 5750.3 |  8.5 | 5189.8 |  288.4 | 267
+   30.0 |  10982.4 | 11183.3 | 15.6 | 10410.9 |  523.3 | 502
+ore 0.1.0, avx2, threads 4, load 95 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    322.9 |  363.7 |  2.5 |  262.0 |   58.5 | 28
+    4.0 |    607.5 |  628.4 |  6.5 |  497.6 |  103.5 | 78
+    8.0 |   1079.5 | 1120.7 | 13.2 |  894.5 |  171.7 | 150
+   16.0 |   2008.5 | 2060.4 | 24.0 | 1647.6 |  336.9 | 267
+   30.0 |   3710.1 | 3941.6 | 34.6 | 3346.7 |  560.3 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 4, load 525 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    669.4 |  789.7 |  1.7 |  607.1 |   55.8 | 28
+    4.0 |   1238.8 | 1335.1 |  2.7 | 1144.7 |   85.2 | 78
+    8.0 |   2306.3 | 2418.3 |  4.0 | 2103.5 |  188.6 | 150
+   16.0 |   4295.3 | 4943.6 |  8.2 | 3885.1 |  376.5 | 267
+   30.0 |   7134.2 | 7551.6 | 14.1 | 6506.4 |  588.6 | 502
+ore 0.1.0, avx2, threads 1, load 82 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    8.0 |   2057.4 | 2200.3 |  8.8 | 1826.3 |  222.4 | 150
+   30.0 |   7396.2 | 7524.6 | 29.3 | 6821.0 |  674.3 | 502
+ore 0.1.0, avx2, threads 4, load 86 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    8.0 |    745.6 |  788.7 |  8.2 |  575.9 |  161.5 | 150
+   30.0 |   3042.2 | 3065.7 | 32.3 | 2378.6 |  631.2 | 502
+ore 0.1.0, sse, threads 1, load 80 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    8.0 |   3690.6 | 3749.9 |  8.1 | 3388.6 |  293.9 | 150
+   30.0 |  14959.8 | 15335.0 | 32.1 | 14057.6 |  870.1 | 502
+ore 0.1.0, sse, threads 4, load 75 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    8.0 |   1548.7 | 1599.5 |  8.2 | 1338.6 |  201.9 | 150
+   30.0 |   8053.5 | 8121.8 | 34.2 | 7191.0 |  828.3 | 502

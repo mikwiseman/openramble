@@ -6,10 +6,9 @@
 use crate::adapters::block_window;
 use crate::adapters::download;
 use crate::adapters::hotkey::Hotkey;
-use crate::dictation::{processor_notice, Dictation};
+use crate::dictation::Dictation;
 use crate::runner::Runner;
 use crate::take::Block;
-use ramble_engine::UnsupportedProcessor;
 use ramble_model::ModelState;
 use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -31,49 +30,7 @@ pub struct ModelReport {
     /// that should mean "look at this" — so when a real repair is needed, they
     /// have already learned to ignore it.
     pub problem: bool,
-    /// Would downloading the model help? Not on a processor that cannot run
-    /// it: the button would fetch the whole model and change nothing.
-    pub can_download: bool,
     pub download_bytes: i64,
-}
-
-impl ModelReport {
-    /// What to show for a model in `state` on this computer's processor.
-    ///
-    /// The processor comes first. A model that is installed and intact is
-    /// still not ready on a processor that cannot run it, and saying
-    /// "not installed yet" there would send the person to a download that
-    /// cannot help.
-    fn describing(
-        state: &ModelState,
-        unsupported: Option<&UnsupportedProcessor>,
-        download_bytes: i64,
-    ) -> Self {
-        if let Some(unsupported) = unsupported {
-            return ModelReport {
-                ready: false,
-                detail: Some(processor_notice(unsupported)),
-                problem: true,
-                can_download: false,
-                download_bytes,
-            };
-        }
-        ModelReport {
-            ready: *state == ModelState::Ready,
-            problem: matches!(state, ModelState::NeedsRepair(_)),
-            detail: match state {
-                ModelState::Ready => None,
-                ModelState::NotInstalled => Some("The speech model is not installed yet.".into()),
-                // Said plainly, including why, because "needs repair" alone tells a
-                // person nothing about what to do next.
-                ModelState::NeedsRepair(reason) => Some(format!(
-                    "The installed model is not usable ({reason}). Downloading it again will fix this."
-                )),
-            },
-            can_download: *state != ModelState::Ready,
-            download_bytes,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -90,35 +47,47 @@ static CANCEL: AtomicBool = AtomicBool::new(false);
 
 #[tauri::command]
 pub fn model_report(dictation: State<'_, Arc<Dictation>>) -> ModelReport {
-    ModelReport::describing(
-        &dictation.model_state(),
-        dictation.unsupported_processor(),
-        dictation.download_byte_count(),
-    )
+    let state = dictation.model_state();
+    ModelReport {
+        ready: state == ModelState::Ready,
+        problem: matches!(state, ModelState::NeedsRepair(_)),
+        detail: match &state {
+            ModelState::Ready => None,
+            ModelState::NotInstalled => Some("The speech model is not installed yet.".into()),
+            // Said plainly, including why, because "needs repair" alone tells a
+            // person nothing about what to do next.
+            ModelState::NeedsRepair(reason) => Some(format!(
+                "The installed model is not usable ({reason}). Downloading it again will fix this."
+            )),
+        },
+        download_bytes: dictation.download_byte_count(),
+    }
 }
 
-/// What this desktop session will not let the app do.
+/// What this desktop session will not let the app do, and what this
+/// computer does more slowly.
 ///
 /// Empty on a session that can do everything. Shown in the settings window,
 /// because a dictation tool that quietly does less than it claims is worse than
 /// one that says so — the person cannot otherwise tell "this desktop forbids
 /// it" from "I am holding the key wrong".
+///
+/// A processor too old for the recognizer's fast kernels is not refused: it
+/// recognizes, more slowly, and that sentence is listed here.
 #[tauri::command]
 pub fn session_notices() -> Vec<String> {
+    // Windows and macOS place no restrictions comparable to a Linux
+    // session's on a tool that has been granted its permissions.
     #[cfg(target_os = "linux")]
-    {
-        crate::adapters::linux_session::detect()
-            .notices()
-            .into_iter()
-            .map(str::to_string)
-            .collect()
-    }
+    let mut notices: Vec<String> = crate::adapters::linux_session::detect()
+        .notices()
+        .into_iter()
+        .map(str::to_string)
+        .collect();
     #[cfg(not(target_os = "linux"))]
-    {
-        // Windows and macOS place no comparable restrictions on a tool that has
-        // been granted its permissions.
-        Vec::new()
-    }
+    let mut notices = Vec::new();
+    notices.extend(ramble_engine::processor_notice());
+    notices
 }
 
 /// A finished dictation, as the window shows it.
@@ -322,7 +291,6 @@ pub fn take_block_later(runner: State<'_, Arc<Runner>>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ramble_engine::Instructions;
 
     /// A first run is not a fault. Only a broken install is.
     #[test]
@@ -335,60 +303,6 @@ mod tests {
             ModelState::NeedsRepair("truncated".into()),
             ModelState::NeedsRepair(_)
         ));
-    }
-
-    fn a_processor_without_avx2() -> UnsupportedProcessor {
-        let packages = Instructions {
-            avx: true,
-            avx2: true,
-            fma: true,
-            f16c: true,
-            bmi2: true,
-            avx512: false,
-        };
-        UnsupportedProcessor::check(packages, Instructions::default()).expect("no AVX2")
-    }
-
-    /// Whatever state the model is in, the processor is what the person is
-    /// told about: it is a fault, and it is not one a download can fix, so
-    /// none is offered.
-    #[test]
-    fn a_processor_that_cannot_run_the_model_is_the_report_whatever_is_installed() {
-        let unsupported = a_processor_without_avx2();
-        for state in [
-            ModelState::NotInstalled,
-            ModelState::Ready,
-            ModelState::NeedsRepair("truncated".into()),
-        ] {
-            let report = ModelReport::describing(&state, Some(&unsupported), 740_363_168);
-            assert!(!report.ready, "{state:?}");
-            assert!(report.problem, "{state:?}");
-            assert!(!report.can_download, "{state:?}");
-            assert_eq!(
-                report.detail.as_deref(),
-                Some(processor_notice(&unsupported).as_str()),
-                "{state:?}"
-            );
-        }
-    }
-
-    /// A processor that can run the model changes nothing in the report.
-    #[test]
-    fn on_any_other_processor_the_report_follows_the_model() {
-        let first_run = ModelReport::describing(&ModelState::NotInstalled, None, 740_363_168);
-        assert!(!first_run.ready && !first_run.problem && first_run.can_download);
-        assert_eq!(
-            first_run.detail.as_deref(),
-            Some("The speech model is not installed yet.")
-        );
-
-        let ready = ModelReport::describing(&ModelState::Ready, None, 740_363_168);
-        assert!(ready.ready && !ready.problem);
-        assert_eq!(ready.detail, None);
-
-        let broken = ModelState::NeedsRepair("truncated".into());
-        let repair = ModelReport::describing(&broken, None, 740_363_168);
-        assert!(!repair.ready && repair.problem && repair.can_download);
     }
 
     #[test]

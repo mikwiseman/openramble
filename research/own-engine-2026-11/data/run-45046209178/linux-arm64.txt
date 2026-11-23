@@ -1,0 +1,105 @@
+CPU(s):                                  4
+Model name:                              Neoverse-N2
+Thread(s) per core:                      1
+Core(s) per socket:                      4
+100% tests passed, 0 tests failed out of 1
+frames 100, reps 7, best table: neon
+Q4_K 1024 -> 4096 (enc.blocks.0.ff1.linear1.weight), 419 M multiply-adds
+  generic  prepare    0.27 ms, product    97.31 ms,     4.3 G multiply-adds/s
+  neon     prepare    0.05 ms, product     9.15 ms,    45.9 G multiply-adds/s
+    against the reference:       0 of 409600 differ, max |diff| 0 (max |value| 98.9)
+Q4_K 4096 -> 1024 (enc.blocks.0.ff1.linear2.weight), 419 M multiply-adds
+  generic  prepare    1.10 ms, product   113.19 ms,     3.7 G multiply-adds/s
+  neon     prepare    0.26 ms, product     9.36 ms,    44.8 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 242)
+Q4_K 1024 -> 1024 (enc.blocks.0.attn.linear_q.weight), 105 M multiply-adds
+  generic  prepare    0.28 ms, product    24.37 ms,     4.3 G multiply-adds/s
+  neon     prepare    0.05 ms, product     2.26 ms,    46.4 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 28.7)
+Q8_0 1024 -> 1024 (enc.blocks.0.attn.linear_out.weight), 105 M multiply-adds
+  generic  prepare    0.18 ms, product    33.89 ms,     3.1 G multiply-adds/s
+  neon     prepare    0.07 ms, product     2.37 ms,    44.2 G multiply-adds/s
+    against the reference:       0 of 102400 differ, max |diff| 0 (max |value| 155)
+F16  1024 -> 2048 (enc.blocks.0.conv.pointwise1.weight), 210 M multiply-adds
+  generic  prepare    0.06 ms, product   139.92 ms,     1.5 G multiply-adds/s
+  neon     prepare    0.07 ms, product    10.81 ms,    19.4 G multiply-adds/s
+    against the reference:       0 of 204800 differ, max |diff| 0 (max |value| 86.4)
+element-wise steps
+  neon
+    against the reference:       0 of 4096 differ, max |diff| 0 (max |value| 2.15e+03)
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+audio 58 s  encode 3887 ms  decode 273 ms
+audio 58 s  encode 10335 ms  decode 241 ms
+audio 8 s  encode 511 ms  decode 52 ms
+audio 8 s  encode 5381 ms  decode 147 ms
+### Same words
+fleurs-en.wav	However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.
+fleurs-ru.wav	В различных местах Рима были установлены большие телевизионные экраны, с помощью которых люди могли наблюдать за церемонией.
+fleurs-de.wav	Er griff auch alles an, was ins Wasser kam. Selbst ein großer Dinosaurier wie der T-Rex war ihm nicht gewachsen.
+dots.wav	Of course, it was impossible to connect the dots looking forward when I was in college, but it was very, very clear looking backwards ten years later. Again, you can't connect the dots looking forward. You can only connect them looking backwards. So you have to trust that the dots will somehow connect in your future. You have to trust in something, your gut, destiny, life, karma, whatever, because believing that the dots will connect down the road will give you the confidence.
+--- transcribe.cpp ---
+fleurs-en.wav	However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.
+fleurs-ru.wav	В различных местах Рима были установлены большие телевизионные экраны, с помощью которых люди могли наблюдать за церемонией.
+fleurs-de.wav	Er griff auch alles an, was ins Wasser kam. Selbst ein großer Dinosaurier wie der T-Rex war ihm nicht gewachsen.
+dots.wav	Of course, it was impossible to connect the dots looking forward when I was in college, but it was very, very clear looking backwards ten years later. Again, you can't connect the dots looking forward. You can only connect them looking backwards. So you have to trust that the dots will somehow connect in your future. You have to trust in something, your gut, destiny, life, karma, whatever, because believing that the dots will connect down the road will give you the confidence.
+text: identical
+tokens and times: DIFFERENT
+kernel tables: identical output
+engine output checksum (compare across machines):
+30b41b143a18db2d
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+audio 70 s  encode 5013 ms  decode 283 ms
+audio 70 s  encode 12362 ms  decode 256 ms
+### A 70 s clip
+words: 170 and 170
+long clip text: identical
+  TCPP_COMMIT: dacdba09be2b8d4dfe97a9d7464c51f462d5f622
+  MODEL_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  MODEL_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+### Speed by clip length, CPU, milliseconds
+ore 0.1.0, neon, threads 1, load 35 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    563.4 |  564.3 |  2.1 |  516.1 |   45.2 | 28
+    4.0 |   1065.6 | 1069.9 |  4.4 |  966.6 |   94.5 | 78
+    8.0 |   1952.7 | 1962.8 |  9.1 | 1782.9 |  160.7 | 150
+   16.0 |   3900.0 | 3900.6 | 17.1 | 3603.4 |  279.5 | 267
+   30.0 |   7457.2 | 7594.7 | 33.0 | 7015.1 |  409.2 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 1, load 240 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |   1281.0 | 1281.8 |  1.0 | 1237.8 |   41.0 | 28
+    4.0 |   2523.8 | 2527.3 |  1.9 | 2442.4 |   81.7 | 78
+    8.0 |   5375.5 | 5392.9 |  3.3 | 5218.2 |  149.1 | 150
+   16.0 |  11495.9 | 11573.2 |  6.5 | 11250.4 |  230.3 | 267
+   30.0 |  18441.4 | 18487.6 | 12.4 | 18069.3 |  389.1 | 502
+ore 0.1.0, neon, threads 2, load 34 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    290.3 |  290.5 |  2.2 |  267.6 |   20.5 | 28
+    4.0 |    540.0 |  542.7 |  4.2 |  499.1 |   36.7 | 78
+    8.0 |   1001.4 | 1003.5 |  8.5 |  924.7 |   68.2 | 150
+   16.0 |   2105.9 | 2124.3 | 17.0 | 1980.1 |  108.8 | 267
+   30.0 |   4167.8 | 4203.9 | 33.2 | 3924.1 |  210.5 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 2, load 237 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    640.2 |  641.9 |  1.0 |  617.8 |   20.1 | 28
+    4.0 |   1257.2 | 1260.6 |  1.8 | 1215.2 |   38.8 | 78
+    8.0 |   2655.4 | 2655.7 |  3.3 | 2579.3 |   68.4 | 150
+   16.0 |   5703.2 | 5711.2 |  6.4 | 5567.2 |  121.2 | 267
+   30.0 |   9319.0 | 9353.2 | 11.8 | 9086.6 |  205.5 | 502
+ore 0.1.0, neon, threads 4, load 34 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    159.6 |  159.8 |  2.1 |  144.8 |   12.6 | 28
+    4.0 |    295.5 |  296.3 |  4.3 |  266.7 |   24.6 | 78
+    8.0 |    544.6 |  552.5 |  8.8 |  490.7 |   45.1 | 150
+   16.0 |   1138.0 | 1143.8 | 17.1 | 1042.5 |   78.4 | 267
+   30.0 |   2188.2 | 2197.4 | 33.4 | 2016.9 |  137.9 | 502
+transcribe.cpp 0.4.1, backend CPU, threads 4, load 239 ms
+seconds | wall min | median |  mel | encode | decode | chars
+    2.0 |    330.1 |  331.5 |  1.0 |  315.4 |   12.4 | 28
+    4.0 |    635.7 |  647.1 |  1.8 |  611.4 |   21.1 | 78
+    8.0 |   1392.1 | 1404.6 |  3.3 | 1345.1 |   39.1 | 150
+   16.0 |   3018.4 | 3023.5 |  6.5 | 2934.9 |   68.3 | 267
+   30.0 |   4777.7 | 4814.6 | 11.8 | 4622.0 |  129.0 | 502

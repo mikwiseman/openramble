@@ -1,0 +1,2 @@
+deb/root/usr/bin/openramble-desktop: 3468090 instructions; AVX-512 registers 86539, mask registers 3407; 256-bit registers 46405; fused multiply-adds 1898
+exe/openramble-desktop.exe: 3157114 instructions; AVX-512 registers 0, mask registers 466; 256-bit registers 21377; fused multiply-adds 904
