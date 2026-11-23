@@ -1,9 +1,11 @@
-name: Quantization on x86 (H17)
+name: Quantization on x86 (H17b)
 
 # Proof-only, on the proof branch, never on main. Recognizes FLEURS test speech
 # with both Parakeet Ultra files through the desktop app's own path, on the
 # images the Windows and Linux packages are built on. The rules are H17 in
-# research/model-upgrade-2026-10/HYPOTHESES.md, committed before this ran.
+# research/model-upgrade-2026-10/HYPOTHESES.md, committed before this ran. This
+# is H17b: Q5_K_M in place of H17's Q4_K_M, from Hugging Face at the pinned
+# revision, because the project's mirror does not hold that file.
 on:
   push:
     branches: ["claude/desktop-q4km-proof"]
@@ -18,8 +20,8 @@ concurrency:
 env:
   # What the packages are built with after the instruction-set change.
   TRANSCRIBE_CMAKE_ARGS: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF"
-  Q4_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
-  Q4_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+  Q5_URL: https://huggingface.co/handy-computer/parakeet-ultra-gguf/resolve/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q5_K_M.gguf
+  Q5_SHA256: f6e3d8172547a3bb468e92ff395696e6d2e0371a9e52690a27741b4e8561c997
   Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
   Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
 
@@ -72,11 +74,11 @@ jobs:
 
       - name: Models
         run: |
-          mkdir -p q8 q4
+          mkdir -p q8 q5
           curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
-          curl -L --fail --retry 3 -o q4/model.gguf "$Q4_URL"
+          curl -L --fail --retry 3 -o q5/model.gguf "$Q5_URL"
           echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
-          echo "$Q4_SHA256  q4/model.gguf" | sha256sum -c -
+          echo "$Q5_SHA256  q5/model.gguf" | sha256sum -c -
 
       - name: Speech
         run: |
@@ -90,13 +92,13 @@ jobs:
       - name: Words
         run: |
           fleurs=target/release/examples/fleurs
-          for model in q8 q4; do
+          for model in q8 q5; do
             for half in 0 1; do
               $fleurs words $model work/clips.tsv out/words-$model-$half.tsv $half 2 2> out/words-$model-$half.log &
             done
           done
           wait
-          for model in q8 q4; do
+          for model in q8 q5; do
             cat out/words-$model-0.tsv out/words-$model-1.tsv > out/words-$model.tsv
             rm out/words-$model-0.tsv out/words-$model-1.tsv
             [ "$(wc -l < out/words-$model.tsv)" = "$(wc -l < work/clips.tsv)" ]
@@ -109,13 +111,13 @@ jobs:
       # Alone on the machine: one process holds both files and alternates.
       - name: Speed
         run: |
-          target/release/examples/fleurs speed q8 q4 work/speed.tsv out/speed.tsv 2> out/speed.log
+          target/release/examples/fleurs speed q8 q5 work/speed.tsv out/speed.tsv 2> out/speed.log
           cat out/speed.log
           wc -l out/speed.tsv
 
       - name: Memory
         run: |
-          for model in q8 q4; do
+          for model in q8 q5; do
             target/release/examples/fleurs words $model work/memory.tsv out/memory-$model.tsv 2> out/memory-$model.log
             echo "$model"; cat out/memory-$model.log
           done
@@ -123,6 +125,6 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: h17-${{ matrix.system }}-${{ matrix.locale }}
+          name: h17b-${{ matrix.system }}-${{ matrix.locale }}
           path: out/*
           if-no-files-found: error
