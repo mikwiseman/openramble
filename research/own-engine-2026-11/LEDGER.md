@@ -998,10 +998,25 @@ they all lean the same way.
 
 Where this stands. The unit keeps the words when activations keep a scale
 per 256 columns, and it is fast only when they do not. Neither variant beats
-Metal's 80 ms yet, so the Mac keeps Metal. What is left to try, in order:
+Metal's 80 ms yet, so the Mac keeps Metal. What is left to try:
 SME2's four-vector read-outs and conversions to cut the read-out cost of the
 accurate variant (`-DORE_R8_ABLOCK=256` with `-DORE_R8_ROWSCALE=1` is that
-variant on the row path), and measuring on an idle Mac.
+variant on the row path), or activations split into a high and a low 8-bit
+part with one scale per frame (two products, one read-out, about 15 bits),
+and measuring on an idle Mac.
+
+The ceiling, counted. The matrices the unit takes hold about 600 million
+weights, so an 8 s clip (112 frames after padding) is about 67 billion
+multiply-adds. At the 1.8 to 2.7 trillion a second K8 measured, that is 25
+to 37 ms even with no read-out at all. The rest of the encoder (attention,
+layer norms, convolutions, the position terms) took about 40 ms on eight
+NEON threads. So a perfect kernel lands the encoder near 65 to 80 ms, about
+where Metal is, and not far below it. On Apple silicon the matrix unit can
+make the engine a match for Metal, which would still be worth having for
+the load time (about 50 ms against Metal's model load) and for a Mac whose
+graphics processor is busy. It cannot make it much faster. What would cut the
+person's wait further on every Mac is recognizing closed stretches of a take
+while they still speak (see Not done).
 
 ## E2. The matrix unit's words
 
