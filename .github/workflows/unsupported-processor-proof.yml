@@ -1,0 +1,247 @@
+name: Unsupported processor proof
+
+# Proof-only, on the proof branch, never on main. Runs the engine and the
+# desktop service on emulated processors with and without the instructions the
+# recognition runtime is compiled to use, and shows a message where there was
+# an illegal instruction.
+#
+#   before    main, as it is: no check
+#   after     the branch: Engine::load asks the processor first
+#   avx-only  the branch, with the runtime compiled for AVX and F16C only, the
+#             floor the fork's build script sets for an Intel Mac
+#
+# 24.04 because 22.04's QEMU cannot emulate AVX at all.
+on:
+  push:
+    branches: ["claude/keen-bartik-86e3cd-proof"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # What desktop-release.yml sets for the packages on claude/funny-benz-160e76.
+  PACKAGE_ARGS: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF"
+  AVX_ONLY_ARGS: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_BMI2=OFF -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF"
+  # main, before the check.
+  BEFORE: e22faf190388fbfa21b41702435d2f59ee5aaa20
+  CLIP_URL: https://raw.githubusercontent.com/mikwiseman/transcribe.cpp/dacdba09be2b8d4dfe97a9d7464c51f462d5f622/samples/dots.wav
+  # The file the Windows and Linux app ships (apps/desktop/src-tauri/model-manifest.json).
+  Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
+  Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
+
+jobs:
+  engine:
+    name: Engine, emulated processors
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Tools
+        run: |
+          sudo apt-get update > /dev/null
+          sudo apt-get install -y qemu-user > /dev/null
+          cat > features.rs <<'RUST'
+          fn main() {
+              let has = [
+                  ("sse4.2", std::arch::is_x86_feature_detected!("sse4.2")),
+                  ("avx", std::arch::is_x86_feature_detected!("avx")),
+                  ("avx2", std::arch::is_x86_feature_detected!("avx2")),
+                  ("fma", std::arch::is_x86_feature_detected!("fma")),
+                  ("f16c", std::arch::is_x86_feature_detected!("f16c")),
+                  ("bmi2", std::arch::is_x86_feature_detected!("bmi2")),
+                  ("avx512f", std::arch::is_x86_feature_detected!("avx512f")),
+              ];
+              let line: Vec<String> = has.iter().map(|(name, yes)| format!("{name} {}", u8::from(*yes))).collect();
+              println!("{}", line.join(", "));
+          }
+          RUST
+          rustc -O -o features features.rs
+
+      - name: Build after, as the packages are compiled
+        run: CARGO_TARGET_DIR=target-after TRANSCRIBE_CMAKE_ARGS="$PACKAGE_ARGS" cargo build --release -p ramble-engine --example load --locked
+
+      - name: Build after, compiled for AVX only
+        run: CARGO_TARGET_DIR=target-avx-only TRANSCRIBE_CMAKE_ARGS="$AVX_ONLY_ARGS" cargo build --release -p ramble-engine --example load --locked
+
+      - name: Build before, as the packages are compiled
+        run: |
+          git worktree add --quiet "$RUNNER_TEMP/before" "$BEFORE"
+          mkdir -p "$RUNNER_TEMP/before/core/ramble-engine/examples"
+          cp core/ramble-engine/examples/load.rs "$RUNNER_TEMP/before/core/ramble-engine/examples/"
+          cd "$RUNNER_TEMP/before"
+          CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target-before" TRANSCRIBE_CMAKE_ARGS="$PACKAGE_ARGS" cargo build --release -p ramble-engine --example load --locked
+
+      - name: How each runtime was compiled
+        run: |
+          {
+            echo "## Engine"
+            echo '```'
+            for variant in before after avx-only; do
+              out=$(find target-$variant/release/build -maxdepth 2 -type d -path '*/transcribe-cpp-sys-*/out' | head -1)
+              echo "$variant: $(grep -h "Adding CPU backend variant" "${out%/out}/output" | sed 's/.*Adding CPU backend variant //' | cut -c1-200)"
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Model and clip
+        run: |
+          mkdir q8
+          curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
+          curl -L --fail --retry 3 -o dots.wav "$CLIP_URL"
+          echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
+
+      - name: The same programs on different processors
+        run: |
+          failed=0
+          # try <expected exit status> <words the program must print> <command...>
+          # The words matter where the status is 1: the emulator also exits
+          # with 1 when it is the one that failed.
+          try() {
+            expected="$1"; words="$2"; shift 2
+            set +e
+            timeout 30m "$@" > out.txt 2> err.txt
+            code=$?
+            set -e
+            echo "  exit status $code"
+            (grep -h 'uncaught target signal\|Illegal\|panicked\|unable to find CPU' err.txt || true) | sed 's/^/  /' | cut -c1-200
+            sed 's/^/  /' out.txt | cut -c1-240
+            if [ "$code" != "$expected" ]; then echo "  EXPECTED exit status $expected"; failed=1; fi
+            if ! grep -qF "$words" out.txt; then echo "  EXPECTED the words: $words"; failed=1; fi
+          }
+          none="it lacks AVX, AVX2, FMA, F16C and BMI2"
+          no_avx2="it lacks AVX2, FMA and BMI2"
+          before=target-before/release/examples/load
+          after=target-after/release/examples/load
+          avx_only=target-avx-only/release/examples/load
+          {
+            echo '```'
+            echo "this machine: $(lscpu | grep 'Model name' | sed 's/.*: *//'); $(./features)"
+            echo "emulator: $(qemu-x86_64 --version | head -1)"
+            echo "exit status 132 is an illegal instruction, 1 is an error the program reported"
+            for cpu in Nehalem IvyBridge Snowridge Haswell; do
+              echo "emulated $cpu: $(qemu-x86_64 -cpu $cpu ./features 2> /dev/null)"
+            done
+            echo
+            echo "--- a processor without AVX (Nehalem, 2008), runtime compiled as the packages are"
+            echo "before:"
+            try 132 "" qemu-x86_64 -cpu Nehalem $before q8
+            echo "after:"
+            try 1 "$none" qemu-x86_64 -cpu Nehalem $after q8
+            echo
+            echo "--- a processor with AVX and no AVX2 (Ivy Bridge, 2012)"
+            echo "before:"
+            try 132 "" qemu-x86_64 -cpu IvyBridge $before q8
+            echo "after:"
+            try 1 "$no_avx2" qemu-x86_64 -cpu IvyBridge $after q8
+            echo
+            echo "--- an Atom-class processor without AVX (Snow Ridge, 2020)"
+            echo "after:"
+            try 1 "$none" qemu-x86_64 -cpu Snowridge $after q8
+            echo
+            echo "--- a processor with AVX2 (Haswell, 2013): the check must not get in the way"
+            echo "after, model loaded under emulation:"
+            try 0 "loaded on" qemu-x86_64 -cpu Haswell $after q8
+            echo
+            echo "--- this machine, not emulated: load and recognize two seconds"
+            echo "after:"
+            try 0 "heard: " $after q8 dots.wav 2
+            echo
+            echo "--- the runtime is asked what it uses: compiled for AVX only"
+            echo "after, on Ivy Bridge, which the package build turns away:"
+            try 0 "loaded on" qemu-x86_64 -cpu IvyBridge $avx_only q8
+            echo "after, on Nehalem:"
+            try 1 "it lacks AVX and F16C" qemu-x86_64 -cpu Nehalem $avx_only q8
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$failed" = 0 ]
+
+  windows:
+    name: Engine, Windows
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Build after, as the packages are compiled
+        run: CARGO_TARGET_DIR=target-after TRANSCRIBE_CMAKE_ARGS="$PACKAGE_ARGS" cargo build --release -p ramble-engine --example load --locked
+
+      - name: Model and clip
+        run: |
+          mkdir q8
+          curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
+          curl -L --fail --retry 3 -o dots.wav "$CLIP_URL"
+          echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
+
+      # No emulator here. This shows that the question links and is answered
+      # on Windows, and that a processor with AVX2 still recognizes.
+      - name: This machine
+        run: |
+          {
+            echo "## Engine, Windows"
+            echo '```'
+            powershell -Command "(Get-CimInstance Win32_Processor).Name"
+            out=$(find target-after/release/build -maxdepth 2 -type d -path '*/transcribe-cpp-sys-*/out' | head -1)
+            echo "compiled: $(grep -h "Adding CPU backend variant" "${out%/out}/output" | sed 's/.*Adding CPU backend variant //' | cut -c1-200)"
+            target-after/release/examples/load.exe q8 dots.wav 2
+            echo "exit status $?"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  desktop:
+    name: Desktop service, emulated processor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Tools
+        run: |
+          sudo apt-get update > /dev/null
+          sudo apt-get install -y qemu-user \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            libasound2-dev libxdo-dev libxkbcommon-dev > /dev/null
+
+      - name: Build, as the packages are compiled
+        run: TRANSCRIBE_CMAKE_ARGS="$PACKAGE_ARGS" cargo build --release -p openramble-desktop --example says --locked
+
+      - name: Tests on this machine and on a processor without AVX2
+        run: |
+          TRANSCRIBE_CMAKE_ARGS="$PACKAGE_ARGS" cargo test --release -p openramble-desktop --lib --locked --no-run 2> build.txt || { tail -30 build.txt; exit 1; }
+          tests=$(grep -o 'target/release/deps/openramble_desktop_lib-[0-9a-f]*' build.txt | head -1)
+          {
+            echo "## Desktop"
+            echo '```'
+            echo "--- the app's unit tests, this machine"
+            "$tests" 2>&1 | grep 'test result'
+            echo "--- the app's unit tests about the processor, emulated Nehalem"
+            qemu-x86_64 -cpu Nehalem "$tests" processor this_computer 2>&1 | grep '^test \|test result'
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: What the app says
+        run: |
+          says=target/release/examples/says
+          export OPENRAMBLE_SUPPORT_ROOT="$RUNNER_TEMP/openramble"
+          {
+            echo '```'
+            echo "--- this machine"
+            "$says"
+            echo "--- emulated Nehalem (no AVX)"
+            qemu-x86_64 -cpu Nehalem "$says" | tee nehalem.txt
+            echo "--- emulated Ivy Bridge (AVX, no AVX2)"
+            qemu-x86_64 -cpu IvyBridge "$says" | tee ivy.txt
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          grep -q "settings window: This computer's processor cannot run the speech model (it lacks AVX, AVX2, FMA, F16C and BMI2)" nehalem.txt
+          grep -q "dictation key: no take. This computer's processor cannot run the speech model" nehalem.txt
+          grep -q "settings window: This computer's processor cannot run the speech model (it lacks AVX2, FMA and BMI2)" ivy.txt
