@@ -11,7 +11,10 @@ permissions:
   contents: read
 
 jobs:
-  bundle:
+  # Each platform is built and published by itself, in desktop-package.yml.
+  # Windows does not wait for Linux, and a platform whose build fails holds
+  # back only its own packages.
+  platform:
     name: ${{ matrix.label }}
     strategy:
       fail-fast: false
@@ -23,114 +26,11 @@ jobs:
           - os: ubuntu-22.04
             label: Linux (x86_64)
             artifact: openramble-linux
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    env:
-      # Nothing of the build machine goes into the packages. Left alone, the
-      # recognition runtime is compiled for the processor of whichever machine
-      # this job is given and linked against that machine's BLAS library.
-      # 0.37.0 for Linux got both: it needs AVX-512, which most computers
-      # lack, and libblas.so.3, which the package does not ask for. So the
-      # instruction set is fixed at x86-64-v3 (AVX2, FMA, F16C and BMI2, in
-      # Intel Core since 2013 and AMD since 2015) and the system BLAS is left
-      # out. The fork's build script passes this variable to CMake after its
-      # own settings.
-      TRANSCRIBE_CMAKE_ARGS: >-
-        -DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON
-        -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON
-        -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-
-      # 22.04 rather than latest: the AppImage and .deb link against whatever
-      # glibc built them, so building on the newest runner would produce
-      # packages that refuse to start on the distributions people actually run.
-      - name: Linux system dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
-            libasound2-dev libxdo-dev libxkbcommon-dev
-
-      - name: Install the Tauri CLI
-        shell: bash
-        run: cargo install tauri-cli --version "^2" --locked
-
-      - name: Bundle
-        shell: bash
-        run: cargo tauri build --config apps/desktop/src-tauri/tauri.conf.json
-
-      # The setting above is a request. This reads what was compiled.
-      - name: The runtime must not need the build machine
-        shell: bash
-        run: scripts/check-desktop-portability.sh
-
-      - name: Collect the packages
-        shell: bash
-        run: |
-          mkdir -p dist
-          find target/release/bundle -type f \
-            \( -name "*.msi" -o -name "*.exe" -o -name "*.AppImage" \
-               -o -name "*.deb" -o -name "*.rpm" \) \
-            -exec cp {} dist/ \;
-          ls -la dist
-
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: dist/*
-          if-no-files-found: error
-
-  # Building the packages is not releasing them. Without this job the workflow
-  # went green while no release existed for anyone to download — the same way a
-  # macOS version was once built, version-bumped, and never shipped. A tag
-  # means a release; that is what this makes true.
-  publish:
-    needs: bundle
-    if: startsWith(github.ref, 'refs/tags/desktop-v')
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/desktop-package.yml
+    with:
+      os: ${{ matrix.os }}
+      artifact: ${{ matrix.artifact }}
+    # Only the publishing job inside asks for this much; the build stays
+    # read-only.
     permissions:
       contents: write
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          path: incoming
-
-      - name: Collect the packages
-        run: |
-          mkdir -p dist
-          find incoming -type f -exec cp {} dist/ \;
-          ls -la dist
-          # A release with no packages in it is worse than no release: it looks
-          # finished and downloads nothing.
-          [ "$(ls -A dist)" ] || { echo "no packages to publish" >&2; exit 1; }
-
-      # The tag and the filenames must agree. They did not once: packages named
-      # 0.1.0 were published under desktop-v0.2.0, so anyone downloading the
-      # release got files claiming to be the version it replaced.
-      - name: The packages must carry the tag's version
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION="${GITHUB_REF_NAME#desktop-v}"
-          for file in dist/*; do
-            case "$(basename "$file")" in
-              *"$VERSION"*) ;;
-              *) echo "$(basename "$file") does not carry version $VERSION" >&2; exit 1 ;;
-            esac
-          done
-          echo "every package carries $VERSION"
-
-      - name: Publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION="${GITHUB_REF_NAME#desktop-v}"
-          # Never the repository's latest release: the README sends Mac
-          # downloads to releases/latest, and that page must keep the DMG.
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "OpenRamble for Windows and Linux $VERSION" \
-            --notes "Windows and Linux packages built from ${GITHUB_SHA}." \
-            --latest=false
