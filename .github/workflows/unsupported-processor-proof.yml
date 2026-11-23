@@ -99,8 +99,9 @@ jobs:
 
       - name: The same programs on different processors
         run: |
-          failed=0
-          # try <expected exit status> <words the program must print> <command...>
+          # A file, not a variable: the block below runs in a subshell.
+          : > failed.txt
+          # try <expected exit status> <words the program must print, or ""> <command...>
           # The words matter where the status is 1: the emulator also exits
           # with 1 when it is the one that failed.
           try() {
@@ -112,8 +113,8 @@ jobs:
             echo "  exit status $code"
             (grep -h 'uncaught target signal\|Illegal\|panicked\|unable to find CPU' err.txt || true) | sed 's/^/  /' | cut -c1-200
             sed 's/^/  /' out.txt | cut -c1-240
-            if [ "$code" != "$expected" ]; then echo "  EXPECTED exit status $expected"; failed=1; fi
-            if ! grep -qF "$words" out.txt; then echo "  EXPECTED the words: $words"; failed=1; fi
+            if [ "$code" != "$expected" ]; then echo "  EXPECTED exit status $expected" | tee -a failed.txt; fi
+            if [ -n "$words" ] && ! grep -qF "$words" out.txt; then echo "  EXPECTED the words: $words" | tee -a failed.txt; fi
           }
           none="it lacks AVX, AVX2, FMA, F16C and BMI2"
           no_avx2="it lacks AVX2, FMA and BMI2"
@@ -160,7 +161,7 @@ jobs:
             try 1 "it lacks AVX and F16C" qemu-x86_64 -cpu Nehalem $avx_only q8
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
-          [ "$failed" = 0 ]
+          [ ! -s failed.txt ]
 
   windows:
     name: Engine, Windows
@@ -222,9 +223,11 @@ jobs:
             echo "## Desktop"
             echo '```'
             echo "--- the app's unit tests, this machine"
-            "$tests" 2>&1 | grep 'test result'
+            "$tests" > native.txt 2>&1 || { tail -40 native.txt; exit 1; }
+            grep 'test result' native.txt
             echo "--- the app's unit tests about the processor, emulated Nehalem"
-            qemu-x86_64 -cpu Nehalem "$tests" processor this_computer 2>&1 | grep '^test \|test result'
+            qemu-x86_64 -cpu Nehalem "$tests" processor this_computer > emulated.txt 2>&1 || { tail -40 emulated.txt; exit 1; }
+            grep '^test \|test result' emulated.txt
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
