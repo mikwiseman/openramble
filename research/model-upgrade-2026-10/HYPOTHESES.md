@@ -565,6 +565,64 @@ no more words than `runtime-0.4.1-quiet60-seam0` on the English and Russian
 hour files and every take, at most 5% more on each mixed file, and fewer in
 total.
 
+## H17. Ultra Q4_K_M on x86 (Windows and Linux)
+
+Preregistered on 23 November 2026, before any transcript of either file from
+an x86 machine existed. H13 kept Q4_K_M off the desktop app because it was
+1.29 times slower than v3 on the CPU backend of an M4 Pro. That is an Arm
+processor, and the desktop app runs on x86. On 22 November the instruction-set
+work timed both Ultra files on four hosted x86 machines, with the runtime
+built for AVX2, one thread and one 8 s clip: Q4_K_M took 14 to 24% less time
+than Q8_0 on every machine (2,198 against 2,557 ms and 1,968 against 2,431 ms
+on Linux, 1,635 against 2,149 ms and 2,078 against 2,715 ms on Windows). The
+accuracy of the two files has only been compared on Metal (H11).
+
+Known when this was written: H11's Metal result (Q4_K_M +0.071 pp pooled, 95%
+interval −0.040 to +0.183, English −0.06 and Russian +0.19), the 4.98% that
+Q4_K_M alone scored on the M4 Pro's CPU backend in the own-engine research,
+and the times above.
+
+Method. `core/ramble-engine/examples/fleurs.rs` on branch
+`claude/desktop-q4km-proof` recognizes through `ramble_engine::Engine`, the
+desktop app's own path: the CPU backend, one thread, our transcribe.cpp fork
+at `dacdba09`. It is built with the switches the packages get from the
+instruction-set change (AVX2, FMA, F16C and BMI2, no AVX-512, no system BLAS)
+on hosted `ubuntu-22.04` and `windows-latest` machines, the images the
+packages are built on. `h17/prepare.py` rebuilds the scorecard's inputs
+without macOS's afconvert and stops unless all 1,422 English and Russian files
+match `research/scorecard/fleurs-full.json.gz` and the long takes match
+`research/scorecard/fixtures.json`. `h17/score.py` scores with the scorecard's
+normalization, jiwer 4.0.0 and the scorecard's paired bootstrap (10,000 draws
+over utterances, the same seed).
+
+Q4_K_M replaces Q8_0 in the desktop app's manifest when all of these hold:
+
+1. Linux, all 1,422 English and Russian FLEURS test utterances: the upper end
+   of the 95% paired interval for the pooled WER difference, Q4_K_M minus
+   Q8_0, is at most +0.20 percentage points. This is H11's rule.
+2. Windows, the same 1,422 utterances: the same bound.
+3. Linux, the German, Spanish, French and Ukrainian FLEURS test sets (3,196
+   utterances), added because the desktop app has no language setting and
+   this ledger has no result for those languages: pooled over all six
+   languages the upper end of the interval is at most +0.20 pp, and no single
+   language's difference is above +0.50 pp.
+4. On Linux, Q4_K_M invents no word on the eleven noise clips, its count of
+   wrong-script decodes on FLEURS is not higher than Q8_0's, and on the six
+   long takes (33 to 129 s, which reach the engine's 30 s cutting; the desktop
+   app has no file import, so they stand in for H11's hour files) its
+   deleted-word rate, pooled, is at most 0.5 points above Q8_0's.
+5. On each system, over every 20th utterance, recognized twice with each file
+   in one process in alternating order: Q4_K_M's median and 95th-percentile
+   time per clip are at most 1.05 times Q8_0's. This is H11's rule 3. The
+   times above predict 0.76 to 0.86.
+6. On each system, the peak resident memory of a process that recognizes 30
+   utterances with Q4_K_M is at most 1.05 times Q8_0's.
+
+If a rule fails, the manifest stays on Q8_0 and the result is reported under
+that rule. Punctuation and capitalization are reported and not gated. What a
+computer that already holds the Q8_0 file does after the switch is a question
+about the installer, answered in code and tests, not by this measurement.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
