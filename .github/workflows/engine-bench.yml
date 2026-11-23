@@ -223,8 +223,13 @@ jobs:
       # (2003, SSE2 only), a Core of 2008 (SSE4.2) and a Core of 2012 (AVX
       # without AVX2). It must recognize the same words on each, on the
       # engine's slower kernels, and say that it will be slower.
+      #
+      # Only on the system the packages are built on. An emulated processor
+      # also runs that machine's own C library, and the newest Ubuntu image
+      # ships one that needs AVX2 itself, so nothing starts there whatever
+      # the engine does.
       - name: Processors without AVX2, emulated
-        if: runner.os == 'Linux' && runner.arch == 'X64'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update > /dev/null
           sudo apt-get install -y qemu-user > /dev/null
