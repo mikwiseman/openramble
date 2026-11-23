@@ -1,0 +1,128 @@
+name: Quantization on x86 (H17)
+
+# Proof-only, on the proof branch, never on main. Recognizes FLEURS test speech
+# with both Parakeet Ultra files through the desktop app's own path, on the
+# images the Windows and Linux packages are built on. The rules are H17 in
+# research/model-upgrade-2026-10/HYPOTHESES.md, committed before this ran.
+on:
+  push:
+    branches: ["claude/desktop-q4km-proof"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # What the packages are built with after the instruction-set change.
+  TRANSCRIBE_CMAKE_ARGS: "-DGGML_NATIVE=OFF -DGGML_SSE42=ON -DGGML_AVX=ON -DGGML_F16C=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_BMI2=ON -DTRANSCRIBE_USE_SYSTEM_BLAS=OFF"
+  Q4_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q4_K_M.gguf
+  Q4_SHA256: c69b7a5f9071a7afd8a1818ef7ae542c386c4b01ed0cac380c19a99947646bf9
+  Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
+  Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
+
+jobs:
+  measure:
+    name: ${{ matrix.system }}, ${{ matrix.locale }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { system: linux, os: ubuntu-22.04, locale: en_us }
+          - { system: linux, os: ubuntu-22.04, locale: ru_ru }
+          - { system: linux, os: ubuntu-22.04, locale: de_de }
+          - { system: linux, os: ubuntu-22.04, locale: es_419 }
+          - { system: linux, os: ubuntu-22.04, locale: fr_fr }
+          - { system: linux, os: ubuntu-22.04, locale: uk_ua }
+          - { system: windows, os: windows-latest, locale: en_us }
+          - { system: windows, os: windows-latest, locale: ru_ru }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Processor
+        run: |
+          mkdir -p out
+          {
+            if command -v lscpu > /dev/null; then
+              lscpu | grep -E 'Model name' | sed 's/  */ /g'
+              echo "logical processors: $(nproc); avx2: $(grep -cw avx2 /proc/cpuinfo), avx512f: $(grep -cw avx512f /proc/cpuinfo)"
+              gcc --version | head -1
+            else
+              powershell -Command "(Get-CimInstance Win32_Processor).Name"
+              powershell -Command "'logical processors: ' + (Get-CimInstance Win32_Processor).NumberOfLogicalProcessors"
+              pwsh -Command '"avx2: " + [System.Runtime.Intrinsics.X86.Avx2]::IsSupported + ", avx512f: " + [System.Runtime.Intrinsics.X86.Avx512F]::IsSupported'
+            fi
+          } | tee out/machine.txt
+
+      - name: Build
+        run: |
+          cargo build --release -p ramble-engine --example fleurs --locked
+          build=$(find target/release/build -maxdepth 2 -type d -path '*/transcribe-cpp-sys-*/out' | head -1)
+          {
+            grep -h '^GGML_NATIVE:\|^GGML_AVX2:\|^GGML_AVX512:\|^TRANSCRIBE_USE_SYSTEM_BLAS:' "$build/build/CMakeCache.txt" | tr -d '\r' | tr '\n' ' '
+            echo
+          } | tee out/build.txt
+
+      - name: Models
+        run: |
+          mkdir -p q8 q4
+          curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
+          curl -L --fail --retry 3 -o q4/model.gguf "$Q4_URL"
+          echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
+          echo "$Q4_SHA256  q4/model.gguf" | sha256sum -c -
+
+      - name: Speech
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then python=python; else python=python3; fi
+          $python -m pip install --quiet numpy
+          PYTHONUTF8=1 $python research/model-upgrade-2026-10/h17/prepare.py ${{ matrix.locale }} work
+          cp work/prepared.txt work/references.tsv out/
+
+      # Text does not depend on what else the machine is doing, so both files
+      # run at once, each in two halves. One thread per process, as the app.
+      - name: Words
+        run: |
+          fleurs=target/release/examples/fleurs
+          for model in q8 q4; do
+            for half in 0 1; do
+              $fleurs words $model work/clips.tsv out/words-$model-$half.tsv $half 2 2> out/words-$model-$half.log &
+            done
+          done
+          wait
+          for model in q8 q4; do
+            cat out/words-$model-0.tsv out/words-$model-1.tsv > out/words-$model.tsv
+            rm out/words-$model-0.tsv out/words-$model-1.tsv
+            [ "$(wc -l < out/words-$model.tsv)" = "$(wc -l < work/clips.tsv)" ]
+            if [ -s work/extras.tsv ]; then
+              $fleurs words $model work/extras.tsv out/extras-$model.tsv 2> out/extras-$model.log
+            fi
+          done
+          cat out/words-q8-0.log
+
+      # Alone on the machine: one process holds both files and alternates.
+      - name: Speed
+        run: |
+          target/release/examples/fleurs speed q8 q4 work/speed.tsv out/speed.tsv 2> out/speed.log
+          cat out/speed.log
+          wc -l out/speed.tsv
+
+      - name: Memory
+        run: |
+          for model in q8 q4; do
+            target/release/examples/fleurs words $model work/memory.tsv out/memory-$model.tsv 2> out/memory-$model.log
+            echo "$model"; cat out/memory-$model.log
+          done
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: h17-${{ matrix.system }}-${{ matrix.locale }}
+          path: out/*
+          if-no-files-found: error

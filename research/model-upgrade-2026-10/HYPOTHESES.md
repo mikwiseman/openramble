@@ -565,6 +565,79 @@ no more words than `runtime-0.4.1-quiet60-seam0` on the English and Russian
 hour files and every take, at most 5% more on each mixed file, and fewer in
 total.
 
+## H17. Ultra Q4_K_M on x86 (Windows and Linux)
+
+Preregistered on 23 November 2026, before any transcript of either file from
+an x86 machine existed. H13 kept Q4_K_M off the desktop app because it was
+1.29 times slower than v3 on the CPU backend of an M4 Pro. That is an Arm
+processor, and the desktop app runs on x86. On 22 November the instruction-set
+work timed both Ultra files on four hosted x86 machines, with the runtime
+built for AVX2, one thread and one 8 s clip: Q4_K_M took 14 to 24% less time
+than Q8_0 on every machine (2,198 against 2,557 ms and 1,968 against 2,431 ms
+on Linux, 1,635 against 2,149 ms and 2,078 against 2,715 ms on Windows). The
+accuracy of the two files has only been compared on Metal (H11).
+
+Known when this was written: H11's Metal result (Q4_K_M +0.071 pp pooled, 95%
+interval −0.040 to +0.183, English −0.06 and Russian +0.19), the 4.98% that
+Q4_K_M alone scored on the M4 Pro's CPU backend in the own-engine research,
+and the times above.
+
+Method. `core/ramble-engine/examples/fleurs.rs` on branch
+`claude/desktop-q4km-proof` recognizes through `ramble_engine::Engine`, the
+desktop app's own path: the CPU backend, one thread, our transcribe.cpp fork
+at `dacdba09`. It is built with the switches the packages get from the
+instruction-set change (AVX2, FMA, F16C and BMI2, no AVX-512, no system BLAS)
+on hosted `ubuntu-22.04` and `windows-latest` machines, the images the
+packages are built on. `h17/prepare.py` rebuilds the scorecard's inputs
+without macOS's afconvert and stops unless all 1,422 English and Russian files
+match `research/scorecard/fleurs-full.json.gz` and the long takes match
+`research/scorecard/fixtures.json`. `h17/score.py` scores with the scorecard's
+normalization, jiwer 4.0.0 and the scorecard's paired bootstrap (10,000 draws
+over utterances, the same seed).
+
+Q4_K_M replaces Q8_0 in the desktop app's manifest when all of these hold:
+
+1. Linux, all 1,422 English and Russian FLEURS test utterances: the upper end
+   of the 95% paired interval for the pooled WER difference, Q4_K_M minus
+   Q8_0, is at most +0.20 percentage points. This is H11's rule.
+2. Windows, the same 1,422 utterances: the same bound.
+3. Linux, the German, Spanish, French and Ukrainian FLEURS test sets (3,196
+   utterances), added because the desktop app has no language setting and
+   this ledger has no result for those languages: pooled over all six
+   languages the upper end of the interval is at most +0.20 pp, and no single
+   language's difference is above +0.50 pp.
+4. On Linux, Q4_K_M invents no word on the eleven noise clips, its count of
+   wrong-script decodes on FLEURS is not higher than Q8_0's, and on the six
+   long takes (33 to 129 s, which reach the engine's 30 s cutting; the desktop
+   app has no file import, so they stand in for H11's hour files) its
+   deleted-word rate, pooled, is at most 0.5 points above Q8_0's.
+5. On each system, over every 20th utterance, recognized twice with each file
+   in one process in alternating order: Q4_K_M's median and 95th-percentile
+   time per clip are at most 1.05 times Q8_0's. This is H11's rule 3. The
+   times above predict 0.76 to 0.86.
+6. On each system, the peak resident memory of a process that recognizes 30
+   utterances with Q4_K_M is at most 1.05 times Q8_0's.
+
+If a rule fails, the manifest stays on Q8_0 and the result is reported under
+that rule. Punctuation and capitalization are reported and not gated. What a
+computer that already holds the Q8_0 file does after the switch is a question
+about the installer, answered in code and tests, not by this measurement.
+
+## H17b. Ultra Q5_K_M on x86
+
+Preregistered on 23 November 2026, after the H17 result and before any
+transcript of Q5_K_M from an x86 machine existed. H17 found Q4_K_M faster and
+smaller on x86 and slightly less accurate. Q5_K_M (550 MB, SHA-256
+`f6e3d817…`, 190 MB smaller than Q8_0) is the next file up. On Metal it was
+level with Q8_0: −0.007 pp pooled, 95% interval −0.087 to +0.072 (H11). Its
+speed on x86 is not known.
+
+Same method, machines, inputs and scoring as H17, with Q5_K_M in place of
+Q4_K_M, fetched from Hugging Face at the pinned revision because the project's
+mirror does not hold it. Q5_K_M replaces Q8_0 in the desktop app's manifest
+when H17's six rules hold for it, unchanged. If they do, the file is uploaded
+to the mirror before any manifest names it.
+
 ## Live text needs partials at least every 300 ms
 
 Recorded on 20 October 2026 as a gate for any future live-text feature, not
@@ -955,6 +1028,101 @@ ships the planner on the fork. The pull request's own commit (`ec107c1`,
 candidate `fork-plan20-shipped`, the framework fetched from the fork's
 release) gives the same text as the measured candidate on all 11 hour files
 and takes, with appending in place of the seam matcher.
+
+## H17 result
+
+Measured on 23 November 2026 on hosted machines (run 45119036473 of the proof
+workflow; transcripts, timings and logs in `h17/artifacts.tar.gz`, scores in
+`h17/h17.json`). Every job's inputs matched the frozen hashes: all 1,422
+English and Russian files, the six takes and the eleven noise clips, on Linux
+and on Windows. The Linux jobs ran on an AMD EPYC 9V45 (German, English,
+Russian, Ukrainian), an Intel Xeon Platinum 8573C (Spanish) and an AMD EPYC
+7763 (French); both Windows jobs ran on an AMD EPYC 7763. The build had AVX2
+on, AVX-512 off and no system BLAS on both systems.
+
+`score.py` reproduces H11 exactly from the scorecard's stored Metal transcripts
+(+0.071 pp, −0.040 to +0.183), so these numbers compare with H11's. The
+program and the workflow as they ran are kept beside it (`h17/fleurs.rs`,
+`h17/quantization-x86-proof.yml`).
+
+| | Utterances | Words | Q8_0 WER | Q4_K_M WER | Difference, pp | 95% interval | Utterances Q4_K_M better / worse |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Linux, English | 647 | 14,573 | 4.89% | 4.83% | −0.062 | −0.209 to +0.088 | 35 / 33 |
+| Linux, Russian | 775 | 15,098 | 4.65% | 4.85% | +0.205 | +0.039 to +0.374 | 45 / 65 |
+| Linux, German | 862 | 18,711 | 4.47% | 4.47% | +0.000 | −0.163 to +0.162 | 56 / 61 |
+| Linux, Spanish | 908 | 23,317 | 3.04% | 3.04% | +0.004 | −0.081 to +0.090 | 38 / 35 |
+| Linux, French | 676 | 17,997 | 4.62% | 4.89% | +0.267 | +0.095 to +0.434 | 33 / 71 |
+| Linux, Ukrainian | 750 | 14,371 | 5.57% | 5.94% | +0.362 | +0.145 to +0.602 | 47 / 77 |
+| Windows, English | 647 | 14,573 | 4.89% | 4.92% | +0.034 | −0.124 to +0.191 | 33 / 44 |
+| Windows, Russian | 775 | 15,098 | 4.66% | 4.91% | +0.258 | +0.087 to +0.427 | 36 / 63 |
+| **Linux, English and Russian** | 1,422 | 29,671 | 4.77% | 4.84% | +0.074 | −0.037 to +0.191 | 80 / 98 |
+| **Windows, English and Russian** | 1,422 | 29,671 | 4.77% | 4.92% | +0.148 | +0.034 to +0.266 | 69 / 107 |
+| **Linux, all six languages** | 4,618 | 104,067 | 4.41% | 4.53% | +0.118 | +0.055 to +0.182 | 254 / 342 |
+
+| Rule | Measured | Verdict |
+|---|---|---|
+| 1. Linux, English and Russian: upper end at most +0.20 pp | +0.191 | pass |
+| 2. Windows, English and Russian: upper end at most +0.20 pp | +0.266 | **fail** |
+| 3. Linux, six languages: upper end at most +0.20 pp; no language above +0.50 pp | +0.182; Ukrainian +0.362 | pass |
+| 4. No invented word on noise; wrong script not above Q8_0's; deleted words on the six takes at most 0.5 points above | 0 and 0 invented; wrong script 1 against 0; deleted 0.78% against 3.13% | **fail** |
+| 5. Median and 95th-percentile time at most 1.05 times Q8_0's | Linux 0.79 to 0.86 and 0.79 to 0.84; Windows 0.73 to 0.75 and 0.73 | pass |
+| 6. Peak resident memory at most 1.05 times Q8_0's | Linux 983 to 1,014 MB against 1,225 to 1,257 MB; Windows 967 to 979 MB against 1,209 to 1,221 MB | pass |
+
+Decision: rules 2 and 4 fail, so the Windows and Linux manifest stays on
+Q8_0.
+
+Accuracy. Q4_K_M is not level with Q8_0. Over the six languages it makes
+about one more word error in every 850 words, and the interval excludes zero.
+English, German and Spanish are level; Russian, French and Ukrainian are each
+0.2 to 0.4 points worse, each with an interval above zero. The three
+measurements of English and Russian together now read +0.071 pp on Metal
+(H11), +0.074 on Linux and +0.148 on Windows, never below zero. The two
+builds of the same arithmetic also differ from each other: Q4_K_M makes 1,437
+errors on Linux and 1,459 on Windows in the same 29,671 words, Q8_0 makes
+1,415 on both. The Mac's Q4_K_M passed this rule at +0.183 and Linux passes at
++0.191, so the rule is being decided inside its own noise; what the six
+languages add is that the cost is real and sits in three of them.
+
+The wrong-script decode is one Ukrainian sentence, which Q4_K_M wrote in
+Latin letters ("Bijci kolehe також vdali šan v Luni.") and Q8_0 wrote
+correctly. No English or Russian decode is in the wrong script with either
+file.
+
+Kinds of difference, Linux, all six languages. 855 of the 4,618 transcripts
+differ after normalization, in 1,162 stretches:
+
+| Kind | Stretches | Reference agrees with Q8_0 | with Q4_K_M | with neither |
+|---|---:|---:|---:|---:|
+| One or two letters, e.g., "громадянин" and "громадяни", "находилось" and "находились" | 668 | 237 | 175 | 256 |
+| A different word, e.g., "miles" and "m", "ларсон" and "larsen" | 226 | 80 | 57 | 89 |
+| A word only one file wrote | 216 | 47 | 53 | 116 |
+| A number written differently, e.g., "12" and "doce", "1" and "один" | 51 | 24 | 14 | 13 |
+| The same letters, split differently | 1 | 0 | 0 | 1 |
+
+Q4_K_M's extra errors are mostly word endings and the spelling of names, one
+or two letters at a time: of its 123 extra errors in 104,067 words, 99 are
+substitutions, 20 insertions and 4 deletions. Punctuation F1 is 82.9% against 83.3% in English and 92.1% against 92.7%
+in Russian; capitalization is within 0.2 points.
+
+Speed, one thread, every 20th utterance (33 to 46 clips of 3.6 to 29 s per
+job), the better of two runs per file: Q4_K_M takes 14 to 21% less time at the
+median on Linux, on all three processors, and 25 to 27% less on Windows. No
+clip on any machine was slower with Q4_K_M; the per-clip ratio runs from 0.71
+to 0.91. This confirms the 14 to 24% from one clip on 22 November.
+
+Memory. The runtime maps the model file, so the difference is the file: with
+Q4_K_M the process holds about 240 MB less (470 MB of mapped file against
+712 MB on Linux). Its own memory is the same with either file, 405 to 452 MB
+on Linux and 385 MB committed on Windows.
+
+Observed and not part of any rule: on the 129 s English take Q8_0 drops one
+whole sentence of 20 words, "Prides are made up of one to three related adult
+males, along with as many as thirty females and cubs", on Linux and on
+Windows alike, and Q4_K_M keeps it. That is the file the desktop app ships.
+It is one take, so it says nothing about which file loses fewer words in
+general, but it shows that the desktop app's own cutting of long takes
+(`runs` in `ramble-engine`) can lose a sentence where the Mac's planner
+loses none (H16f).
 
 ## Proposed next hypotheses
 
