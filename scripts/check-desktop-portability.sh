@@ -27,6 +27,11 @@ while IFS= read -r object; do OBJECTS+=("$object"); done < <(
 # Instructions the first x86-64 processors lack and that carry no AVX prefix:
 # SSSE3, SSE4 and the bit-manipulation sets. Every AVX and AVX-512 mnemonic
 # starts with "v", and nothing older does in compiled code.
+#
+# One exception is known and checked for. The Windows compiler writes some
+# loops twice, once with SSE4 instructions, and picks between them while the
+# program runs by reading __isa_available, which its runtime library sets
+# from the processor. A file that refers to that variable may hold them.
 NEWER='^(pshufb|palignr|pabs[bwd]|pmaddubsw|phadd[wd]|phaddsw|phsub[wd]|phsubsw|psign[bwd]|pmulhrsw|pmulld|pmuldq|pblendw|pblendvb|blendvp[sd]|blendp[sd]|ptest|pextr[bdq]|pinsr[bdq]|extractps|insertps|pmovzx[a-z]+|pmovsx[a-z]+|pminu[wd]|pmaxu[wd]|pmins[bd]|pmaxs[bd]|round[ps][sd]|dpp[sd]|mpsadbw|packusdw|pcmpeqq|pcmpgtq|popcnt[wlq]?|crc32[bwlq]?|lzcnt[wlq]?|andn[lq]?|bextr[lq]?|bzhi[lq]?|pdep[lq]?|pext[lq]?|mulx[lq]?|sarx[lq]?|shlx[lq]?|shrx[lq]?|rorx[lq]?|movbe[wlq]?)$'
 
 status=0
@@ -60,10 +65,15 @@ for object in "${OBJECTS[@]}"; do
       [[ "$avx" -eq 0 ]] || { echo "  The SSE kernels contain AVX instructions." >&2; status=1; }
       ;;
     *)
-      [[ "$avx" -eq 0 && "$later" -eq 0 ]] || {
-        echo "  $name runs before any kernel is chosen and needs a newer processor than the first x86-64 ones." >&2
+      guarded=$(objdump -t "$object" 2> /dev/null | grep -c '__isa_available' || true)
+      if [[ "$avx" -ne 0 || ( "$later" -ne 0 && "$guarded" -eq 0 ) ]]; then
+        echo "  $name runs before any kernel is chosen and needs a newer processor than the first x86-64 ones:" >&2
+        objdump -d --no-show-raw-insn "$object" | awk -v newer="$NEWER" \
+          '/^ *[0-9a-f]+:/ && ($2 ~ /^v/ || $2 ~ newer) { print "   " $0 }' | head -5 >&2
         status=1
-      }
+      elif [[ "$later" -ne 0 ]]; then
+        echo "  ($name asks the processor before it uses those: __isa_available)"
+      fi
       ;;
   esac
 done
