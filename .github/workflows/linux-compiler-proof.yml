@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,10 +31,16 @@ env:
   Q8_URL: https://github.com/mikwiseman/openramble/releases/download/models-a1539be1/parakeet-ultra-Q8_0.gguf
   Q8_SHA256: 007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59
   VARIANTS: gcc-11 gcc-12 gcc-13 gcc-13-static clang clang-15
+  # Run 2 builds nothing again. It takes the six builds of run 1 and times
+  # them on more machines, because all three machines of run 1 turned out to
+  # be the same processor.
+  BUILDS_RUN: "45118800225"
 
 jobs:
   build:
     name: Build, ${{ matrix.name }}
+    # Ran in run 1. Kept as the record of how those builds were made.
+    if: false
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     strategy:
@@ -172,33 +179,60 @@ jobs:
           path: keep/*
           if-no-files-found: error
 
-  # Every 22.04 build beside a build made here by this image's GCC 13, on one
-  # machine. Three machines, because a hosted machine is whichever one is free.
-  speed:
-    name: Speed, machine ${{ matrix.machine }}
-    needs: build
-    if: ${{ !cancelled() }}
+  # The same source built by the 24.04 image's own GCC 13.
+  reference:
+    name: Built on 24.04
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Build
+        run: |
+          gcc --version | head -1
+          cargo build --release -p ramble-engine --example clock --locked
+          scripts/check-desktop-portability.sh | tail -1
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: build-here
+          path: target/release/examples/clock
+          if-no-files-found: error
+
+  # Every 22.04 build beside the 24.04 build, on one machine. The 24.04 build
+  # needs a newer C library than a 22.04 machine has, so every program runs in
+  # a 24.04 container, on machines from both pools: a hosted machine is
+  # whichever one is free, and the two pools hand out different processors.
+  speed:
+    name: Speed, machine ${{ matrix.machine }} (${{ matrix.os }})
+    needs: reference
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        machine: [a, b, c]
+        include:
+          - { machine: a, os: ubuntu-22.04 }
+          - { machine: b, os: ubuntu-22.04 }
+          - { machine: c, os: ubuntu-22.04 }
+          - { machine: d, os: ubuntu-22.04 }
+          - { machine: e, os: ubuntu-24.04 }
+          - { machine: f, os: ubuntu-24.04 }
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TIMED: gcc-11 gcc-12 gcc-13 clang clang-15 here
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          pattern: build-*
-          path: builds
+          name: build-here
+          path: builds/build-here
 
-      - name: The same source built on this image
+      - name: The builds of run 1, models and clip
         run: |
-          cargo build --release -p ramble-engine --example clock --locked
-          scripts/check-desktop-portability.sh | tail -1
-
-      - name: Models and clip
-        run: |
+          for variant in $VARIANTS; do
+            gh run download "$BUILDS_RUN" --repo "$GITHUB_REPOSITORY" --name "build-$variant" --dir "builds/build-$variant"
+          done
+          chmod +x builds/build-*/clock
           mkdir -p q8 q4
           curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
           curl -L --fail --retry 3 -o q4/model.gguf "$Q4_URL"
@@ -210,27 +244,25 @@ jobs:
       # shared machine shows.
       - name: Speed
         run: |
-          program() { if [ "$1" = here ]; then echo target/release/examples/clock; else echo "builds/build-$1/clock"; fi; }
+          cat > inside.sh <<'EOF'
+          for round in 1 2; do
+            for model in q8 q4; do
+              for variant in $TIMED; do
+                "builds/build-$variant/clock" $model dots.wav 3 2 8 16 30 2> "heard-$variant-$model.txt" \
+                  | awk -v r="$round" -v m="$model" -v v="$variant" '/^ *[0-9]+ \|/ { gsub(/ /, ""); split($0, a, "|"); print r " | " m " | " v " | " a[1] " | " a[2] " | " a[3] }' \
+                  || echo "$round | $model | $variant | FAILED"
+              done
+            done
+          done
+          EOF
           {
             echo "## Machine ${{ matrix.machine }}"
             echo '```'
-            echo "machine: $(lscpu | grep 'Model name' | sed 's/.*: *//'); avx512f on $(grep -cw avx512f /proc/cpuinfo) of $(nproc) processors"
-            echo "here: $(gcc --version | head -1)"
+            echo "machine: $(lscpu | grep 'Model name' | sed 's/.*: *//'); avx512f on $(grep -cw avx512f /proc/cpuinfo) of $(nproc) processors; host image ${{ matrix.os }}"
             echo "round | file | build | seconds | milliseconds, best of three | characters"
-            for round in 1 2; do
-              for model in q8 q4; do
-                for variant in $VARIANTS here; do
-                  clock=$(program "$variant")
-                  [ -f "$clock" ] || { echo "$round | $model | $variant | not built"; continue; }
-                  chmod +x "$clock"
-                  "$clock" $model dots.wav 3 2 8 16 30 2> "heard-$variant-$model.txt" \
-                    | awk -v r="$round" -v m="$model" -v v="$variant" '/^ *[0-9]+ \|/ { gsub(/ /, ""); split($0, a, "|"); print r " | " m " | " v " | " a[1] " | " a[2] " | " a[3] }' \
-                    || echo "$round | $model | $variant | FAILED"
-                done
-              done
-            done | tee times.txt
+            docker run --rm -e TIMED -v "$PWD:/work" -w /work ubuntu:24.04 bash /work/inside.sh | tee times.txt
             echo "--- the 8 s clip: Q8_0 round 1, round 2, Q4_K_M round 1, round 2"
-            for variant in $VARIANTS here; do
+            for variant in $TIMED; do
               row="$variant"
               for model in q8 q4; do
                 for round in 1 2; do
@@ -242,8 +274,7 @@ jobs:
             echo "--- words"
             for model in q8 q4; do
               same=yes
-              for variant in $VARIANTS; do
-                [ -f "heard-$variant-$model.txt" ] || continue
+              for variant in $TIMED; do
                 cmp -s "heard-$variant-$model.txt" "heard-here-$model.txt" || same="no ($variant differs)"
               done
               echo "$model: text identical in every build: $same"
@@ -262,26 +293,36 @@ jobs:
   # loader, started, and its runtime asked to recognize the clip.
   stock:
     name: Starts on ${{ matrix.image }}
-    needs: build
-    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         image: ["ubuntu:22.04", "debian:12"]
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          pattern: build-*
-          path: builds
-
-      - name: Model and clip
+      - name: The builds of run 1, model and clip
         run: |
+          for variant in $VARIANTS; do
+            gh run download "$BUILDS_RUN" --repo "$GITHUB_REPOSITORY" --name "build-$variant" --dir "builds/build-$variant"
+          done
           mkdir q8
           curl -L --fail --retry 3 -o q8/model.gguf "$Q8_URL"
           curl -L --fail --retry 3 -o dots.wav "$CLIP_URL"
           echo "$Q8_SHA256  q8/model.gguf" | sha256sum -c -
+
+      # Every compiler leaves its name in the objects it writes.
+      - name: Which compilers each executable came from
+        run: |
+          {
+            echo "## Compilers named inside each executable"
+            echo '```'
+            for variant in $VARIANTS; do
+              echo "$variant: $(readelf -p .comment "builds/build-$variant/openramble-desktop" | grep -oE '(GCC: \([^)]*\) [0-9.]+|[A-Za-z ]*clang version [0-9.]+[^ ]*|rustc version [0-9.]+)' | sort -u | tr '\n' ';')"
+            done
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Install, load, start, recognize
         run: |
@@ -321,10 +362,13 @@ jobs:
             apt-get install -y "/work/$deb" > install.log 2>&1 || true
             if dpkg -i "/work/$deb" >> install.log 2>&1; then echo "  installs: yes"; else echo "  installs: NO"; tail -3 install.log | sed 's/^/    /'; fi
             exe=$(dpkg -L "$package" | grep '^/usr/bin/' | head -1)
-            if cmp -s "$exe" "$dir/openramble-desktop"; then echo "  installed executable is this build's: yes"; else echo "  installed executable is this build's: NO"; fi
+            # The packager writes the package format into the executable, so
+            # the installed file is a few bytes off the one in the build
+            # directory and far off any other build's.
+            echo "  installed executable: $(stat -c %s "$exe") bytes, this build's has $(stat -c %s "$dir/openramble-desktop"), $(cmp -l "$exe" "$dir/openramble-desktop" 2> /dev/null | wc -l) bytes differ; from gcc-11's, $(cmp -l "$exe" builds/build-gcc-11/openramble-desktop 2> /dev/null | wc -l) differ"
             missing=$(ldd -r "$exe" 2>&1 | grep -E 'not found|undefined symbol' | head -4 | cut -c1-200)
             echo "  loader: ${missing:-every library and every symbol version found}"
-            dbus-run-session -- xvfb-run -a bash /work/start.sh "$exe"
+            dbus-run-session -- xvfb-run -a bash /work/start.sh "$exe" 2> /dev/null
             pkill -9 -f -i webkit > /dev/null 2>&1
             chmod +x "$dir/clock"
             "$dir/clock" q8 dots.wav 1 2 > clock.out 2> clock.err
