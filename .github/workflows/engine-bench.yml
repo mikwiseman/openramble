@@ -22,8 +22,10 @@ on:
 permissions:
   contents: read
 
+# A push replaces the run of the push before it. It does not stop a run
+# started by hand, which may be two hours into the FLEURS job.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 env:
