@@ -3636,10 +3636,10 @@ dependencies = [
 name = "ramble-engine"
 version = "0.42.2"
 dependencies = [
+ "cc",
  "ramble-audio",
  "ramble-model",
  "tempfile",
- "transcribe-cpp",
 ]
 
 [[package]]
@@ -5309,25 +5309,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
-]
-
-[[package]]
-name = "transcribe-cpp"
-version = "0.4.1"
-source = "git+https://github.com/mikwiseman/transcribe.cpp?rev=dacdba09be2b8d4dfe97a9d7464c51f462d5f622#dacdba09be2b8d4dfe97a9d7464c51f462d5f622"
-dependencies = [
- "log",
- "thiserror 2.0.20",
- "transcribe-cpp-sys",
-]
-
-[[package]]
-name = "transcribe-cpp-sys"
-version = "0.4.1"
-source = "git+https://github.com/mikwiseman/transcribe.cpp?rev=dacdba09be2b8d4dfe97a9d7464c51f462d5f622#dacdba09be2b8d4dfe97a9d7464c51f462d5f622"
-dependencies = [
- "cmake",
- "serde_json",
 ]
 
 [[package]]

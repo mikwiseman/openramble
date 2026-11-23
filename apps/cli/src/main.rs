@@ -6,7 +6,7 @@
 //! shared Rust core: ffmpeg decodes any input to 16 kHz mono, silence is left
 //! out, the rest is cut at pauses into pieces of at most `--max-chunk`
 //! seconds, and `--workers` engines recognize the pieces in parallel. Each
-//! engine is single-threaded by design (see `ramble_engine::Engine::load`),
+//! engine runs on one thread (see `pool::load`),
 //! so parallelism comes from several engines rather than from threads inside
 //! one.
 
@@ -329,7 +329,7 @@ fn serve(args: Vec<String>) -> Result<(), String> {
             let loaded = pool::load(&model_dir, engines)?;
             device = loaded
                 .first()
-                .map(|engine| engine.report().device.clone())
+                .map(|engine| engine.report().kernels.clone())
                 .unwrap_or_default();
             Ok(loaded
                 .into_iter()
@@ -338,7 +338,7 @@ fn serve(args: Vec<String>) -> Result<(), String> {
         },
     )?;
     log(&format!(
-        "openramble serve: {engines} engines on {device}, model {model}, listening on {}",
+        "openramble serve: {engines} engines on {device} kernels, model {model}, listening on {}",
         server.address()
     ));
     while !stop.load(std::sync::atomic::Ordering::SeqCst) {

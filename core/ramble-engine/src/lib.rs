@@ -1,8 +1,13 @@
 //! The recognizer.
 //!
-//! The only crate in this workspace that touches the inference runtime, mirroring
-//! the rule the Mac already keeps: exactly one file may import it, so the blast
-//! radius of a runtime change is one place.
+//! The only crate in this workspace that touches the recognition engine,
+//! mirroring the rule the Mac already keeps: exactly one place may call it, so
+//! the blast radius of an engine change is one place.
+//!
+//! The engine is ours and lives in `engine/`: plain C that `build.rs` compiles
+//! into this crate. It runs on the processor, chooses its kernels for the
+//! processor it finds when a model is opened, and needs nothing of the machine
+//! that built it.
 //!
 //! What the shipping Mac app learned the hard way, kept here:
 //!
@@ -11,25 +16,18 @@
 //!   loaded model, which makes the next take colder and slower still — a spiral
 //!   the person cannot escape. Cancellation exists for a person who pressed
 //!   Escape, not for a clock.
-//! - **The model must be gone before the process exits.** ggml's static
-//!   destructors abort — signal 6, a crash report — if a model is still alive at
-//!   `exit()`. See [`Engine::shutdown`].
-//! - **A fallback is announced, never silent.** Running on the CPU because the
-//!   GPU was unavailable is a fact the person is entitled to, since it is the
-//!   difference between two seconds and twenty.
+//! - **A slower path is announced, never silent.** A processor without the
+//!   instructions the fast kernels need still recognizes, several times more
+//!   slowly, and the person is entitled to know which of the two they have.
 
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use transcribe_cpp::{
-    Backend, Model, ModelOptions, RunOptions, Session, SessionOptions, TimestampKind,
-};
-
-mod processor;
+#[allow(unsafe_code)]
+mod ore;
 mod report;
-pub use processor::{Instructions, UnsupportedProcessor};
-pub use report::{BackendReport, Compiled};
+pub use report::BackendReport;
 
 #[derive(Debug)]
 pub enum EngineError {
@@ -39,9 +37,6 @@ pub enum EngineError {
     Run(String),
     /// The person pressed Escape.
     Cancelled,
-    /// This computer's processor lacks instructions the runtime was compiled
-    /// to use. Nothing was loaded and nothing on this computer will change it.
-    UnsupportedProcessor(UnsupportedProcessor),
 }
 
 impl std::fmt::Display for EngineError {
@@ -53,7 +48,6 @@ impl std::fmt::Display for EngineError {
             EngineError::Load(detail) => write!(f, "the recognizer could not start: {detail}"),
             EngineError::Run(detail) => write!(f, "the recognition failed: {detail}"),
             EngineError::Cancelled => write!(f, "cancelled"),
-            EngineError::UnsupportedProcessor(unsupported) => write!(f, "{unsupported}"),
         }
     }
 }
@@ -75,74 +69,55 @@ pub struct Recognized {
     pub text: String,
     /// The raw words in order, each trimmed and never empty.
     pub words: Vec<Word>,
-    /// The decode hit the runtime's output budget; the words are what came
-    /// before it.
+    /// Always false: this model's decoder has no output budget that stops it
+    /// before the end of the clip. Kept for the callers that report it.
     pub truncated: bool,
 }
 
 /// A loaded recognizer.
 ///
-/// The session is behind a mutex because the runtime's session is `Send` but not
-/// `Sync`, and because two takes must not decode through one session at once.
-/// Dictation is inherently one-at-a-time, so the lock is never contended in
-/// practice; it exists to make that a compile-time fact rather than a hope.
+/// The session is behind a mutex because two takes must not decode through one
+/// session at once. Dictation is inherently one-at-a-time, so the lock is never
+/// contended in practice; it exists to make that a compile-time fact rather
+/// than a hope.
 pub struct Engine {
-    session: Mutex<Session>,
-    /// Kept alive alongside the session, and dropped after it: the session
-    /// borrows the model's tensors.
-    _model: Model,
+    recognizer: Mutex<ore::Recognizer>,
     report: BackendReport,
 }
 
 impl Engine {
-    /// Load the model in a directory.
+    /// Load the model in a directory for one person dictating: one
+    /// recognition at a time, on as many threads as the machine has, at most
+    /// four.
     ///
-    /// The runtime wants a file, the installer produces a directory, so the
+    /// The engine's threads take their work from a shared counter and never
+    /// wait for one another, so a busy machine slows a recognition down
+    /// without stalling it (research/own-engine-2026-11, the ledger's rows on
+    /// threads under load).
+    ///
+    /// The engine wants a file, the installer produces a directory, so the
     /// single `.gguf` inside is found here rather than making every caller know
     /// the filename.
     pub fn load(model_directory: &Path) -> Result<Self, EngineError> {
-        Self::load_unless(UnsupportedProcessor::on_this_computer(), model_directory)
+        Self::load_with_threads(model_directory, 0)
     }
 
-    /// Load the model, unless the processor cannot run it.
-    ///
-    /// Asked first, before the runtime is given anything to do. On such a
-    /// processor the runtime does not return an error: its first arithmetic
-    /// is an illegal instruction and the process is gone.
-    fn load_unless(
-        unsupported: Option<UnsupportedProcessor>,
-        model_directory: &Path,
-    ) -> Result<Self, EngineError> {
-        if let Some(unsupported) = unsupported {
-            return Err(EngineError::UnsupportedProcessor(unsupported));
-        }
-        install_logging_policy();
+    /// Load with a fixed number of threads. The server runs several engines
+    /// side by side, each on one thread.
+    pub fn load_with_threads(model_directory: &Path, threads: usize) -> Result<Self, EngineError> {
         let model_path = model_file(model_directory)
             .ok_or_else(|| EngineError::NoModel(model_directory.to_path_buf()))?;
-
-        let requested = preferred_backend();
-        let (model, active) = load_with_fallback(&model_path, requested)?;
-
-        let report = BackendReport::new(requested, &model, active);
-        // Match the shipping macOS adapter. Parakeet's CPU predictor installs
-        // a spin/yield barrier for every graph node at two or more threads;
-        // one thread removes that pressure-sensitive synchronization while
-        // the Metal/Vulkan encoder keeps its own parallelism.
-        // Intel macOS also runs the encoder on the CPU, so it uses four threads.
-        let session = model
-            .session_with(&SessionOptions {
-                n_threads: if cfg!(all(target_os = "macos", target_arch = "x86_64")) {
-                    4
-                } else {
-                    1
-                },
-                ..SessionOptions::default()
-            })
-            .map_err(|error| EngineError::Load(error.to_string()))?;
-
+        // The weights stay memory-mapped: engines loaded from one file share
+        // its pages, and the OS can drop them under pressure instead of
+        // swapping them. Installs replace a model by renaming a new directory
+        // into place, never by rewriting the mapped file.
+        let recognizer = ore::Recognizer::open(&model_path, threads).map_err(EngineError::Load)?;
+        let report = BackendReport {
+            kernels: recognizer.kernels(),
+            threads: recognizer.threads(),
+        };
         Ok(Engine {
-            session: Mutex::new(session),
-            _model: model,
+            recognizer: Mutex::new(recognizer),
             report,
         })
     }
@@ -152,50 +127,26 @@ impl Engine {
         &self.report
     }
 
+    /// The engine's version.
+    pub fn version() -> String {
+        ore::version()
+    }
+
     /// Recognize 16 kHz mono audio.
     ///
-    /// Short clips are padded before the runtime sees them — the mel front-end
-    /// emits NaNs on anything under two frames — and long ones are cut into
-    /// runs of at most [`MAX_RUN_SAMPLES`].
+    /// Short clips are padded before the engine sees them, as they always
+    /// were, and long ones are cut into runs of at most [`MAX_RUN_SAMPLES`].
     pub fn transcribe(&self, samples: &[f32]) -> Result<String, EngineError> {
-        let options = RunOptions {
-            // Timestamps cost decoding work and nothing in this product reads
-            // them: the text goes straight into somebody else's text field.
-            timestamps: TimestampKind::None,
-            ..Default::default()
-        };
-
-        let mut session = self
-            .session
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let mut texts = Vec::new();
-        for run in runs(samples) {
-            let prepared = ramble_audio::prepare_for_engine(&samples[run]);
-            let transcript = session
-                .run(&prepared, &options)
-                .map_err(|error| EngineError::Run(error.to_string()))?;
-            if session.was_aborted() {
-                return Err(EngineError::Cancelled);
-            }
-            texts.push(transcript.text);
-        }
-        Ok(joined(texts))
+        self.recognize(samples).map(|recognized| recognized.text)
     }
 
     /// Recognize 16 kHz mono audio and say where each word lies.
     ///
-    /// The text is the same as [`Engine::transcribe`] gives: Parakeet builds
-    /// its words either way and only drops them when no times were asked for.
     /// Padding goes at the end of a short clip, so it moves no time; times are
     /// clamped to the clip so the padding can never hold a word.
     pub fn recognize(&self, samples: &[f32]) -> Result<Recognized, EngineError> {
-        let options = RunOptions {
-            timestamps: TimestampKind::Word,
-            ..Default::default()
-        };
-        let mut session = self
-            .session
+        let mut recognizer = self
+            .recognizer
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut whole = Recognized::default();
@@ -203,10 +154,8 @@ impl Engine {
         for run in runs(samples) {
             let offset = clip_ms(run.start);
             let prepared = ramble_audio::prepare_for_engine(&samples[run.clone()]);
-            let outcome = session.run(&prepared, &options);
-            let part = recognized(outcome, session.was_aborted(), clip_ms(run.len()))?;
+            let part = recognized(recognizer.run(&prepared), clip_ms(run.len()))?;
             texts.push(part.text);
-            whole.truncated |= part.truncated;
             whole.words.extend(part.words.into_iter().map(|word| Word {
                 start_ms: word.start_ms + offset,
                 end_ms: word.end_ms + offset,
@@ -217,24 +166,22 @@ impl Engine {
         Ok(whole)
     }
 
-    /// Drop the model before the process exits.
+    /// Release the model and stop the engine's threads.
     ///
-    /// Not tidiness. ggml registers static destructors that abort the process —
-    /// signal 6, a crash report on the person's screen — when a model is still
-    /// alive as `exit()` runs. The app quitting cleanly after a dictation
-    /// depends on this being called, and it is why `Engine` is not simply left
-    /// to the allocator at shutdown.
+    /// Dropping the engine does the same. Callers name the moment so that it
+    /// happens on the thread that owns the engine, before the process exits.
     pub fn shutdown(self) {
         drop(self);
     }
 }
 
-/// The longest audio the runtime is given in one run: 30 seconds.
+/// The longest audio the engine is given in one run: 30 seconds.
 ///
 /// Parakeet Ultra segments a longer run itself, at pauses its own speech head
-/// finds, and on transcribe.cpp 0.4.1 that head can miss the speech at the
-/// start of a piece that begins mid-sentence and drop it without a trace. So
-/// longer audio is cut here, the bound the Mac's file chunker keeps too.
+/// finds, and that head can miss the speech at the start of a piece that
+/// begins mid-sentence and drop it without a trace. The engine keeps that
+/// behaviour of transcribe.cpp 0.4.1, so longer audio is cut here, the bound
+/// the Mac's file chunker keeps too.
 pub const MAX_RUN_SAMPLES: usize = 30 * ramble_audio::ENGINE_SAMPLE_RATE as usize;
 
 /// Where to cut audio into runs of at most [`MAX_RUN_SAMPLES`]: in the middle
@@ -260,7 +207,7 @@ fn runs(samples: &[f32]) -> Vec<Range<usize>> {
 }
 
 /// The text of consecutive runs. One run's text is returned exactly as the
-/// runtime gave it.
+/// engine gave it.
 fn joined(mut texts: Vec<String>) -> String {
     if texts.len() == 1 {
         return texts.remove(0);
@@ -279,26 +226,19 @@ fn clip_ms(samples: usize) -> u32 {
     u32::try_from(ms).unwrap_or(u32::MAX)
 }
 
-/// What a run produced, in this crate's terms.
-///
-/// A truncated decode is still an answer: its words are real and the caller
-/// is told the rest is missing. An abort is the caller's own cancellation.
+/// What a run produced, in this crate's terms. An abort is the caller's own
+/// cancellation.
 fn recognized(
-    outcome: Result<transcribe_cpp::Transcript, transcribe_cpp::Error>,
-    aborted: bool,
+    outcome: Result<ore::Heard, ore::Failure>,
     clip_ms: u32,
 ) -> Result<Recognized, EngineError> {
-    let (transcript, truncated) = match outcome {
-        _ if aborted => return Err(EngineError::Cancelled),
-        Ok(transcript) => (transcript, false),
-        Err(transcribe_cpp::Error::OutputTruncated { partial, .. }) => {
-            (partial.map(|partial| *partial).unwrap_or_default(), true)
-        }
-        Err(transcribe_cpp::Error::Aborted { .. }) => return Err(EngineError::Cancelled),
-        Err(error) => return Err(EngineError::Run(error.to_string())),
+    let heard = match outcome {
+        Ok(heard) => heard,
+        Err(ore::Failure::Aborted) => return Err(EngineError::Cancelled),
+        Err(ore::Failure::Other(detail)) => return Err(EngineError::Run(detail.into())),
     };
     let clamp = |ms: i64| ms.clamp(0, i64::from(clip_ms)) as u32;
-    let words = transcript
+    let words = heard
         .words
         .into_iter()
         .filter_map(|word| {
@@ -315,81 +255,10 @@ fn recognized(
         })
         .collect();
     Ok(Recognized {
-        text: transcript.text,
+        text: heard.text,
         words,
-        truncated,
+        truncated: false,
     })
-}
-
-/// Decide once what the runtime is allowed to print.
-///
-/// Silent by default. The runtime narrates every Metal kernel it compiles
-/// straight to stderr, which on a person's machine is dozens of lines of noise
-/// per dictation and tells them nothing they can act on — and a dictation tool
-/// that chatters into the system log looks broken even when it is not.
-///
-/// `OPENRAMBLE_ENGINE_LOG=1` turns it back on, matching how the Mac app gates
-/// its own diagnostics: available when something is being investigated, absent
-/// from the build people actually use.
-fn install_logging_policy() {
-    static ONCE: std::sync::Once = std::sync::Once::new();
-    ONCE.call_once(|| {
-        let wanted = std::env::var("OPENRAMBLE_ENGINE_LOG")
-            .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
-            .unwrap_or(false);
-        if wanted {
-            transcribe_cpp::init_logging();
-        } else {
-            transcribe_cpp::disable_logging();
-        }
-    });
-}
-
-/// The accelerator this platform should ask for.
-///
-/// Asking by name rather than taking `Auto` so the answer is a decision recorded
-/// here, and so a machine that cannot honour it produces a report instead of a
-/// quiet demotion.
-fn preferred_backend() -> Backend {
-    if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        Backend::Metal
-    } else {
-        // The CPU, until a build with Vulkan compiled in exists. Asking for an
-        // accelerator this build cannot provide would fail every load rather
-        // than run slowly, which is the worse of the two outcomes.
-        Backend::Cpu
-    }
-}
-
-/// Load on the preferred accelerator, falling back to the CPU.
-///
-/// The fallback is real and necessary — a Linux box with no Vulkan driver, a VM
-/// with no GPU passthrough — but it is never silent. The active backend is
-/// carried out so the interface can say so.
-fn load_with_fallback(path: &Path, requested: Backend) -> Result<(Model, Backend), EngineError> {
-    // The weights stay memory-mapped (the runtime's default): engines loaded
-    // from one file share its pages, and the OS can drop them under pressure
-    // instead of swapping them. Installs replace a model by renaming a new
-    // directory into place, never by rewriting the mapped file.
-    let options = ModelOptions {
-        backend: requested,
-        ..ModelOptions::default()
-    };
-    match Model::load_with(path, &options) {
-        Ok(model) => Ok((model, requested)),
-        Err(accelerator_error) => {
-            let cpu = ModelOptions {
-                backend: Backend::Cpu,
-                ..ModelOptions::default()
-            };
-            match Model::load_with(path, &cpu) {
-                Ok(model) => Ok((model, Backend::Cpu)),
-                // Report the accelerator's failure, not the CPU's: the first is
-                // what the person can act on.
-                Err(_) => Err(EngineError::Load(accelerator_error.to_string())),
-            }
-        }
-    }
 }
 
 /// The `.gguf` in a directory: the first by name if there are several.
@@ -414,34 +283,32 @@ pub fn model_file(directory: &Path) -> Option<PathBuf> {
 mod tests {
     use super::*;
 
-    fn runtime_word(text: &str, t0_ms: i64, t1_ms: i64) -> transcribe_cpp::Word {
-        transcribe_cpp::Word {
+    fn engine_word(text: &str, t0_ms: i64, t1_ms: i64) -> ore::Word {
+        ore::Word {
+            text: text.into(),
             t0_ms,
             t1_ms,
-            text: text.into(),
-            ..Default::default()
         }
     }
 
-    fn transcript(text: &str, words: Vec<transcribe_cpp::Word>) -> transcribe_cpp::Transcript {
-        transcribe_cpp::Transcript {
+    fn heard(text: &str, words: Vec<ore::Word>) -> Result<ore::Heard, ore::Failure> {
+        Ok(ore::Heard {
             text: text.into(),
             words,
-            ..Default::default()
-        }
+        })
     }
 
     #[test]
     fn word_times_are_clamped_into_the_clip_and_never_end_before_they_start() {
-        let outcome = Ok(transcript(
+        let outcome = heard(
             "early late inverted",
             vec![
-                runtime_word("early", -40, 300),
-                runtime_word("late", 900, 1_400),
-                runtime_word("inverted", 700, 650),
+                engine_word("early", -40, 300),
+                engine_word("late", 900, 1_400),
+                engine_word("inverted", 700, 650),
             ],
-        ));
-        let clamped = recognized(outcome, false, 1_000).unwrap();
+        );
+        let clamped = recognized(outcome, 1_000).unwrap();
         assert_eq!(
             clamped.words,
             vec![
@@ -468,16 +335,16 @@ mod tests {
 
     #[test]
     fn empty_words_are_dropped_and_the_order_is_kept() {
-        let outcome = Ok(transcript(
+        let outcome = heard(
             "one two",
             vec![
-                runtime_word(" one", 0, 100),
-                runtime_word("  ", 100, 120),
-                runtime_word("", 120, 130),
-                runtime_word("two ", 130, 300),
+                engine_word(" one", 0, 100),
+                engine_word("  ", 100, 120),
+                engine_word("", 120, 130),
+                engine_word("two ", 130, 300),
             ],
-        ));
-        let words: Vec<String> = recognized(outcome, false, 1_000)
+        );
+        let words: Vec<String> = recognized(outcome, 1_000)
             .unwrap()
             .words
             .into_iter()
@@ -487,52 +354,31 @@ mod tests {
     }
 
     #[test]
-    fn a_truncated_decode_keeps_its_partial_words() {
-        let outcome = Err(transcribe_cpp::Error::OutputTruncated {
-            message: "budget".into(),
-            partial: Some(Box::new(transcript(
-                "cut",
-                vec![runtime_word("cut", 0, 200)],
-            ))),
-        });
-        let partial = recognized(outcome, false, 1_000).unwrap();
-        assert!(partial.truncated);
-        assert_eq!(partial.text, "cut");
-        assert_eq!(partial.words.len(), 1);
-
-        let without_partial = Err(transcribe_cpp::Error::OutputTruncated {
-            message: "budget".into(),
-            partial: None,
-        });
-        let empty = recognized(without_partial, false, 1_000).unwrap();
-        assert_eq!(
-            empty,
-            Recognized {
-                truncated: true,
-                ..Default::default()
-            }
-        );
+    fn an_abort_is_a_cancellation_and_other_failures_stay_failures() {
+        assert!(matches!(
+            recognized(Err(ore::Failure::Aborted), 1_000),
+            Err(EngineError::Cancelled)
+        ));
+        assert!(matches!(
+            recognized(Err(ore::Failure::Other("bad")), 1_000),
+            Err(EngineError::Run(_))
+        ));
     }
 
     #[test]
-    fn an_abort_is_a_cancellation_and_other_failures_stay_failures() {
-        let aborted = Err(transcribe_cpp::Error::Aborted {
-            message: "stop".into(),
-            partial: None,
-        });
-        assert!(matches!(
-            recognized(aborted, true, 1_000),
-            Err(EngineError::Cancelled)
-        ));
-        assert!(matches!(
-            recognized(Ok(transcript("x", vec![])), true, 1_000),
-            Err(EngineError::Cancelled)
-        ));
-        let failed = Err(transcribe_cpp::Error::InvalidArgument("bad".into()));
-        assert!(matches!(
-            recognized(failed, false, 1_000),
-            Err(EngineError::Run(_))
-        ));
+    fn a_file_that_is_not_a_model_fails_to_load_with_a_reason() {
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::write(directory.path().join("model.gguf"), b"not a model").unwrap();
+        match Engine::load(directory.path()) {
+            Err(EngineError::Load(detail)) => assert!(!detail.is_empty()),
+            other => panic!("expected a load failure, got {:?}", other.err()),
+        }
+    }
+
+    #[test]
+    fn the_engine_states_its_version() {
+        let version = Engine::version();
+        assert!(version.split('.').count() >= 2, "{version}");
     }
 
     #[test]
@@ -545,31 +391,9 @@ mod tests {
     #[test]
     fn a_directory_without_a_model_says_so_rather_than_panicking() {
         let directory = tempfile::tempdir().unwrap();
-        // About the directory, whatever processor runs the test.
         assert!(matches!(
-            Engine::load_unless(None, directory.path()),
+            Engine::load(directory.path()),
             Err(EngineError::NoModel(_))
-        ));
-    }
-
-    /// Checked first, with nothing else looked at: this directory holds no
-    /// model, and the answer is still the processor.
-    #[test]
-    fn a_processor_that_cannot_run_the_runtime_is_refused_before_anything_is_loaded() {
-        let directory = tempfile::tempdir().unwrap();
-        let packages = Instructions {
-            avx: true,
-            avx2: true,
-            fma: true,
-            f16c: true,
-            bmi2: true,
-            avx512: false,
-        };
-        let unsupported = UnsupportedProcessor::check(packages, Instructions::default());
-        assert!(unsupported.is_some());
-        assert!(matches!(
-            Engine::load_unless(unsupported, directory.path()),
-            Err(EngineError::UnsupportedProcessor(_))
         ));
     }
 
@@ -626,35 +450,5 @@ mod tests {
             joined(vec![" one".into(), "".into(), "two ".into()]),
             "one two"
         );
-    }
-
-    #[test]
-    fn the_mac_app_pins_the_runtime_this_crate_links() {
-        // One runtime everywhere. A measurement taken on one platform says
-        // nothing about another that runs a different build, and for five
-        // days in October 2026 the Mac and this crate ran 0.4.0 and 0.2.0.
-        // The fork's release tag is `v<version>-<commit>`, so the Mac's
-        // framework names the commit both targets here must build.
-        let package = include_str!("../../../Packages/LocalASR/Package.swift");
-        let tag = package
-            .split("transcribe.cpp/releases/download/v")
-            .nth(1)
-            .and_then(|rest| rest.split('/').next())
-            .expect("Package.swift pins CTranscribe by its release URL");
-        let (version, commit) = tag.split_once('-').expect("the tag is <version>-<commit>");
-        assert_eq!(version, transcribe_cpp::version());
-        let manifest = include_str!("../Cargo.toml");
-        assert_eq!(manifest.matches(&format!("rev = \"{commit}")).count(), 2);
-    }
-
-    #[test]
-    fn each_platform_asks_for_what_its_build_can_actually_provide() {
-        if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-            assert_eq!(preferred_backend(), Backend::Metal);
-        } else {
-            // Asking for an accelerator this build has no support for would
-            // fail every load instead of running slowly.
-            assert_eq!(preferred_backend(), Backend::Cpu);
-        }
     }
 }

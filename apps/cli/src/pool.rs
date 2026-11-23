@@ -8,8 +8,7 @@
 //!
 //! Crash-only: if an engine thread panics, the process aborts and systemd
 //! starts a fresh one, rather than carrying on with an engine in an unknown
-//! state. Stopping joins every engine thread, and each drops its model first,
-//! because ggml aborts if a model is still alive at exit.
+//! state. Stopping joins every engine thread, and each drops its model first.
 
 use std::fs::File;
 use std::ops::Range;
@@ -44,7 +43,7 @@ impl Recognize for Engine {
 pub fn load(model_directory: &std::path::Path, count: usize) -> Result<Vec<Engine>, String> {
     let loaded: Vec<Result<Engine, EngineError>> = std::thread::scope(|scope| {
         let loading: Vec<_> = (0..count)
-            .map(|_| scope.spawn(|| Engine::load(model_directory)))
+            .map(|_| scope.spawn(|| Engine::load_with_threads(model_directory, 1)))
             .collect();
         loading
             .into_iter()

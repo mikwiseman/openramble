@@ -103,8 +103,6 @@ fn spoken_words_come_back_as_text() {
         );
     }
 
-    // The model must be gone before this process exits, or ggml's static
-    // destructors abort with signal 6 and the test binary "fails" after passing.
     engine.shutdown();
 }
 

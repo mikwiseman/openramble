@@ -1,66 +1,34 @@
 //! What the recognizer is running on, in words a person can act on.
 //!
-//! A fallback to the CPU is the difference between a two-second transcription
-//! and a twenty-second one. Discovering that by feel, over weeks, is exactly the
+//! The engine picks its kernels for the processor it finds. On a processor
+//! without the instructions the fast ones need it still recognizes, several
+//! times more slowly. Discovering that by feel, over weeks, is exactly the
 //! experience this product exists to avoid — so when it happens it is stated.
 
-use transcribe_cpp::{Backend, Model};
-
-/// Which accelerators this build could use at all.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Compiled {
-    pub metal: bool,
-    pub vulkan: bool,
-}
-
-impl Compiled {
-    pub fn current() -> Self {
-        Compiled {
-            metal: cfg!(all(target_os = "macos", target_arch = "aarch64")),
-            // Not yet compiled in anywhere: the crate's Vulkan support needs the
-            // SDK at build time, which no stock build image has.
-            vulkan: false,
-        }
-    }
-}
-
-/// What was asked for, what was got, and why they differ.
+/// The processor kernels the engine chose, and how many threads it runs on.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BackendReport {
-    pub compiled: Compiled,
-    pub requested: Backend,
-    pub active: Backend,
-    /// The device the runtime actually chose, as it names it — "Metal",
-    /// "Vulkan0", "CPU".
-    pub device: String,
+    /// The engine's own name for its kernel set: "avx2", "avx512",
+    /// "avx512+avx2" or "neon" for the fast ones, "sse" or "generic" for a
+    /// processor that has none of them.
+    pub kernels: String,
+    pub threads: usize,
 }
 
 impl BackendReport {
-    pub(crate) fn new(requested: Backend, model: &Model, active: Backend) -> Self {
-        BackendReport {
-            compiled: Compiled::current(),
-            requested,
-            active,
-            device: model.backend(),
-        }
-    }
-
-    /// Did the recognizer end up somewhere other than where it was sent?
-    pub fn is_fallback(&self) -> bool {
-        self.requested != self.active
+    /// Is this processor one the fast kernels cannot run on?
+    pub fn is_slow_path(&self) -> bool {
+        matches!(self.kernels.as_str(), "sse" | "generic")
     }
 
     /// One line for the interface. `None` when everything is as intended —
     /// a message that appears when nothing is wrong stops being read.
     pub fn notice(&self) -> Option<String> {
-        if !self.is_fallback() {
-            return None;
-        }
-        Some(format!(
-            "Running on the processor rather than the graphics card ({}). \
-             Dictation still works, but it will be slower.",
-            self.device
-        ))
+        self.is_slow_path().then(|| {
+            "This processor is older than the ones the recognizer is tuned for. \
+             Dictation still works, but it will be slower."
+                .to_string()
+        })
     }
 }
 
@@ -68,43 +36,30 @@ impl BackendReport {
 mod tests {
     use super::*;
 
-    fn report(requested: Backend, active: Backend) -> BackendReport {
+    fn report(kernels: &str) -> BackendReport {
         BackendReport {
-            compiled: Compiled::current(),
-            requested,
-            active,
-            device: "CPU".into(),
+            kernels: kernels.into(),
+            threads: 4,
         }
     }
 
     #[test]
     fn the_expected_case_says_nothing() {
         // A notice shown when nothing is wrong is a notice nobody reads.
-        let fine = report(Backend::Metal, Backend::Metal);
-        assert!(!fine.is_fallback());
-        assert!(fine.notice().is_none());
+        for kernels in ["avx2", "avx512", "avx512+avx2", "neon"] {
+            assert!(report(kernels).notice().is_none(), "{kernels}");
+        }
     }
 
     #[test]
-    fn a_demotion_to_the_processor_is_stated_plainly() {
-        let fell_back = report(Backend::Vulkan, Backend::Cpu);
-        assert!(fell_back.is_fallback());
-        let notice = fell_back.notice().expect("a fallback must be announced");
-        assert!(notice.contains("slower"), "{notice}");
-        // Plain language: no backend jargon in the sentence a person reads.
-        assert!(!notice.contains("Vulkan"), "{notice}");
-    }
-
-    #[test]
-    fn the_report_states_what_this_build_actually_contains() {
-        // Not what we wish it contained: a report that overstates the build is
-        // worse than no report, because it sends someone looking for a GPU
-        // problem that cannot exist.
-        let compiled = Compiled::current();
-        assert_eq!(
-            compiled.metal,
-            cfg!(all(target_os = "macos", target_arch = "aarch64"))
-        );
-        assert!(!compiled.vulkan);
+    fn a_processor_without_the_fast_kernels_is_stated_plainly() {
+        for kernels in ["sse", "generic"] {
+            let notice = report(kernels)
+                .notice()
+                .expect("the slow path must be announced");
+            assert!(notice.contains("slower"), "{notice}");
+            // Plain language: no kernel names in the sentence a person reads.
+            assert!(!notice.contains(kernels), "{notice}");
+        }
     }
 }
