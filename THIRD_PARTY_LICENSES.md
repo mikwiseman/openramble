@@ -65,8 +65,8 @@ transcribe.cpp vendors three libraries, whose notices ship with it:
 - Silero VAD, MIT License — the runtime's voice-activity segmentation is
   translated from it.
 
-Windows, Linux and the Linux server recognize speech with OpenRamble's own
-engine in `engine/`. It follows transcribe.cpp and ggml closely in the places
+Intel Macs, Windows, Linux and the Linux server recognize speech with
+OpenRamble's own engine in `engine/`. It follows transcribe.cpp and ggml closely in the places
 `engine/NOTICE.md` lists, and that file carries both notices.
 
 The DMG includes the complete license texts as `transcribe-cpp-MIT.txt`,

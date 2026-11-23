@@ -109,13 +109,16 @@ final class LongInputRoutingTests: XCTestCase {
     /// Noise whose loudness changes every 20 ms, as syllables do. A constant
     /// signal is no speech to the file planner's gate.
     private static func speech(seconds: Int) -> [Float] {
-        (0..<seconds * 16_000).map { index in
+        (0..<seconds * 16_000).map { (index: Int) -> Float in
             var state = UInt32(truncatingIfNeeded: index / 320) &* 2_654_435_761 &+ 1
             state = state &* 1_664_525 &+ 1_013_904_223
             var noise = UInt32(truncatingIfNeeded: index) &* 747_796_405 &+ 2_891_336_453
             noise ^= noise >> 13
             noise = noise &* 1_274_126_177
-            return 0.1 * (0.4 + 1.2 * Float(state >> 8) / Float(1 << 24)) * (Float(noise >> 8) / Float(1 << 23) - 1)
+            // Named parts: Swift 6.1 cannot type-check the one-line form in time.
+            let loudness: Float = 0.4 + 1.2 * Float(state >> 8) / Float(1 << 24)
+            let sample: Float = Float(noise >> 8) / Float(1 << 23) - 1
+            return 0.1 * loudness * sample
         }
     }
 

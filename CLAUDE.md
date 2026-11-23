@@ -39,8 +39,8 @@ the public privacy description in `README.md` if this boundary ever changes.
 - `Packages/DictationCore` contains platform-independent dictation logic and
   protocols for system boundaries.
 - `Packages/LocalASR` depends on `DictationCore` and owns model installation and
-  recognition. Only `TranscribeCppAdapter.swift` may import the inference
-  runtime.
+  recognition. Only `TranscribeCppAdapter.swift` and `OreAdapter.swift` may
+  import a recognition engine.
 - `apps/macos` contains the thin SwiftUI/AppKit application layer.
 - The recorder (`MeetingCapture`, `MeetingStore`, the Recordings window) is
   macOS-only and deliberately absent from `core/`. It rests on Core Audio
@@ -75,11 +75,13 @@ No package depends on the application layer.
   module and the gate checks it by filename.
 - `scripts/build-ffi.sh` produces `Packages/RambleCoreFFI`, a Swift package whose
   implementation is Rust. Its output is generated, never committed.
-- Two recognizers, each where it is faster. The Mac runs the CTranscribe
-  framework LocalASR pins, our transcribe.cpp fork, on Metal. Windows, Linux
-  and the Linux server run our own engine in `engine/`: plain C with no
-  dependencies, compiled into `ramble-engine` by its `build.rs`. It chooses its
-  kernels for the processor it finds when a model is opened, so every file
+- Two recognizers, each where it is faster. Apple silicon runs the
+  CTranscribe framework LocalASR pins, our transcribe.cpp fork, on Metal.
+  Every processor path runs our own engine in `engine/`, plain C with no
+  dependencies: Intel Macs through `OreAdapter.swift`, and Windows, Linux and
+  the Linux server through `ramble-engine`, whose `build.rs` compiles it.
+  `LocalTranscriber.shippingEngine()` is the one place a Mac chooses. The engine
+  chooses its kernels for the processor it finds when a model is opened, so every file
   outside `engine/src/ore_kernels_*.c` is compiled for the first x86-64
   processors and `scripts/check-desktop-portability.sh` reads the build to
   prove it. The engine follows transcribe.cpp's arithmetic where it must give

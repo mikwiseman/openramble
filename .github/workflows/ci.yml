@@ -370,6 +370,14 @@ jobs:
             | tee "$RUNNER_TEMP/transcript.txt"
           grep -Fqi "$phrase" "$RUNNER_TEMP/transcript.txt"
 
+      # An Intel Mac recognizes with our own engine. Its tests put the same
+      # phrase through transcribe.cpp on this processor and compare the words.
+      - name: The engine gives the words transcribe.cpp gives
+        run: |
+          model=$(dirname "$(find "$WAI_MODELS_ROOT" -name '*.gguf' | head -1)")
+          OPENRAMBLE_TEST_MODEL_DIR="$model" OPENRAMBLE_TEST_AUDIO="$RUNNER_TEMP/probe.wav" \
+            swift test --package-path Packages/LocalASR --filter OreAdapterTests
+
   release-build:
     name: Release build
     runs-on: macos-26

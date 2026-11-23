@@ -78,9 +78,10 @@ class EndToEndScenario: XCTestCase {
     private(set) var probe: TranscriptionProbe!
     private(set) var workspace: URL!
 
+    // Neither override calls XCTestCase's own: those do nothing, and Swift
+    // 6.1, which the Intel Mac check compiles this file with, refuses to
+    // hand the test case from the main actor to them.
     override func setUp() async throws {
-        try await super.setUp()
-
         // The model comes first: without it, the test does not fail, but is skipped.
         transcriber = try await requireEndToEndTranscriber()
 
@@ -101,7 +102,6 @@ class EndToEndScenario: XCTestCase {
         if let workspace {
             try? FileManager.default.removeItem(at: workspace)
         }
-        try await super.tearDown()
     }
 
     // MARK: - Chain assembly
