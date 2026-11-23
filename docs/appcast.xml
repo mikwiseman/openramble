@@ -6,13 +6,13 @@
     <description>OpenRamble updates</description>
     <language>en</language>
     <item>
-      <title>0.42.1</title>
-      <pubDate>Sun, 22 Nov 2026 19:05:02 +0200</pubDate>
-      <sparkle:version>88</sparkle:version>
-      <sparkle:shortVersionString>0.42.1</sparkle:shortVersionString>
+      <title>0.43.0</title>
+      <pubDate>Mon, 23 Nov 2026 23:41:54 +0200</pubDate>
+      <sparkle:version>89</sparkle:version>
+      <sparkle:shortVersionString>0.43.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description>&lt;h2&gt;OpenRamble 0.42.1&lt;/h2&gt;&lt;h2&gt;A tidier setup&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;The speech model and the permissions are now one list with one layout, in the first-run setup and in Settings → Setup. Each row shows its state, what it is for, and the one button it needs.&lt;/li&gt;&lt;li&gt;A model download shows its progress bar under the row&amp;#x27;s own words.&lt;/li&gt;&lt;li&gt;The download sentence is shorter. It no longer names a mirror and a CDN, and the size is on the button.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;Easier to read&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;The smallest gray text is larger everywhere. Sentences are 12 points and times are 11, where some were 10.&lt;/li&gt;&lt;li&gt;In the Library, your dictations are listed in the same serif they have on the page beside the list. A recording&amp;#x27;s title and the empty Library&amp;#x27;s headline use it too.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;Small things&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;In the first-run try-out, the note fills the page, and &amp;quot;Skip the try-out&amp;quot; sits beside the key.&lt;/li&gt;&lt;li&gt;In Settings → About, &amp;quot;Check Now&amp;quot; sits beside the Updates heading.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Your voice and text still never leave your Mac.&lt;/p&gt;</description>
-      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.42.1/OpenRamble-0.42.1.dmg" length="15199283" type="application/octet-stream" sparkle:edSignature="PRbH3gktuVtDpaT/VtD883eX/RbuoCVjT5JiSKQS1nNkCzBAn7YXh8u0+YhosYRjJdFsGlhMzceR1MI+VekbBg==" />
+      <description>&lt;h2&gt;OpenRamble 0.43.0&lt;/h2&gt;&lt;h2&gt;Faster on Intel Macs&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;On a Mac with an Intel processor, OpenRamble now recognizes speech with its own engine, written in C for the Parakeet model. On the same processor it is about two to three times as fast as before, and it makes as few word errors.&lt;/li&gt;&lt;li&gt;Taught words, word times in transcribed files and everything else work as they did.&lt;/li&gt;&lt;li&gt;Macs with Apple silicon are unchanged: they still recognize on the graphics processor.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Your voice and text still never leave your Mac.&lt;/p&gt;</description>
+      <enclosure url="https://github.com/mikwiseman/openramble/releases/download/v0.43.0/OpenRamble-0.43.0.dmg" length="15585471" type="application/octet-stream" sparkle:edSignature="OkZIHr5lyWl7JZL9mccGfyyekvKSm9yziFHUriIiZrG8Lxsso2ovlM5XMhncvkj9GDYFL2m7kqUuc746ng76Ag==" />
     </item>
   </channel>
 </rss>
