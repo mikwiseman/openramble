@@ -21,25 +21,34 @@ struct RootView: View {
 /// The first screen: what OpenRamble is, and the one download it needs.
 struct SetupView: View {
     @Environment(ModelSetup.self) private var setup
+    /// 44 points at the default text size, and larger with it.
+    @ScaledMetric(relativeTo: .largeTitle) private var headline: CGFloat = 44
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 40)
-            Text("Your words,\nwritten here.")
-                .font(.system(size: 44, weight: .regular, design: .serif))
-                .lineSpacing(2)
-                .accessibilityAddTraits(.isHeader)
-            Text("OpenRamble turns speech into text on this iPhone. Nothing you say is sent anywhere.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .padding(.top, 20)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 40)
-            model
+        // Pinned to the screen when it fits; scrolls at the largest text sizes.
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    Spacer(minLength: 40)
+                    Text("Your words,\nwritten here.")
+                        .font(.system(size: headline, weight: .regular, design: .serif))
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    Text("OpenRamble turns speech into text on this iPhone. Nothing you say is sent anywhere.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 20)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 40)
+                    model
+                }
+                .padding(.horizontal, Theme.margin)
+                .padding(.bottom, 24)
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .leading)
+            }
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .padding(.horizontal, Theme.margin)
-        .padding(.bottom, 24)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.systemBackground))
     }
 
@@ -56,16 +65,16 @@ struct SetupView: View {
             case let .downloading(received, total):
                 about
                 progress(Double(received) / Double(max(total, 1)))
-                HStack {
-                    Text(received == 0
-                         ? "Starting…"
-                         : "\(received.formatted(.byteCount(style: .file))) of \(total.formatted(.byteCount(style: .file)))")
-                        .font(Theme.caption)
-                        .foregroundStyle(.secondary)
-                        .contentTransition(.numericText())
-                    Spacer()
-                    Button("Cancel") { setup.cancel() }
-                        .font(.footnote)
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        progressLabel(received, of: total)
+                        Spacer()
+                        cancel
+                    }
+                    VStack(alignment: .leading, spacing: 10) {
+                        progressLabel(received, of: total)
+                        cancel
+                    }
                 }
                 Text("You can leave the app. The download carries on.")
                     .font(.footnote)
@@ -89,6 +98,20 @@ struct SetupView: View {
         .animation(.smooth, value: setup.phase)
     }
 
+    private func progressLabel(_ received: Int64, of total: Int64) -> some View {
+        Text(received == 0
+             ? "Starting…"
+             : "\(received.formatted(.byteCount(style: .file))) of \(total.formatted(.byteCount(style: .file)))")
+            .font(Theme.caption)
+            .foregroundStyle(.secondary)
+            .contentTransition(.numericText())
+    }
+
+    private var cancel: some View {
+        Button("Cancel") { setup.cancel() }
+            .font(.footnote)
+    }
+
     /// The one action, across the column, where the thumb is.
     private func wide(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -103,6 +126,7 @@ struct SetupView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("First, the voice model")
                 .font(.headline.weight(.regular))
+                .fixedSize(horizontal: false, vertical: true)
             Text("Parakeet Ultra, \(setup.byteCount.formatted(.byteCount(style: .file))). Downloaded once; after that OpenRamble works offline.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
