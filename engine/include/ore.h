@@ -102,6 +102,11 @@ void ore_last_timings(const ore_session * session, ore_timings * out);
 // The instruction set the session computes with ("neon", "avx2", "generic")
 // and its thread count, for logs and reports.
 const char * ore_session_kernels(const ore_session * session);
+
+// The kernel set a session opened on this processor will use, known without
+// opening a model: "avx512", "avx512+avx2", "avx2" or "neon" for the fast
+// ones, "sse" or "generic" for a processor that has none of them.
+const char * ore_processor_kernels(void);
 int          ore_session_threads(const ore_session * session);
 
 #ifdef __cplusplus

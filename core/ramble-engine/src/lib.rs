@@ -27,7 +27,7 @@ use std::sync::Mutex;
 #[allow(unsafe_code)]
 mod ore;
 mod report;
-pub use report::BackendReport;
+pub use report::{processor_notice, BackendReport};
 
 #[derive(Debug)]
 pub enum EngineError {

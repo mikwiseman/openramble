@@ -40,6 +40,7 @@ extern "C" {
     fn ore_word_count(session: *const RawSession) -> c_int;
     fn ore_word_at(session: *const RawSession, index: c_int, out: *mut RawWord) -> c_int;
     fn ore_session_kernels(session: *const RawSession) -> *const c_char;
+    fn ore_processor_kernels() -> *const c_char;
     fn ore_session_threads(session: *const RawSession) -> c_int;
 }
 
@@ -68,6 +69,13 @@ pub(crate) enum Failure {
 pub(crate) fn version() -> String {
     // SAFETY: the engine returns a static NUL-terminated string.
     unsafe { owned(ore_version()) }
+}
+
+/// The kernel set a session on this processor will use, known without a
+/// model.
+pub(crate) fn processor_kernels() -> String {
+    // SAFETY: the engine returns a static NUL-terminated string.
+    unsafe { owned(ore_processor_kernels()) }
 }
 
 /// One opened model and the one session that runs on it.

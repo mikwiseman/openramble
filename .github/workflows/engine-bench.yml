@@ -196,7 +196,6 @@ jobs:
           cargo build --release --locked -p ramble-engine --example recognize
           target/release/examples/recognize model-dir \
             tcpp/samples/fleurs-en.wav tcpp/samples/fleurs-ru.wav tcpp/samples/fleurs-de.wav | tr -d '\r' > crate.tsv
-          rm -rf model-dir
           head -3 ore.tsv | tr -d '\r' | cut -f2 > tool-text.txt
           {
             echo "### The crate the app links"
@@ -218,6 +217,41 @@ jobs:
             scripts/check-desktop-portability.sh
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # What a person with an older computer gets. The same program runs on
+      # three emulated processors that have no AVX2: the first x86-64 one
+      # (2003, SSE2 only), a Core of 2008 (SSE4.2) and a Core of 2012 (AVX
+      # without AVX2). It must recognize the same words on each, on the
+      # engine's slower kernels, and say that it will be slower.
+      - name: Processors without AVX2, emulated
+        if: runner.os == 'Linux' && runner.arch == 'X64'
+        run: |
+          sudo apt-get update > /dev/null
+          sudo apt-get install -y qemu-user > /dev/null
+          clip=tcpp/samples/ru.wav
+          target/release/examples/recognize --once model-dir "$clip" > native.tsv 2> native.err
+          {
+            echo "### Processors without AVX2, emulated ($(qemu-x86_64 --version | head -1))"
+            echo '```'
+            echo "this machine: $(head -1 native.err); $(cut -f2 native.tsv) ms; $(cut -f3 native.tsv)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          status=0
+          for cpu in Opteron_G1:generic Nehalem:sse IvyBridge:sse; do
+            model=${cpu%%:*} kernels=${cpu##*:}
+            if timeout 1500 qemu-x86_64 -cpu "$model" target/release/examples/recognize --once model-dir "$clip" \
+                > "emu-$model.tsv" 2> "emu-$model.err"; then
+              line="$model: $(head -1 "emu-$model.err"); $(cut -f2 "emu-$model.tsv") ms emulated; $(cut -f3 "emu-$model.tsv")"
+              grep -q "$kernels kernels" "emu-$model.err" || { line="$line; WRONG KERNELS"; status=1; }
+              grep -q "it will be slower" "emu-$model.err" || { line="$line; NO NOTICE"; status=1; }
+              cmp -s <(cut -f3 native.tsv) <(cut -f3 "emu-$model.tsv") || { line="$line; DIFFERENT WORDS"; status=1; }
+            else
+              line="$model: FAILED ($(tail -1 "emu-$model.err"))"
+              status=1
+            fi
+            echo "$line" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+          echo '```' | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "$status"
 
       # Longer than the model's 30 s limit: both runtimes cut it at pauses.
       - name: A long clip

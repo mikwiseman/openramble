@@ -349,4 +349,5 @@ void ore_last_timings(const ore_session * s, ore_timings * out) {
 }
 
 const char * ore_session_kernels(const ore_session * s) { return s ? s->k->name : ""; }
+const char * ore_processor_kernels(void) { return ore_kernels_pick()->name; }
 int          ore_session_threads(const ore_session * s) { return s ? s->n_threads : 0; }

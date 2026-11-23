@@ -18,18 +18,35 @@ pub struct BackendReport {
 impl BackendReport {
     /// Is this processor one the fast kernels cannot run on?
     pub fn is_slow_path(&self) -> bool {
-        matches!(self.kernels.as_str(), "sse" | "generic")
+        is_slow_path(&self.kernels)
     }
 
     /// One line for the interface. `None` when everything is as intended —
     /// a message that appears when nothing is wrong stops being read.
     pub fn notice(&self) -> Option<String> {
-        self.is_slow_path().then(|| {
-            "This processor is older than the ones the recognizer is tuned for. \
-             Dictation still works, but it will be slower."
-                .to_string()
-        })
+        notice_for(&self.kernels)
     }
+}
+
+/// The same line, known before any model is loaded: the settings window can
+/// say it on a computer that has not downloaded the model yet.
+///
+/// There is no processor the engine refuses. The first x86-64 processors run
+/// its plain kernels, so the only thing to say is that it will be slower.
+pub fn processor_notice() -> Option<String> {
+    notice_for(&crate::ore::processor_kernels())
+}
+
+fn is_slow_path(kernels: &str) -> bool {
+    matches!(kernels, "sse" | "generic")
+}
+
+fn notice_for(kernels: &str) -> Option<String> {
+    is_slow_path(kernels).then(|| {
+        "This processor is older than the ones the recognizer is tuned for. \
+         Dictation still works, but it will be slower."
+            .to_string()
+    })
 }
 
 #[cfg(test)]
@@ -49,6 +66,14 @@ mod tests {
         for kernels in ["avx2", "avx512", "avx512+avx2", "neon"] {
             assert!(report(kernels).notice().is_none(), "{kernels}");
         }
+    }
+
+    #[test]
+    fn the_processor_alone_gives_the_notice_a_loaded_engine_would() {
+        assert_eq!(
+            processor_notice(),
+            report(&crate::ore::processor_kernels()).notice()
+        );
     }
 
     #[test]

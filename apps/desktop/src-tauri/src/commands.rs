@@ -64,28 +64,30 @@ pub fn model_report(dictation: State<'_, Arc<Dictation>>) -> ModelReport {
     }
 }
 
-/// What this desktop session will not let the app do.
+/// What this desktop session will not let the app do, and what this
+/// computer does more slowly.
 ///
 /// Empty on a session that can do everything. Shown in the settings window,
 /// because a dictation tool that quietly does less than it claims is worse than
 /// one that says so — the person cannot otherwise tell "this desktop forbids
 /// it" from "I am holding the key wrong".
+///
+/// A processor too old for the recognizer's fast kernels is not refused: it
+/// recognizes, more slowly, and that sentence is listed here.
 #[tauri::command]
 pub fn session_notices() -> Vec<String> {
+    // Windows and macOS place no restrictions comparable to a Linux
+    // session's on a tool that has been granted its permissions.
     #[cfg(target_os = "linux")]
-    {
-        crate::adapters::linux_session::detect()
-            .notices()
-            .into_iter()
-            .map(str::to_string)
-            .collect()
-    }
+    let mut notices: Vec<String> = crate::adapters::linux_session::detect()
+        .notices()
+        .into_iter()
+        .map(str::to_string)
+        .collect();
     #[cfg(not(target_os = "linux"))]
-    {
-        // Windows and macOS place no comparable restrictions on a tool that has
-        // been granted its permissions.
-        Vec::new()
-    }
+    let mut notices = Vec::new();
+    notices.extend(ramble_engine::processor_notice());
+    notices
 }
 
 /// A finished dictation, as the window shows it.
