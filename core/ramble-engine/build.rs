@@ -8,7 +8,7 @@
 
 use std::path::Path;
 
-const SOURCES: [&str; 12] = [
+const SOURCES: [&str; 14] = [
     "ore.c",
     "ore_cpu.c",
     "ore_decoder.c",
@@ -81,5 +81,19 @@ fn main() {
     } else {
         build.file(engine.join("src").join(AVX2_SOURCE));
     }
+    let compiler = build.get_compiler();
     build.compile("ore");
+
+    // The matrix-unit kernels on Apple silicon call two routines of the
+    // compiler's own runtime (`__arm_tpidr2_save` and `__arm_tpidr2_restore`).
+    // Clang links that library itself; a Rust link does not, so it is named.
+    if target_os == "macos" && target_arch == "aarch64" {
+        let out = std::process::Command::new(compiler.path())
+            .arg("--print-resource-dir")
+            .output()
+            .expect("the C compiler names its resource folder");
+        let dir = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        println!("cargo:rustc-link-search=native={dir}/lib/darwin");
+        println!("cargo:rustc-link-lib=static=clang_rt.osx");
+    }
 }
