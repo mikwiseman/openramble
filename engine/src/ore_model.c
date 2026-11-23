@@ -147,10 +147,50 @@ void ore_model_close_internal(struct ore_model * m) {
     free(m->vocab.score);
     free(m->vocab.type);
     free(m->vocab.sorted);
+    for (int i = 0; i < m->n_r8; ++i) ore_r8_free(&m->r8[i]);
+    free(m->r8);
     ore_mel_free(&m->mel);
     ore_gguf_close(m->g);
     free(m);
 }
+
+#if ORE_HAVE_SME
+#include <pthread.h>
+
+int ore_model_prepare_r8(struct ore_model * m) {
+    static pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_lock(&mu);
+    if (m->r8_state == 0) {
+        const int n_max = m->n_layers * 11;
+        m->r8           = (ore_r8 *) calloc((size_t) n_max, sizeof(ore_r8));
+        m->r8_state     = m->r8 ? 1 : -1;
+        for (int i = 0; i < m->n_layers && m->r8_state == 1; ++i) {
+            ore_block *  b    = &m->blocks[i];
+            ore_tensor * ts[] = { &b->ff1_l1, &b->ff1_l2, &b->att_q, &b->att_k, &b->att_v, &b->att_out,
+                                  &b->att_pos, &b->pw1, &b->pw2, &b->ff2_l1, &b->ff2_l2 };
+            for (size_t j = 0; j < sizeof(ts) / sizeof(ts[0]); ++j) {
+                ore_tensor * t     = ts[j];
+                const int    n_in  = (int) (t->n_dims == 3 ? t->dims[1] : t->dims[0]);
+                const int    n_out = (int) (t->n_dims == 3 ? t->dims[2] : t->dims[1]);
+                if ((t->type != ORE_T_Q4_K && t->type != ORE_T_F16) || n_in % ORE_Q4K_BLOCK || n_out % 16) continue;
+                if (!ore_r8_make(&m->r8[m->n_r8], t->data, (int) t->type, n_in, n_out)) {
+                    m->r8_state = -1;
+                    break;
+                }
+                t->r8 = &m->r8[m->n_r8++];
+            }
+        }
+    }
+    const int ok = m->r8_state == 1;
+    pthread_mutex_unlock(&mu);
+    return ok;
+}
+#else
+int ore_model_prepare_r8(struct ore_model * m) {
+    (void) m;
+    return 0;
+}
+#endif
 
 // [taps][channels] from ggml's depthwise layout, where each channel's taps are
 // contiguous.

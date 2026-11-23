@@ -29,6 +29,12 @@ double ore_now_ms(void) {
 
 #define LN_EPS 1e-5f
 
+// Threads that use the matrix unit at once. On the M4 Pro one is fastest
+// (ledger K9): the cores share the unit, and a second thread only queues.
+#ifndef ORE_R8_UNITS
+#define ORE_R8_UNITS 1
+#endif
+
 static float * need(struct ore_session * s, ore_buf * b, size_t n) {
     float * p = ore_buf_need(b, n);
     if (!p) s->oom = 1;
@@ -46,7 +52,7 @@ static void lin_in_set(ore_lin_in * in, const float * x, size_t stride, int rows
     in->stride   = stride;
     in->rows     = rows;
     in->n        = n;
-    in->have_q8k = in->have_q80 = in->have_xp = 0;
+    in->have_q8k = in->have_q80 = in->have_xp = in->have_row = 0;
 }
 
 typedef struct {
@@ -83,6 +89,19 @@ static void job_gemm_q80(void * v, int b, int e, int thread) {
     (void) thread;
     c->s->k->gemm_q80(c->w->data, c->n_in, b, e, &c->in->q80, c->y, c->ystride);
 }
+#ifndef ORE_R8_ROWSCALE
+#define ORE_R8_ROWSCALE 0
+#endif
+static void job_quant_row(void * v, int b, int e, int thread) {
+    lin_ctx * c = (lin_ctx *) v;
+    (void) thread;
+    ore_quantize_rows(c->in->x, c->in->stride, b, e, &c->in->row);
+}
+static void job_gemm_r8(void * v, int b, int e, int thread) {
+    lin_ctx * c = (lin_ctx *) v;
+    (void) thread;
+    c->s->k->gemm_r8(c->w->r8, b, e, ORE_R8_ROWSCALE ? &c->in->row : &c->in->q8k, c->y, c->ystride);
+}
 static void job_gemm_f32(void * v, int b, int e, int thread) {
     lin_ctx * c = (lin_ctx *) v;
     c->s->k->gemm_f32(c->w->data, c->w->type == ORE_T_F16, (size_t) c->n_in, c->n_in, b, e, c->in->xp.p, c->in->rows,
@@ -98,7 +117,33 @@ static void linear(struct ore_session * s, const ore_tensor * w, ore_lin_in * in
     const int ntb   = ore_frame_blocks(in->rows);
     lin_ctx   c     = { s, w, in, y, ystride, n_in };
     if (s->oom || in->rows <= 0) return;
-    if (w->type == ORE_T_Q4_K) {
+    if (w->r8 && s->k->gemm_r8 && ORE_R8_ROWSCALE) {
+        if (!in->have_row) {
+            if (!ore_qact_reserve(&in->row, in->rows, in->n, in->n)) {
+                s->oom = 1;
+                return;
+            }
+            ore_parallel_for(s->pool, ntb, 1, job_quant_row, &c);
+            in->have_row = 1;
+        }
+        const int units = s->n_threads < ORE_R8_UNITS ? s->n_threads : ORE_R8_UNITS;
+        const int grain = ((n_out / units + 15) / 16) * 16;
+        ore_parallel_for(s->pool, n_out, grain, job_gemm_r8, &c);
+    } else if (w->r8 && s->k->gemm_r8) {
+        if (!in->have_q8k) {
+            if (!ore_qact_reserve(&in->q8k, in->rows, in->n, ORE_Q4K_BLOCK)) {
+                s->oom = 1;
+                return;
+            }
+            ore_parallel_for(s->pool, ntb, 1, job_quant_q8k, &c);
+            in->have_q8k = 1;
+        }
+        // The matrix unit is shared by the cores of a cluster, so more threads
+        // than units only queue for it.
+        const int units = s->n_threads < ORE_R8_UNITS ? s->n_threads : ORE_R8_UNITS;
+        const int grain = ((n_out / units + 15) / 16) * 16;
+        ore_parallel_for(s->pool, n_out, grain, job_gemm_r8, &c);
+    } else if (w->type == ORE_T_Q4_K) {
         if (!in->have_q8k) {
             if (!ore_qact_reserve(&in->q8k, in->rows, in->n, ORE_Q4K_BLOCK)) {
                 s->oom = 1;

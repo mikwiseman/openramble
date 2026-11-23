@@ -376,17 +376,72 @@ static void test_mel(void) {
     ore_mel_free(&m);
 }
 
+// The matrix unit's product against the same arithmetic written plainly: the
+// integer sum of each 256 columns, scaled per frame and added with fused
+// multiply-add in order, then scaled per row. Bit for bit.
+static void test_r8(const ore_kernels * k) {
+    enum { NIN = 768, NOUT = 48 };
+    const int frames[] = { 1, 5, 16, 17, 37, 70 };
+    uint8_t * q4 = (uint8_t *) ore_alloc((size_t) NOUT * (NIN / 256) * ORE_Q4K_BYTES);
+    for (int b = 0; b < NOUT * (NIN / 256); ++b) {
+        uint8_t *      blk = q4 + (size_t) b * ORE_Q4K_BYTES;
+        const uint16_t d   = ore_f32_to_f16(0.001f + (float) (rnd_u32() & 255) * 1e-5f);
+        const uint16_t m   = ore_f32_to_f16(0.002f + (float) (rnd_u32() & 255) * 1e-5f);
+        memcpy(blk, &d, 2);
+        memcpy(blk + 2, &m, 2);
+        for (int i = 4; i < ORE_Q4K_BYTES; ++i) blk[i] = (uint8_t) rnd_u32();
+    }
+    ore_r8 w;
+    CHECK(ore_r8_make(&w, q4, ORE_T_Q4_K, NIN, NOUT), "r8: out of memory");
+    for (size_t fi = 0; fi < sizeof(frames) / sizeof(frames[0]); ++fi) {
+        const int T  = frames[fi];
+        float *   x  = (float *) ore_alloc(sizeof(float) * (size_t) T * NIN);
+        float *   yr = (float *) ore_alloc(sizeof(float) * (size_t) T * NOUT);
+        float *   yk = (float *) ore_alloc(sizeof(float) * (size_t) T * NOUT);
+        for (int i = 0; i < T * NIN; ++i) x[i] = rnd_f();
+        ore_qact a = { 0 };
+        CHECK(ore_qact_reserve(&a, T, NIN, 256), "out of memory");
+        k->quantize_q8k(x, NIN, 0, ore_frame_blocks(T), &a);
+        k->gemm_r8(&w, 0, 16, &a, yk, NOUT);  // rows split as the threads would
+        k->gemm_r8(&w, 16, NOUT, &a, yk, NOUT);
+        for (int t = 0; t < T; ++t) {
+            const int tb = t / 16, f = t % 16;
+            for (int r = 0; r < NOUT; ++r) {
+                float acc = 0.0f;
+                for (int b = 0; b < NIN / 256; ++b) {
+                    int32_t sum = 0;
+                    for (int kk = b * 256; kk < (b + 1) * 256; ++kk) {
+                        const int8_t wq = w.q[(size_t) (r / 16) * NIN * 16 + (size_t) (kk / 4) * 64 + (r % 16) * 4 + kk % 4];
+                        const int8_t xq = a.q[((size_t) tb * (NIN / 4) + kk / 4) * 64 + f * 4 + kk % 4];
+                        sum += wq * xq;
+                    }
+                    acc = fmaf((float) sum, a.d[((size_t) tb * a.nb + b) * 16 + f], acc);
+                }
+                yr[(size_t) t * NOUT + r] = acc * w.scale[r];
+            }
+        }
+        CHECK(memcmp(yr, yk, sizeof(float) * (size_t) T * NOUT) == 0, "%s: r8 product differs at %d frames", k->name, T);
+        ore_qact_free(&a);
+        ore_free(x);
+        ore_free(yr);
+        ore_free(yk);
+    }
+    ore_r8_free(&w);
+    ore_free(q4);
+}
+
 int main(int argc, char ** argv) {
     const char * scratch = argc > 1 ? argv[1] : "ore-selftest.gguf";
     test_half();
     test_exp();
-    const char * names[] = { "generic", "neon", "avx512", "avx512+avx2", "avx2", "sse" };
+    const char * names[] = { "generic", "neon", "sme", "avx512", "avx512+avx2", "avx2", "sse" };
     printf("kernel tables:");
     for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
         const ore_kernels * k = ore_kernels_named(names[i]);
         if (!k) continue;
         printf(" %s", k->name);
         test_kernels(k);
+        if (k->gemm_r8) test_r8(k);
     }
     printf("; chosen: %s\n", ore_kernels_pick()->name);
     test_threads();

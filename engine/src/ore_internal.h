@@ -70,6 +70,11 @@ struct ore_model {
     float   vad_threshold;
     double  vad_min_speech, vad_min_gap;          // seconds
     double  seg_max, seg_min, seg_min_pause, seg_scan_block;
+    // The matrix unit's copies of the encoder's Q4_K matrices, made the first
+    // time a session on a table that uses them opens (ore_model_prepare_r8).
+    ore_r8 * r8;
+    int      n_r8;
+    int      r8_state;  // 0 not made, 1 made, -1 out of memory
 };
 
 // A growable, 64-byte aligned buffer of floats.
@@ -93,9 +98,9 @@ typedef struct {
     const float * x;
     size_t        stride;
     int           rows, n;
-    ore_qact      q8k, q80;
+    ore_qact      q8k, q80, row;  // row: one scale per frame, for the matrix unit
     ore_buf       xp;
-    int           have_q8k, have_q80, have_xp;
+    int           have_q8k, have_q80, have_xp, have_row;
 } ore_lin_in;
 
 typedef struct {
@@ -164,6 +169,8 @@ int ore_piece_starts_word(const struct ore_model * m, int id);
 
 struct ore_model * ore_model_open_internal(const char * path, const char ** err);
 void               ore_model_close_internal(struct ore_model * m);
+// Makes the matrix unit's copies once. Returns 0 when out of memory.
+int ore_model_prepare_r8(struct ore_model * m);
 
 // Runs the mel front end and the encoder. On success *enc points at
 // [*T][d_model] floats owned by the session. Returns 0 on failure

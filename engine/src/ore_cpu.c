@@ -88,10 +88,23 @@ static int arm_has_dotprod(void) { return 0; }
 #endif
 #endif
 
+#if ORE_HAVE_SME
+#include <sys/sysctl.h>
+// A matrix unit: Apple's M4 and later.
+static int arm_has_sme(void) {
+    int    v = 0;
+    size_t n = sizeof(v);
+    return sysctlbyname("hw.optional.arm.FEAT_SME", &v, &n, NULL, 0) == 0 && v == 1;
+}
+#endif
+
 const ore_kernels * ore_kernels_named(const char * name) {
     if (strcmp(name, "generic") == 0) return &ore_kernels_generic;
 #if ORE_ARM64
     if (strcmp(name, "neon") == 0) return arm_has_dotprod() ? &ore_kernels_neon : NULL;
+#endif
+#if ORE_HAVE_SME
+    if (strcmp(name, "sme") == 0) return arm_has_sme() ? &ore_kernels_sme : NULL;
 #endif
 #if ORE_X86
     if (strcmp(name, "avx512") == 0) return x86_has_avx512_vnni() ? &ore_kernels_avx512 : NULL;

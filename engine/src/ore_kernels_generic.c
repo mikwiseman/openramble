@@ -339,5 +339,5 @@ static void gemv_f32_generic(const float * w, int rows, int cols, const float * 
 const ore_kernels ore_kernels_generic = {
     "generic",          quantize_q8k_generic, quantize_q80_generic, gemm_q4k_generic, gemm_q80_generic,
     gemm_f32_generic,   layer_norm_generic,   silu_generic,         glu_generic,      softmax_generic,
-    dwconv_bn_silu_generic, dwconv_bias_generic, gemv_f32_generic,
+    dwconv_bn_silu_generic, dwconv_bias_generic, gemv_f32_generic, NULL,
 };

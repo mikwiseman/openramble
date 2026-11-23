@@ -896,7 +896,15 @@ static void gemv_f32_neon(const float * w, int rows, int cols, const float * x, 
 const ore_kernels ore_kernels_neon = {
     "neon",        quantize_q8k_neon, quantize_q80_neon, gemm_q4k_neon, gemm_q80_neon, gemm_f32_neon,
     layer_norm_neon, silu_neon,       glu_neon,          softmax_neon,  dwconv_bn_silu_neon, dwconv_bias_neon,
-    gemv_f32_neon,
+    gemv_f32_neon, NULL,
 };
+
+#if ORE_HAVE_SME
+const ore_kernels ore_kernels_sme = {
+    "sme",         quantize_q8k_neon, quantize_q80_neon, gemm_q4k_neon, gemm_q80_neon, gemm_f32_neon,
+    layer_norm_neon, silu_neon,       glu_neon,          softmax_neon,  dwconv_bn_silu_neon, dwconv_bias_neon,
+    gemv_f32_neon, ore_gemm_r8_sme,
+};
+#endif
 
 #endif  // ORE_ARM64

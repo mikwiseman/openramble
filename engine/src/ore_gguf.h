@@ -10,6 +10,8 @@
 
 typedef struct ore_gguf ore_gguf;
 
+struct ore_r8;
+
 typedef struct {
     const char *    name;      // not NUL-terminated; see name_len
     size_t          name_len;
@@ -18,6 +20,9 @@ typedef struct {
     uint64_t        dims[4];   // GGUF order: dims[0] is the innermost axis
     const uint8_t * data;      // inside the mapping
     size_t          bytes;     // size of the tensor data
+    // The same weights for the matrix unit (ore_kernels.h), when a session on
+    // a table that uses it asked for them. NULL otherwise.
+    const struct ore_r8 * r8;
 } ore_tensor;
 
 // Opens and validates a file. Returns NULL on any failure; `err` (may be NULL)

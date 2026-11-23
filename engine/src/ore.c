@@ -181,6 +181,7 @@ ore_session * ore_session_open_kernels(const ore_model * model, int threads, con
     if (!model) return NULL;
     const ore_kernels * k = kernels ? ore_kernels_named(kernels) : ore_kernels_pick();
     if (!k) return NULL;
+    if (k->gemm_r8 && !ore_model_prepare_r8((struct ore_model *) model)) return NULL;
     ore_session * s = (ore_session *) calloc(1, sizeof(*s));
     if (!s) return NULL;
     s->m    = model;
@@ -208,9 +209,11 @@ void ore_session_close(ore_session * s) {
     for (size_t i = 0; i < sizeof(bufs) / sizeof(bufs[0]); ++i) ore_free(bufs[i]->p);
     ore_qact_free(&s->in_a.q8k);
     ore_qact_free(&s->in_a.q80);
+    ore_qact_free(&s->in_a.row);
     ore_free(s->in_a.xp.p);
     ore_qact_free(&s->in_pos.q8k);
     ore_qact_free(&s->in_pos.q80);
+    ore_qact_free(&s->in_pos.row);
     ore_free(s->in_pos.xp.p);
     for (int i = 0; i < ORE_MAX_THREADS; ++i) {
         ore_thread_scratch * t = &s->ts[i];

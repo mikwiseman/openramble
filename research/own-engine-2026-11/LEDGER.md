@@ -924,6 +924,61 @@ Next. The layout holds well enough to build the kernel: weights repacked at
 load into the matrix unit's tiles of 16 rows by 4 columns, and streaming mode
 around each product. M1 to M3 have no matrix unit and keep Metal.
 
+## K9. A kernel for the matrix unit
+
+Change (23 November, branch `claude/engine-notes-m4`). A table named `sme`,
+chosen only by name so far: the NEON table plus `gemm_r8`
+(`src/ore_kernels_sme.c`). When a session on it opens, `ore_model_prepare_r8`
+makes a copy of every encoder matrix stored as Q4_K or F16 (the two 1x1
+convolutions included) as 8-bit numbers with one scale per row, packed in
+the unit's tiles of 16 rows by 4 columns (`src/ore_r8.c`). The product runs
+in streaming mode: one SMOPA adds 16 rows by 16 frames over 4 columns, four
+tiles take 64 frames per weight load, and the tiles are read out frame by
+frame, scaled and summed in single precision after every scale-block of the
+activations. `tests/selftest.c` checks it bit for bit against the same
+arithmetic written plainly, on 1 to 70 frames and a split row range.
+
+Profile, one thread, 8 s clip, `sample` (self time):
+
+| | Q4_K products | Half-precision products | Everything |
+|---|---|---|---|
+| NEON | 61% | 27% | about 635 ms |
+| Matrix unit, Q4_K only | 4.3 times faster | now over half of the time | about 490 ms |
+
+So the half-precision 1x1 convolutions went onto the unit too, and with
+them the gain shows.
+
+Threads. The M4 Pro has ten performance cores in two clusters and four
+efficiency cores. More threads on the unit than it serves only queue, and a
+thread the system puts on an efficiency core holds every product up. With
+the workers at `QOS_CLASS_USER_INITIATED`, one thread on the unit was
+fastest: encoder 87 ms on eight threads against 95 ms for NEON. With the
+workers at `QOS_CLASS_USER_INTERACTIVE` two threads help.
+
+Activations. Read-outs after every 256 columns cost about as much as the
+products. One scale per frame for the whole row (`ore_quantize_rows`) needs
+one read-out per product. Timed on a loaded Mac (other chats were booting
+simulators, load 18 to 70), so only the order is worth anything: NEON 581
+ms, one scale per 256 columns 554 ms (one unit) and 324 ms (two units), one
+scale per frame 162 ms (one unit) and 92 ms (two units, interactive). The
+same comparison on a quiet Mac is still to be run.
+
+## E2. The matrix unit's words
+
+Method. All 1,422 FLEURS clips through the `sme` table with one unit and one
+activation scale per 256 columns, Q4_K and F16 matrices on the unit.
+
+| | English | Russian | Both |
+|---|---|---|---|
+| Engine, NEON, Q4_K_M (P1) | 723 | 749 | 1,472 |
+| Engine, matrix unit | 734 | 739 | 1,473 |
+| transcribe.cpp on Metal, what ships (P1) | 735 | 735 | 1,470 |
+
+Found. The matrix unit keeps the words: one error more than NEON, three
+more than Metal, in 29,586 words. English leans slightly worse (8 clips
+better, 18 worse) and Russian slightly better (25 better, 17 worse), as in
+E1, and the half-precision convolutions in 8 bits cost nothing visible.
+
 ## Not done
 
 - **Apple silicon.** The Mac app on Apple silicon still runs transcribe.cpp

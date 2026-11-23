@@ -675,7 +675,7 @@ static void gemv_f32_avx2(const float * w, int rows, int cols, const float * x, 
 const ore_kernels ore_kernels_avx2 = {
     "avx2",          quantize_q8k_avx2, quantize_q80_avx2, gemm_q4k_avx2, gemm_q80_avx2, gemm_f32_avx2,
     layer_norm_avx2, silu_avx2,         glu_avx2,          softmax_avx2,  dwconv_bn_silu_avx2, dwconv_bias_avx2,
-    gemv_f32_avx2,
+    gemv_f32_avx2, NULL,
 };
 
 // ---- AVX-512 with VNNI ------------------------------------------------------
@@ -963,7 +963,7 @@ static void gemm_f32_avx512(const void * w, int w_is_f16, size_t wstride, int n_
 const ore_kernels ore_kernels_avx512 = {
     "avx512",        quantize_q8k_avx2, quantize_q80_avx2, gemm_q4k_avx512, gemm_q80_avx512,     gemm_f32_avx512,
     layer_norm_avx2, silu_avx2,         glu_avx2,          softmax_avx2,    dwconv_bn_silu_avx2, dwconv_bias_avx2,
-    gemv_f32_avx2,
+    gemv_f32_avx2, NULL,
 };
 
 // The same table with the 256-bit float product, for processors that run a
@@ -973,7 +973,7 @@ const ore_kernels ore_kernels_avx512 = {
 const ore_kernels ore_kernels_avx512_f256 = {
     "avx512+avx2",   quantize_q8k_avx2, quantize_q80_avx2, gemm_q4k_avx512, gemm_q80_avx512,     gemm_f32_avx2,
     layer_norm_avx2, silu_avx2,         glu_avx2,          softmax_avx2,    dwconv_bn_silu_avx2, dwconv_bias_avx2,
-    gemv_f32_avx2,
+    gemv_f32_avx2, NULL,
 };
 
 #endif  // ORE_X86

@@ -150,7 +150,10 @@ static void * worker_main(void * arg) {
     int        seen = 0;
 #if defined(__APPLE__)
     // Recognition is something a person is waiting for.
-    pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0);
+#ifndef ORE_WORKER_QOS
+#define ORE_WORKER_QOS QOS_CLASS_USER_INITIATED
+#endif
+    pthread_set_qos_class_self_np(ORE_WORKER_QOS, 0);
 #endif
     for (;;) {
         // Spin briefly for the next job, then sleep.

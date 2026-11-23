@@ -857,7 +857,7 @@ static void gemv_f32_sse(const float * w, int rows, int cols, const float * x, f
 const ore_kernels ore_kernels_sse = {
     "sse",          quantize_q8k_sse, quantize_q80_sse, gemm_q4k_sse, gemm_q80_sse,       gemm_f32_sse,
     layer_norm_sse, silu_sse,         glu_sse,          softmax_sse,  dwconv_bn_silu_sse, dwconv_bias_sse,
-    gemv_f32_sse,
+    gemv_f32_sse, NULL,
 };
 
 #endif  // ORE_X86

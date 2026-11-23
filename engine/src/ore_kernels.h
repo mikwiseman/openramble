@@ -41,6 +41,26 @@ typedef struct {
     void *    mem;
 } ore_qact;
 
+// Weights for a matrix unit (Apple's M4 and later): 8-bit numbers with one
+// scale per row, stored in groups of 16 rows. Columns 4c to 4c + 3 of group g
+// are the 64 bytes at q + ((size_t) g * (n / 4) + c) * 64, row i of the group
+// at byte 4 * i. Made from a Q4_K tensor by ore_r8_make (ledger E1).
+typedef struct ore_r8 {
+    int8_t * q;
+    float *  scale;  // one per row: the row's largest magnitude over 127
+    int      n;      // columns, a multiple of 256
+    int      rows;   // a multiple of 16
+} ore_r8;
+
+// Activations with one scale per frame over all n columns, in the layout of
+// ore_qact with a single scale-block (reserve it with block = n).
+void ore_quantize_rows(const float * x, size_t xstride, int tb0, int tb1, ore_qact * out);
+
+// Fills `r` from a Q4_K or F16 tensor of `rows` rows of `n` columns. Returns
+// 0 when out of memory. ore_r8_free releases what it made.
+int  ore_r8_make(ore_r8 * r, const uint8_t * w, int type, int n, int rows);
+void ore_r8_free(ore_r8 * r);
+
 // Makes room for rows x n with scale-blocks of `block` columns (256 or 32).
 // Returns 0 when out of memory.
 int  ore_qact_reserve(ore_qact * a, int rows, int n, int block);
@@ -91,6 +111,13 @@ typedef struct ore_kernels {
     // y[r] = sum_k w[r * cols + k] * x[k] for one vector, fused, in the 16
     // lanes above.
     void (*gemv_f32)(const float * w, int rows, int cols, const float * x, float * y);
+
+    // For weights the matrix unit holds (ore_r8), rows [r0, r1) in multiples
+    // of 16, every frame: y[t * ystride + r] = scale[r] * (the sum over
+    // 256-column blocks b of x.d[t][b] * the integer sum over b of
+    // W[r][k] * x.q[t][k]), the block sums added in order of b with fused
+    // multiply-add. x comes from quantize_q8k. NULL in tables without one.
+    void (*gemm_r8)(const ore_r8 * w, int r0, int r1, const ore_qact * x, float * y, size_t ystride);
 } ore_kernels;
 
 // xp[(tb * n + k) * 16 + f] = x[(tb * 16 + f) * xstride + k], zero past `rows`.
@@ -106,6 +133,14 @@ const ore_kernels * ore_kernels_named(const char * name);
 extern const ore_kernels ore_kernels_generic;
 #if ORE_ARM64
 extern const ore_kernels ore_kernels_neon;
+#endif
+#if ORE_ARM64 && defined(__APPLE__)
+#define ORE_HAVE_SME 1
+// The NEON table with the matrix unit's product (ore_kernels_sme.c).
+extern const ore_kernels ore_kernels_sme;
+void ore_gemm_r8_sme(const ore_r8 * w, int r0, int r1, const ore_qact * x, float * y, size_t ystride);
+#else
+#define ORE_HAVE_SME 0
 #endif
 #if ORE_X86
 extern const ore_kernels ore_kernels_avx512;
