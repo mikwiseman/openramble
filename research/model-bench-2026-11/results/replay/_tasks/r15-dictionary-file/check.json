@@ -1,0 +1,91 @@
+{
+ "task": "r15-dictionary-file",
+ "checked_at": "2026-11-23 23:48",
+ "load": "8.5",
+ "leaked": [],
+ "parent": {
+  "task": "r15-dictionary-file",
+  "load": "8.5",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 17
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 0
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": false,
+   "code": 1,
+   "seconds": 2,
+   "failed": [],
+   "tries": 2
+  },
+  "suite": {
+   "ok": false,
+   "code": 1,
+   "seconds": 1,
+   "failed": [],
+   "tries": 2
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "fail",
+  "reason": "hidden tests"
+ },
+ "reference": {
+  "task": "r15-dictionary-file",
+  "load": "12.8",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 9
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 0
+  },
+  "own_tests": {
+   "files": 1,
+   "fail_on_base": true
+  },
+  "hidden": {
+   "ok": true,
+   "code": 0,
+   "seconds": 5,
+   "failed": [],
+   "tries": 1
+  },
+  "suite": {
+   "ok": true,
+   "code": 0,
+   "seconds": 41,
+   "failed": [],
+   "tries": 1
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "pass",
+  "reason": ""
+ },
+ "usable": true
+}

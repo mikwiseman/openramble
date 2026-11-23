@@ -1,15 +1,15 @@
 {
  "task": "r97-handsfree-stop",
- "load": "18.6",
+ "load": "13.8",
  "check": {
   "ok": true,
   "code": 0,
-  "seconds": 35
+  "seconds": 26
  },
  "network_gate": {
   "ok": true,
   "code": 0,
-  "seconds": 2
+  "seconds": 1
  },
  "own_tests": {
   "files": 0,
@@ -18,26 +18,22 @@
  "hidden": {
   "ok": false,
   "code": 1,
-  "seconds": 50
+  "seconds": 43,
+  "failed": [
+   "DictationCoreTests.DictationControllerTests testAHandsFreePressWhileALandedPasteFinishesListensUntilItsSecondPress"
+  ],
+  "tries": 2
  },
  "suite": {
   "ok": false,
   "code": 1,
-  "seconds": 85
+  "seconds": 90,
+  "failed": [
+   "DictationCoreTests.DictationControllerTests testAHandsFreePressWhileALandedPasteFinishesListensUntilItsSecondPress"
+  ],
+  "tries": 2
  },
- "suite_first_try": {
-  "ok": false,
-  "code": 1,
-  "seconds": 86
- },
- "size": {
-  "source": 9,
-  "tests": 0,
-  "fixtures": 0,
-  "other": 0,
-  "reference_source": 25,
-  "ratio": 0.36
- },
+ "not_built": [],
  "unasked_files": [],
  "weakened_tests": {
   "removed": 0,

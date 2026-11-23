@@ -1,0 +1,211 @@
+diff --git a/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift b/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift
+index 305beba..08889ba 100644
+--- a/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift
++++ b/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift
+@@ -102,9 +102,8 @@ public actor MeetingCapture {
+         }
+     }
+ 
+-    /// Anything above this counts as audio rather than line noise. Well
+-    /// below speech (0.02 is the segmenter's floor) so a quiet voice on the
+-    /// far side still proves the tap alive.
++    /// The health check also counts signals below the speech floors, such as
++    /// the system audio probe, so they can still prove the tap is alive.
+     public static let audibleThreshold: Float = 0.0005
+ 
+     public let directory: URL
+@@ -468,12 +467,14 @@ final class MeetingPipeline: @unchecked Sendable {
+         let error: MeetingWriter.Failure?
+     }
+ 
++    /// The digital tap has no room noise and can admit much quieter speech.
++    private static let systemSpeechPeak: Float = 0.002
++
+     private let queue = DispatchQueue(label: "is.waiwai.dictation.meeting-pipeline", qos: .userInitiated)
+     private let writer: MeetingWriter
+     private let activeChannels: Set<MeetingChannel>
+     private let onLevels: @Sendable (MeetingCapture.Levels) -> Void
+     private let onSegment: @Sendable (MeetingSegmentRef) -> Void
+-    private let segmentParameters: MeetingSegmentPolicy.Parameters
+     private let freeBytesQuery: @Sendable () -> Int64?
+     private let audioSink: (any MeetingAudioBlockSink)?
+     var onDiskOrWriteFailure: (@Sendable (Failure) -> Void)?
+@@ -512,14 +513,17 @@ final class MeetingPipeline: @unchecked Sendable {
+     ) {
+         self.writer = writer
+         self.activeChannels = activeChannels
+-        self.segmentParameters = segmentParameters
+         self.onLevels = onLevels
+         self.onSegment = onSegment
+         freeBytesQuery = freeBytes
+         self.audioSink = audioSink
+         aligner = DualChannelAligner(activeChannels: activeChannels)
+         for channel in activeChannels {
+-            policies[channel] = MeetingSegmentPolicy(channel: channel, parameters: segmentParameters)
++            var parameters = segmentParameters
++            if channel == .system {
++                parameters.speech.speechPeak = min(parameters.speech.speechPeak, Self.systemSpeechPeak)
++            }
++            policies[channel] = MeetingSegmentPolicy(channel: channel, parameters: parameters)
+         }
+     }
+ 
+diff --git a/Packages/DictationCore/Sources/DictationAudio/SystemAudioTapSource.swift b/Packages/DictationCore/Sources/DictationAudio/SystemAudioTapSource.swift
+index 1dd6afc..33487e0 100644
+--- a/Packages/DictationCore/Sources/DictationAudio/SystemAudioTapSource.swift
++++ b/Packages/DictationCore/Sources/DictationAudio/SystemAudioTapSource.swift
+@@ -297,15 +297,13 @@ public final class SystemAudioTapSource: MeetingAudioSource, @unchecked Sendable
+     }
+ }
+ 
+-/// A quarter second of a 50 Hz tone at −40 dB, played through the default
++/// A quarter second of a 50 Hz tone, played through the default
+ /// output when a recording of the other side begins.
+ ///
+-/// Laptop speakers reproduce nothing that low and nobody hears −40 dB, but
+-/// the tap sees the digital signal exactly. Measured: the built-in speakers'
+-/// processing removed a 10 Hz tone entirely before the tap point, while
+-/// 40 Hz arrived at its exact amplitude; and the tap sits before the volume
+-/// control — the same 0.0100 peak at volume 15 and volume 94 — so the tone
+-/// is seen at the same level whether the Mac is loud or nearly muted.
++/// Laptop speakers reproduce almost nothing at this frequency and level, but
++/// the tap sees the digital signal. A measured −40 dB tone at 40 Hz arrived at
++/// its exact amplitude, while a 10 Hz tone was removed before the tap point.
++/// The tap sits before the volume control, so the probe works at low volumes.
+ ///
+ /// That turns an unanswerable question — is the other side actually being
+ /// captured, or was the permission denied, or is the output a Bluetooth
+@@ -316,7 +314,8 @@ public final class SystemAudioTapSource: MeetingAudioSource, @unchecked Sendable
+ public enum SystemAudioProbe {
+     public static let seconds = 0.25
+     public static let hertz = 50.0
+-    public static let amplitude: Float = 0.01
++    /// Above the capture health floor and below the system speech floor.
++    public static let amplitude: Float = 0.0015
+ 
+     /// Plays and returns; the player is kept alive until it finishes.
+     public static func play() {
+diff --git a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+index 32d2482..70b8274 100644
+--- a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
++++ b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+@@ -99,11 +99,13 @@ public struct MeetingSegmentPolicy: Sendable {
+         if peak >= parameters.speech.speechPeak { heardSpeech = true }
+         remember(Frame(peak: peak, count: count))
+ 
+-        // Silence before the first word is not part of any segment. Let the
+-        // start slide forward so a quiet channel never accumulates.
+-        if !heardSpeech, !parameters.preserveQuietAudio, pendingFrames > frames(Self.leadingSilence) {
+-            segmentStart = end - frames(Self.leadingSilence)
++        // Keep only the final second of quiet before speech. The segmenter
++        // measures cuts from the same starting frame as the file.
++        let leadingFrames = frames(Self.leadingSilence)
++        if !heardSpeech, !parameters.preserveQuietAudio, pendingFrames > leadingFrames {
++            segmentStart = end - leadingFrames
+             segmenter.reset()
++            _ = segmenter.observe(peak: peak, count: leadingFrames)
+             return nil
+         }
+ 
+diff --git a/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift b/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
+index e84ed9a..8f1332b 100644
+--- a/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
++++ b/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
+@@ -460,6 +460,97 @@ extension MeetingCaptureTests {
+         _ = try await capture.stop()
+         XCTAssertEqual(segments.value.count, 1, "silence after the pause is not a segment")
+     }
++
++    func testPauseCutsKeepTheLastSpeechAfterLeadingSilence() async throws {
++        let microphone = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: nil,
++            onSegment: { segments.value.append($0) }
++        )
++        try await capture.start()
++        // Twenty millisecond blocks, including a distinct ending to each phrase.
++        for _ in 0..<2 {
++            for _ in 0..<150 { microphone.deliver(constant(0, 320)) }
++            for _ in 0..<490 { microphone.deliver(constant(0.5, 320)) }
++            for _ in 0..<10 { microphone.deliver(constant(0.25, 320)) }
++        }
++        for _ in 0..<150 { microphone.deliver(constant(0, 320)) }
++        _ = try await capture.stop()
++
++        let reader = MeetingPCMWindowReader(url: await capture.audioURL)
++        XCTAssertEqual(segments.value.map(\.startFrame), [32_000, 240_000])
++        XCTAssertEqual(segments.value.map(\.endFrame), [213_600, 421_600])
++        for segment in segments.value {
++            let samples = try reader.read(segment)
++            XCTAssertEqual(samples.filter { abs($0 - 0.25) < 0.001 }.count, 3_200)
++            XCTAssertTrue(samples.suffix(5_600).allSatisfy { $0 == 0 })
++        }
++    }
++
++    func testQuietSystemSpeechReachesTranscriptionOnItsOwnChannel() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        let quiet = (0..<320).map { Float(sin(2 * Double.pi * Double($0) / 40)) * 0.005 }
++        let leak = quiet.map { $0 * 0.5 }
++        for _ in 0..<150 {
++            microphone.deliver(leak)
++            system.deliver(quiet)
++        }
++        for _ in 0..<150 {
++            microphone.deliver(constant(0.5, 320))
++            system.deliver(constant(0, 320))
++        }
++        let summary = try await capture.stop()
++
++        let reader = MeetingPCMWindowReader(url: await capture.audioURL)
++        XCTAssertTrue(summary.systemAudio.everDeliveredAudio)
++        XCTAssertEqual(try reader.read(channel: .system, startFrame: 0, frameCount: 320)[10], 0.005, accuracy: 0.0001)
++        XCTAssertEqual(segments.value.filter { $0.channel == .microphone }.map(\.startFrame), [32_000])
++        let remote = try XCTUnwrap(segments.value.first { $0.channel == .system })
++        XCTAssertEqual(remote.startFrame, 0)
++        XCTAssertEqual(try reader.read(remote)[10], 0.005, accuracy: 0.0001)
++    }
++
++    func testTheSystemAudioProbeShowsTheTapIsAliveWithoutSubmittingSpeech() async throws {
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: nil,
++            systemAudio: system,
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        let probeURL = directory.appending(path: "probe.wav")
++        try SystemAudioProbe.wavData().write(to: probeURL)
++        let file = try AVAudioFile(forReading: probeURL)
++        let buffer = try XCTUnwrap(
++            AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length))
++        )
++        try file.read(into: buffer)
++        let target = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: Double(MeetingWriter.sampleRate), channels: 1))
++        let converter = try MicrophoneCapture.converter(from: buffer.format, to: target) {
++            AVAudioConverter(from: $0, to: $1)
++        }
++        system.deliver(try MicrophoneCapture.extractSamples(from: buffer, using: converter, target: target))
++        let summary = try await capture.stop()
++
++        XCTAssertTrue(summary.systemAudio.everDeliveredAudio)
++        XCTAssertTrue(segments.value.isEmpty)
++    }
+ }
+ 
+ extension MeetingCaptureTests {

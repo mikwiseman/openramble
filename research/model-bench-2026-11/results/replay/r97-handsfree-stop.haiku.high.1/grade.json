@@ -1,15 +1,15 @@
 {
  "task": "r97-handsfree-stop",
- "load": "4.6",
+ "load": "11.4",
  "check": {
   "ok": true,
   "code": 0,
-  "seconds": 25
+  "seconds": 56
  },
  "network_gate": {
   "ok": true,
   "code": 0,
-  "seconds": 1
+  "seconds": 2
  },
  "own_tests": {
   "files": 2,
@@ -18,7 +18,7 @@
  "hidden": {
   "ok": false,
   "code": 1,
-  "seconds": 39,
+  "seconds": 40,
   "failed": [
    "DictationCoreTests.DictationControllerTests testAPressWhileThePasteWaitsForItsReadEndsTheWaitOutLoud",
    "DictationCoreTests.DictationControllerTests testAShortcutPressedWhileALandedPasteFinishesStartsNothing"
@@ -28,21 +28,14 @@
  "suite": {
   "ok": false,
   "code": 1,
-  "seconds": 88,
+  "seconds": 89,
   "failed": [
    "DictationCoreTests.DictationControllerTests testAPressWhileThePasteWaitsForItsReadEndsTheWaitOutLoud",
    "DictationCoreTests.DictationControllerTests testAShortcutPressedWhileALandedPasteFinishesStartsNothing"
   ],
   "tries": 2
  },
- "size": {
-  "source": 80,
-  "tests": 72,
-  "fixtures": 0,
-  "other": 0,
-  "reference_source": 25,
-  "ratio": 3.2
- },
+ "not_built": [],
  "unasked_files": [],
  "weakened_tests": {
   "removed": 0,
@@ -57,6 +50,7 @@
   "says_checks_pass": true
  },
  "false_green": false,
+ "unseen_denied": false,
  "unproven_claim": false,
  "run": "r97-handsfree-stop.haiku.high.1"
 }

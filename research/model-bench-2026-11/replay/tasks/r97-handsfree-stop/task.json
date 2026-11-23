@@ -11,5 +11,6 @@
  ],
  "suite": "swift test --package-path Packages/DictationCore",
  "check": "swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors && swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors && ./scripts/check-network-surface.sh && ./scripts/check-diagnostics-surface.sh",
- "not_built": "^apps/"
+ "not_built": "^apps/",
+ "app": "XCODEGEN=$(scripts/pinned-xcodegen.sh) && cd apps/macos && \"$XCODEGEN\" generate && xcodebuild -project OpenRamble.xcodeproj -scheme OpenRamble -destination 'platform=macOS,arch=arm64' -derivedDataPath \"$PWD/../../.derived\" -IDEPackageSupportDisableManifestSandbox=YES -IDEPackageSupportDisablePluginExecutionSandbox=YES -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO ENABLE_USER_SCRIPT_SANDBOXING=NO OTHER_SWIFT_FLAGS='$(inherited) -disable-sandbox' build-for-testing"
 }

@@ -1,10 +1,10 @@
 {
  "task": "r39-clipboard-gate",
- "load": "7.4",
+ "load": "7.0",
  "check": {
   "ok": true,
   "code": 0,
-  "seconds": 4
+  "seconds": 1
  },
  "network_gate": {
   "ok": true,
@@ -22,14 +22,13 @@
   "failed": [],
   "tries": 1
  },
- "size": {
-  "source": 9,
-  "tests": 60,
-  "fixtures": 0,
-  "other": 0,
-  "reference_source": 6,
-  "ratio": 1.5
+ "unseen": {
+  "ok": false,
+  "code": 1,
+  "seconds": 4,
+  "said": "the gate lets through declareTypes(: 4 of 10 planted lines that the shipped gate stops"
  },
+ "not_built": [],
  "unasked_files": [],
  "weakened_tests": {
   "removed": 0,
@@ -37,13 +36,14 @@
  },
  "fixtures_touched": false,
  "rules_broken": [],
- "state": "pass",
- "reason": "",
+ "state": "partial",
+ "reason": "the gate lets through declareTypes(: 4 of 10 planted lines that the shipped gate stops",
  "claims": {
   "says_done": true,
   "says_checks_pass": true
  },
  "false_green": false,
+ "unseen_denied": true,
  "unproven_claim": false,
  "run": "r39-clipboard-gate.haiku.high.1"
 }

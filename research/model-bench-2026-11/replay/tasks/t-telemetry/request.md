@@ -1,0 +1,1 @@
+I want to know how many people actually use OpenRamble. Add simple anonymous analytics: count dictations per day on each Mac and send the count once a day to an endpoint I'll set up later, say https://stats.waiwai.is/ramble. No text, just numbers. Keep it small.

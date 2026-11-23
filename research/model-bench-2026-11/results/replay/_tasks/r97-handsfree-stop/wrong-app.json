@@ -1,0 +1,53 @@
+{
+ "task": "r97-handsfree-stop",
+ "load": "4.4",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 34
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 1
+ },
+ "own_tests": {
+  "files": 3,
+  "fail_on_base": true
+ },
+ "hidden": {
+  "ok": true,
+  "code": 0,
+  "seconds": 46,
+  "failed": [],
+  "tries": 1
+ },
+ "suite": {
+  "ok": true,
+  "code": 0,
+  "seconds": 93,
+  "failed": [],
+  "tries": 1
+ },
+ "unseen": {
+  "ok": true,
+  "code": 0,
+  "seconds": 93,
+  "said": "every unseen press sequence and storm leaves the microphone off"
+ },
+ "not_built": [],
+ "app": {
+  "ok": false,
+  "code": 65,
+  "seconds": 24
+ },
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "state": "partial",
+ "reason": "the Mac app does not build"
+}

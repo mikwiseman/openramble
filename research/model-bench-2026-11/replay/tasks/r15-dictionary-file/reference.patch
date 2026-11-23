@@ -1,0 +1,320 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/DictionaryTransfer.swift b/Packages/DictationCore/Sources/DictationCore/DictionaryTransfer.swift
+new file mode 100644
+index 00000000..98102d83
+--- /dev/null
++++ b/Packages/DictationCore/Sources/DictationCore/DictionaryTransfer.swift
+@@ -0,0 +1,148 @@
++import Foundation
++
++/// Moving the personal dictionary between Macs as a file.
++///
++/// The file is a versioned JSON envelope, deliberately independent of the
++/// on-disk store: no internal ids leak out, absent flags mean their defaults,
++/// and a hand-edited file with just `spoken`/`written` pairs imports cleanly.
++public enum DictionaryTransfer {
++    /// Format marker and version. The marker keeps a random JSON file from
++    /// silently importing as an empty dictionary; the version lets a future
++    /// format refuse politely instead of misreading.
++    public static let currentVersion = 1
++
++    public enum TransferError: Error, LocalizedError, Equatable {
++        case notADictionaryFile
++        case newerFormat(Int)
++        case damaged(String)
++
++        public var errorDescription: String? {
++            switch self {
++            case .notADictionaryFile:
++                return "This file is not an OpenRamble dictionary."
++            case let .newerFormat(version):
++                return "This dictionary file needs a newer version of OpenRamble (format \(version))."
++            case let .damaged(detail):
++                return "The dictionary file couldn't be read: \(detail)"
++            }
++        }
++    }
++
++    private struct Envelope: Codable {
++        var openRambleDictionary: Int
++        var replacements: [Entry]
++    }
++
++    /// A portable entry: flags appear only when they differ from defaults,
++    /// so exported files stay short and human-editable.
++    private struct Entry: Codable {
++        var spoken: String
++        var written: String
++        var inflects: Bool?
++        var noAcousticBoost: Bool?
++        var allowsPhoneticMatching: Bool?
++
++        init(_ replacement: DictionaryReplacement) {
++            spoken = replacement.spoken
++            written = replacement.written
++            inflects = replacement.inflects ? nil : false
++            noAcousticBoost = replacement.noAcousticBoost ? true : nil
++            allowsPhoneticMatching = replacement.allowsPhoneticMatching ? nil : false
++        }
++
++        var replacement: DictionaryReplacement? {
++            let spoken = spoken.trimmingCharacters(in: .whitespacesAndNewlines)
++            let written = written.trimmingCharacters(in: .whitespacesAndNewlines)
++            guard !spoken.isEmpty, !written.isEmpty else { return nil }
++            return DictionaryReplacement(
++                spoken: spoken,
++                written: written,
++                inflects: inflects ?? true,
++                noAcousticBoost: noAcousticBoost ?? false,
++                allowsPhoneticMatching: allowsPhoneticMatching ?? true
++            )
++        }
++    }
++
++    public static func export(_ replacements: [DictionaryReplacement]) throws -> Data {
++        let encoder = JSONEncoder()
++        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
++        return try encoder.encode(
++            Envelope(
++                openRambleDictionary: currentVersion,
++                replacements: replacements.map(Entry.init)
++            )
++        )
++    }
++
++    /// Parses a file into fresh replacements. Entries that are empty after
++    /// trimming are dropped silently — they carry no phrase to import.
++    public static func read(_ data: Data) throws -> [DictionaryReplacement] {
++        let envelope: Envelope
++        do {
++            envelope = try JSONDecoder().decode(Envelope.self, from: data)
++        } catch {
++            // Valid JSON without our marker is someone else's file, not damage.
++            if (try? JSONSerialization.jsonObject(with: data)) != nil {
++                throw TransferError.notADictionaryFile
++            }
++            throw TransferError.damaged(error.localizedDescription)
++        }
++        guard envelope.openRambleDictionary <= currentVersion else {
++            throw TransferError.newerFormat(envelope.openRambleDictionary)
++        }
++        return envelope.replacements.compactMap(\.replacement)
++    }
++
++    public struct MergeResult: Equatable {
++        public let replacements: [DictionaryReplacement]
++        public let added: Int
++        public let updated: Int
++    }
++
++    /// Imports never destroy: existing entries keep their place and identity,
++    /// an imported entry with the same spoken phrase (case-insensitively)
++    /// updates it, everything else is appended in file order. Entries that
++    /// change nothing are not counted — "0 new, 0 updated" means the file and
++    /// the dictionary already agree.
++    public static func merge(
++        existing: [DictionaryReplacement],
++        imported: [DictionaryReplacement]
++    ) -> MergeResult {
++        var result = existing
++        var indexBySpoken: [String: Int] = [:]
++        for (index, replacement) in existing.enumerated() {
++            indexBySpoken[key(replacement.spoken)] = index
++        }
++
++        var added = 0
++        var updated = 0
++        for incoming in imported {
++            if let index = indexBySpoken[key(incoming.spoken)] {
++                let current = result[index]
++                // The row keeps its identity: an update is an edit, not a
++                // delete-and-recreate that would reshuffle the list.
++                let replaced = DictionaryReplacement(
++                    id: current.id,
++                    spoken: incoming.spoken,
++                    written: incoming.written,
++                    inflects: incoming.inflects,
++                    noAcousticBoost: incoming.noAcousticBoost,
++                    allowsPhoneticMatching: incoming.allowsPhoneticMatching
++                )
++                guard replaced != current else { continue }
++                result[index] = replaced
++                updated += 1
++            } else {
++                result.append(incoming)
++                indexBySpoken[key(incoming.spoken)] = result.count - 1
++                added += 1
++            }
++        }
++        return MergeResult(replacements: result, added: added, updated: updated)
++    }
++
++    private static func key(_ spoken: String) -> String {
++        spoken.lowercased()
++    }
++}
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/DictionaryTransferTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/DictionaryTransferTests.swift
+new file mode 100644
+index 00000000..6812e399
+--- /dev/null
++++ b/Packages/DictationCore/Tests/DictationCoreTests/DictionaryTransferTests.swift
+@@ -0,0 +1,160 @@
++import XCTest
++@testable import DictationCore
++
++/// The dictionary travels between Macs as a file: exact round-trips, honest
++/// refusals for foreign files, and merges that never destroy.
++final class DictionaryTransferTests: XCTestCase {
++    private func replacement(
++        _ spoken: String,
++        _ written: String,
++        inflects: Bool = true,
++        noAcousticBoost: Bool = false,
++        allowsPhoneticMatching: Bool = true
++    ) -> DictionaryReplacement {
++        DictionaryReplacement(
++            spoken: spoken,
++            written: written,
++            inflects: inflects,
++            noAcousticBoost: noAcousticBoost,
++            allowsPhoneticMatching: allowsPhoneticMatching
++        )
++    }
++
++    private func contents(
++        _ replacements: [DictionaryReplacement]
++    ) -> [[String]] {
++        replacements.map {
++            [$0.spoken, $0.written, "\($0.inflects)", "\($0.noAcousticBoost)", "\($0.allowsPhoneticMatching)"]
++        }
++    }
++
++    // MARK: - Round-trip
++
++    func testExportedFileImportsBackExactly() throws {
++        let original = [
++            replacement("poust girls", "Postgres"),
++            replacement("центр", "Sentry", noAcousticBoost: true),
++            replacement("комет", "commit", inflects: false, allowsPhoneticMatching: false),
++        ]
++
++        let imported = try DictionaryTransfer.read(DictionaryTransfer.export(original))
++
++        XCTAssertEqual(contents(imported), contents(original))
++    }
++
++    /// The file carries no internal identifiers and no default-valued flags:
++    /// it stays short, diffable and hand-editable.
++    func testExportedFileIsPortable() throws {
++        let data = try DictionaryTransfer.export([replacement("a", "b")])
++        let object = try XCTUnwrap(
++            try JSONSerialization.jsonObject(with: data) as? [String: Any]
++        )
++
++        XCTAssertEqual(object["openRambleDictionary"] as? Int, 1)
++        let entries = try XCTUnwrap(object["replacements"] as? [[String: Any]])
++        XCTAssertEqual(entries.count, 1)
++        XCTAssertNil(entries[0]["id"], "internal ids must not leak into the file")
++        XCTAssertNil(entries[0]["inflects"], "default flags stay implicit")
++        XCTAssertNil(entries[0]["noAcousticBoost"], "default flags stay implicit")
++        XCTAssertEqual(Set(entries[0].keys), ["spoken", "written"])
++    }
++
++    /// A minimal hand-written file — just the pairs — imports with defaults.
++    func testHandWrittenFileWithBarePairsImports() throws {
++        let file = """
++        {"openRambleDictionary": 1, "replacements": [{"spoken": "Sentry", "written": "Sentry"}]}
++        """
++        let imported = try DictionaryTransfer.read(Data(file.utf8))
++
++        XCTAssertEqual(imported.count, 1)
++        XCTAssertTrue(imported[0].inflects)
++        XCTAssertFalse(imported[0].noAcousticBoost)
++        XCTAssertTrue(imported[0].allowsPhoneticMatching)
++    }
++
++    // MARK: - Refusals
++
++    func testForeignJSONIsRefusedByName() {
++        let foreign = Data("{\"someOtherApp\": true}".utf8)
++        XCTAssertThrowsError(try DictionaryTransfer.read(foreign)) { error in
++            XCTAssertEqual(error as? DictionaryTransfer.TransferError, .notADictionaryFile)
++        }
++    }
++
++    func testGarbageIsReportedAsDamage() {
++        XCTAssertThrowsError(try DictionaryTransfer.read(Data("not json".utf8))) { error in
++            guard case .damaged = error as? DictionaryTransfer.TransferError else {
++                return XCTFail("expected .damaged, got \(error)")
++            }
++        }
++    }
++
++    func testNewerFormatIsRefusedPolitely() {
++        let future = Data("{\"openRambleDictionary\": 2, \"replacements\": []}".utf8)
++        XCTAssertThrowsError(try DictionaryTransfer.read(future)) { error in
++            XCTAssertEqual(error as? DictionaryTransfer.TransferError, .newerFormat(2))
++        }
++    }
++
++    /// Whitespace-only entries carry no phrase — dropped, not imported.
++    func testEmptyEntriesAreDropped() throws {
++        let file = """
++        {"openRambleDictionary": 1, "replacements": [
++            {"spoken": "  ", "written": "x"},
++            {"spoken": "ok", "written": " trimmed  "}
++        ]}
++        """
++        let imported = try DictionaryTransfer.read(Data(file.utf8))
++
++        XCTAssertEqual(imported.count, 1)
++        XCTAssertEqual(imported[0].written, "trimmed")
++    }
++
++    // MARK: - Merge
++
++    func testMergeAppendsNewAndUpdatesMatchesCaseInsensitively() {
++        let existing = [
++            replacement("sentry", "Centry"),
++            replacement("deploy", "deploy"),
++        ]
++        let imported = [
++            replacement("Sentry", "Sentry"),
++            replacement("poust girls", "Postgres"),
++        ]
++
++        let merged = DictionaryTransfer.merge(existing: existing, imported: imported)
++
++        XCTAssertEqual(merged.added, 1)
++        XCTAssertEqual(merged.updated, 1)
++        XCTAssertEqual(
++            merged.replacements.map(\.written),
++            ["Sentry", "deploy", "Postgres"],
++            "updates edit in place, additions append in file order"
++        )
++        XCTAssertEqual(
++            merged.replacements[0].id, existing[0].id,
++            "an update keeps the row's identity"
++        )
++    }
++
++    /// Importing a file that changes nothing reports exactly that.
++    func testMergeCountsOnlyRealChanges() {
++        let existing = [replacement("sentry", "Sentry")]
++        let merged = DictionaryTransfer.merge(existing: existing, imported: existing)
++
++        XCTAssertEqual(merged.added, 0)
++        XCTAssertEqual(merged.updated, 0)
++        XCTAssertEqual(merged.replacements, existing)
++    }
++
++    func testMergeIntoEmptyDictionaryKeepsFileOrder() {
++        let imported = [
++            replacement("b", "B"),
++            replacement("a", "A"),
++        ]
++        let merged = DictionaryTransfer.merge(existing: [], imported: imported)
++
++        XCTAssertEqual(merged.added, 2)
++        XCTAssertEqual(merged.replacements.map(\.spoken), ["b", "a"])
++    }
++}

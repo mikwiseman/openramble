@@ -1,0 +1,51 @@
+{
+ "task": "r100-recorder-words",
+ "load": "6.5",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 29
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 2
+ },
+ "own_tests": {
+  "files": 1,
+  "fail_on_base": true
+ },
+ "hidden": {
+  "ok": false,
+  "code": 1,
+  "seconds": 3,
+  "failed": [
+   "DictationAudioTests.SystemMeetingDefaultTests testExplicitCaptureThresholdStillAppliesToSystemAudio"
+  ],
+  "tries": 2
+ },
+ "suite": {
+  "ok": false,
+  "code": 1,
+  "seconds": 87,
+  "failed": [
+   "DictationAudioTests.SystemMeetingDefaultTests testExplicitCaptureThresholdStillAppliesToSystemAudio"
+  ],
+  "tries": 2
+ },
+ "not_built": [],
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "state": "fail",
+ "reason": "hidden tests",
+ "claims": null,
+ "false_green": null,
+ "unseen_denied": null,
+ "unproven_claim": null,
+ "run": "r100-recorder-words.gpt.xhigh.1"
+}

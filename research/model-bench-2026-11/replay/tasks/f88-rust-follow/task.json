@@ -1,0 +1,17 @@
+{
+ "title": "The Rust core fell behind the Mac",
+ "kind": "follow",
+ "area": "Rust port of a Swift change, conformance",
+ "source": "#88 merged, with its Rust half (core/ramble-text/src/clean.rs) taken out; base commit refs/bench/f88-base",
+ "base": "598ec36d0d0b90a44aef31d225df76893ab75100",
+ "reference": "1ab4af81ab0eaaa27723bbe63fa50c14f03d9354",
+ "hidden": [
+  "core/ramble-text/tests/conformance.rs",
+  "core/conformance/corpus-text.json",
+  "core/conformance/fixtures/text/pipeline.json"
+ ],
+ "authored_tests": "The repository's own conformance test is the grader: the fixtures are recordings of the Swift pipeline, and the Rust port must reproduce them. The grader restores the test, corpus and fixtures from the reference before it runs.",
+ "suite": "cargo test -p ramble-text -p ramble-core --all-features",
+ "check": "cargo fmt --all --check && cargo clippy -p ramble-core -p ramble-text --all-targets --all-features -- -D warnings && swift build --package-path core/conformance/generator && core/conformance/generator/.build/debug/GenerateFixtures core/conformance/corpus-text.json core/conformance/fixtures/text/pipeline.json && git diff --quiet -- core/conformance/fixtures && ./scripts/check-network-surface.sh",
+ "not_built": "^(apps/|Packages/)"
+}

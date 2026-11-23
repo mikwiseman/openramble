@@ -1,0 +1,77 @@
+{
+ "task": "t-telemetry",
+ "checked_at": "2026-11-23 23:46",
+ "load": "9.7",
+ "leaked": [],
+ "parent": {
+  "task": "t-telemetry",
+  "load": "9.7",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 7
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 2
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": true,
+   "code": 0,
+   "seconds": 0,
+   "failed": [],
+   "tries": 1
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "pass",
+  "reason": ""
+ },
+ "reference": {
+  "task": "t-telemetry",
+  "load": "8.6",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 2
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 2
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": true,
+   "code": 0,
+   "seconds": 0,
+   "failed": [],
+   "tries": 1
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "pass",
+  "reason": ""
+ },
+ "usable": true
+}

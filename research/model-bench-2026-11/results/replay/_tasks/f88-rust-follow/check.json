@@ -1,0 +1,101 @@
+{
+ "task": "f88-rust-follow",
+ "checked_at": "2026-11-23 23:46",
+ "load": "8.7",
+ "leaked": [],
+ "parent": {
+  "task": "f88-rust-follow",
+  "load": "8.7",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 23
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 1
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": false,
+   "code": 101,
+   "seconds": 0,
+   "failed": [
+    "the_rust_pipeline_matches_what_macos_produced"
+   ],
+   "tries": 2
+  },
+  "suite": {
+   "ok": false,
+   "code": 101,
+   "seconds": 0,
+   "failed": [
+    "the_rust_pipeline_matches_what_macos_produced"
+   ],
+   "tries": 2
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "fail",
+  "reason": "hidden tests"
+ },
+ "reference": {
+  "task": "f88-rust-follow",
+  "load": "8.0",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 12
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 1
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": true,
+   "code": 0,
+   "seconds": 4,
+   "failed": [],
+   "tries": 1
+  },
+  "suite": {
+   "ok": true,
+   "code": 0,
+   "seconds": 1,
+   "failed": [],
+   "tries": 1
+  },
+  "unseen": {
+   "ok": true,
+   "code": 0,
+   "seconds": 50,
+   "said": "no real word lost in 54,840 unseen sentences"
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "pass",
+  "reason": ""
+ },
+ "usable": true
+}

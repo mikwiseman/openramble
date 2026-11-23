@@ -1,15 +1,15 @@
 {
  "task": "r97-handsfree-stop",
- "load": "14.6",
+ "load": "177.4",
  "check": {
   "ok": true,
   "code": 0,
-  "seconds": 101
+  "seconds": 91
  },
  "network_gate": {
   "ok": true,
   "code": 0,
-  "seconds": 2
+  "seconds": 3
  },
  "own_tests": {
   "files": 2,
@@ -18,16 +18,28 @@
  "hidden": {
   "ok": true,
   "code": 0,
-  "seconds": 82,
+  "seconds": 46,
   "failed": [],
   "tries": 1
  },
  "suite": {
   "ok": true,
   "code": 0,
-  "seconds": 123,
+  "seconds": 85,
   "failed": [],
   "tries": 1
+ },
+ "unseen": {
+  "ok": true,
+  "code": 0,
+  "seconds": 90,
+  "said": "every unseen press sequence and storm leaves the microphone off"
+ },
+ "not_built": [],
+ "app": {
+  "ok": true,
+  "code": 0,
+  "seconds": 341
  },
  "unasked_files": [],
  "weakened_tests": {
@@ -36,17 +48,14 @@
  },
  "fixtures_touched": false,
  "rules_broken": [],
- "not_built": [
-  "apps/macos/OpenRamble/AppState.swift",
-  "apps/macos/OpenRambleTests/AppStateTests.swift"
- ],
- "state": "partial",
- "reason": "changed code that no check built",
+ "state": "pass",
+ "reason": "",
  "claims": {
   "says_done": true,
   "says_checks_pass": true
  },
  "false_green": false,
+ "unseen_denied": false,
  "unproven_claim": false,
  "run": "r97-handsfree-stop.gpt.high.1"
 }

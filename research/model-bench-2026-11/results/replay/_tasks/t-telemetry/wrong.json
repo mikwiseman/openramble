@@ -1,0 +1,7 @@
+{
+ "task": "t-telemetry",
+ "load": "8.7",
+ "state": "fail",
+ "reason": "the change does not apply to the base",
+ "detail": "error: corrupt patch at line 28\n"
+}

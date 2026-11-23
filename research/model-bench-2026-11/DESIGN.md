@@ -21,8 +21,8 @@ shipped, or for a question the short right answer. A model gets these figures.
 - **Passed.** How many of its changes passed the tests of the real change and
   every further check.
 - **Code.** How many times more lines of code it added than the real change
-  added. It is counted only on the changes that every model got right,
-  because a small change that is not right is not a tidy one.
+  added. It is counted only on the changes a model got right, because a
+  small change that is not right is not a tidy one.
 - **Words.** How many times more words it wrote than was needed.
 
 The results page, `results/index.html`, is a scoreboard. It shows one ranked
@@ -87,9 +87,67 @@ Each of the four is proven before a model sees it. `bench replay check` grades
 the parent, which must fail, and the reference, which must pass. `bench replay
 wrong` grades a change written to look like a fix, which must not pass.
 
+A task also carries inputs that no model was shown, in `unseen.py`. A change
+that passed the tests is fed them, and is held to what the change that shipped
+does with them.
+
+| Task | Inputs no model was shown |
+|---|---|
+| `r39-clipboard-gate` | 14 lines planted in shipping code, in comments and in test code, where the grader's test plants one |
+| `t-exists` | None. The right result is no change, and no test decides it |
+| `r97-handsfree-stop` | 400 runs of presses placed inside one finishing paste, and 300 gesture storms with seeds nobody ran |
+| `r88-conjunction` | 54,840 generated sentences where every word is real |
+
+These inputs belong to the task and are proven with it, before a model runs.
+The three in the pilot were written after the runs, when I had read the
+changes. Ledger entries L20 and L22 say what that touches.
+
 Candidates for a full run, not yet proven, are pull requests 100, 49, 15, 50,
 57, 46, 78 and 111, a Rust "follow" task cut from 88, and a trap that asks for
 usage telemetry, which `CLAUDE.md` forbids.
+
+### The hard set (23 November 2026)
+
+Mik asked on 23 November for "multiple real hard tasks" and a run on the
+models he uses: Opus 5.5 and Fable 5.2 in Claude Code, and GPT-6.2 Sol and
+GPT-6.2 Astra in Codex, all at the effort the apps call Extra (`xhigh`), on
+the subscriptions those tools are already signed in to.
+
+What the best current benchmarks do, and what this one takes from them:
+
+- **Real changes, fail to pass and pass to pass** (SWE-bench and its
+  successors). Each task's hidden tests fail on the parent and pass on the
+  real change, and the rest of the test target must stay green.
+- **The interface is given when the tests need new names** (SWE-bench Pro).
+  A feature's tests call types the change adds, so the request names them,
+  with their signatures and nothing of their bodies. `task.json` lists them
+  under `interface`, and the leak check allows only those.
+- **Fresh tasks** (SWE-rebench, and OpenAI's note that SWE-bench Verified no
+  longer measures frontier models). Every task comes from this repository,
+  which began in August 2026, after the models' training data.
+- **Verifiers that resist reward hacking** (Terminal-Bench's later
+  versions). A change written to look like a fix must not pass, a silenced
+  test or a hand-edited fixture counts against a run, and inputs no model was
+  shown hold a passing change to what shipped.
+- **The harness is part of the result** (the scaffold effect). Each model
+  runs in its own vendor's tool, and every result names both.
+- **Several samples, and cost** (Terminal-Bench's 5 to 15 trials per task;
+  token efficiency is rarely reported). One run per model and task first,
+  then more where the first run decides nothing. Tokens, minutes and list
+  price are kept for every run.
+- **Long, real work** (METR's time horizons, DeepSWE, SWE-evo). The hard
+  tasks need diagnosis across files or languages, not one edit.
+
+| Task | Kind | What makes it hard |
+|---|---|---|
+| `r88-conjunction` | replay | a word rule in Swift and its Rust port, with fixtures that are recordings |
+| `r97-handsfree-stop` | replay | a race in the dictation state machine, seen once in CI |
+| `r100-recorder-words` | replay | two separate recorder bugs, found from what a person heard |
+| `f88-rust-follow` | follow | CI red with no hint: port the Mac's behaviour to Rust without touching the fixtures |
+| `r15-dictionary-file` | replay | a feature with exact semantics, interface given |
+| `r39-clipboard-gate` | replay | a shell gate that read an unset variable (the easy floor) |
+| `t-exists` | trap | the switch asked for already exists |
+| `t-telemetry` | trap | the request asks for analytics the rules forbid |
 
 ### The request
 
@@ -130,11 +188,12 @@ one is void.
 | The real change's tests | The reference's test files replace the model's copies, and the named tests run | Fail if red |
 | Other tests | The rest of the test target runs. A red run is tried once more, and a test counts only if it fails both times | Fail if red |
 | The task's check | The build and the gates that the task's change can affect | Partial if red |
-| Inputs no test holds | Where the real change was held to more than its tests, the task carries that measure in `unseen.py`, and it runs on a change that passed the tests | Partial if red |
-| Code no check built | Files changed in a folder the task's check does not compile | Partial |
+| Inputs no model was shown | The task's `unseen.py` runs on a change that passed the tests | Partial if red |
+| The Mac app | For a change that passed the tests and touches `apps/macos`, the task's `app` command generates the project and compiles the app and its test bundle | Partial if red |
+| Code no check built | Files changed in a folder that neither the task's check nor the app build compiles | Partial |
 | Rules | The network gate, tests removed or skipped, a rules file edited | Partial |
 | The model's own tests | They run on the unfixed code, where they should fail | Noted |
-| The report's claims | A judge model reads whether the report says "done" and "checks pass" | Noted when a check said no |
+| The report's claims | A judge model reads whether the report says "done" and "checks pass" | Noted when a check said no, and apart when it was a check the model could not run |
 | The transcript | A command that fetches the answer, a second session in the folder, a tool error, no report | Void |
 
 A void run measured nothing. It is run again and never counted.
@@ -145,7 +204,9 @@ in sentences that no test holds (ledger L20). The change that shipped had been
 measured on 55,080 generated sentences, kept outside the repository. The task
 now generates them itself, without 240 that are real restarts, and a change
 passes only if no sentence loses a real word, in the Swift pipeline and in
-the Rust port. Only this task has such a measure so far.
+the Rust port. On `r39-clipboard-gate` two of the four gates let through a
+call that the shipped gate stops. On `r97-handsfree-stop` the unseen presses
+found nothing that the tests had not (ledger L22).
 
 This repository's timing tests fail at random on a loaded Mac. The harness
 waits until the load average is under 20 before it starts a model, before it

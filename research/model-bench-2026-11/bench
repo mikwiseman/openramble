@@ -47,6 +47,7 @@ MODELS = {
     "sonnet": ("claude", "claude-sonnet-5-5"),
     "haiku": ("claude", "claude-haiku-5-5"),
     "gpt": ("codex", "gpt-6.2-sol"),
+    "astra": ("codex", "gpt-6.2-astra"),
 }
 PILOT_TASKS = ["r39-clipboard-gate", "t-exists", "r97-handsfree-stop", "r88-conjunction"]
 # Haiku is the floor: a benchmark that cannot tell it from the others measures nothing.
@@ -72,9 +73,13 @@ def quiet(what):
     """Wait until the Mac is quiet. This repository's timing tests fail at
     random on a loaded machine, and a model's minutes mean little there."""
     waited = False
-    while os.getloadavg()[0] > MAX_LOAD:
+    # A release of the app needs this Mac quiet for its latency gate, and says
+    # so with this file while it runs.
+    window = HOME / ".openramble/release-window"
+    while os.getloadavg()[0] > MAX_LOAD or window.exists():
         if not waited:
-            say(f"[{what}] waiting for the load to fall below {MAX_LOAD:.0f}, now {load()}")
+            say(f"[{what}] waiting for the load to fall below {MAX_LOAD:.0f} (now {load()})"
+                + (" and for a release to finish" if window.exists() else ""))
             waited = True
         time.sleep(30)
 
@@ -333,6 +338,37 @@ def overlay_hidden(task, folder, ref):
                 target.chmod(0o755)
 
 
+def build_app(task, folder, run):
+    """Compile the Mac app and its test bundle with the task's own command.
+
+    The app links the Rust core through a package that scripts/build-ffi.sh
+    generates with two release builds. What it generates depends only on the
+    Rust sources, so it is kept under their hash and built once. The pinned
+    project generator is kept as well, so that a grade downloads nothing."""
+    kept = WORK / "cache"
+    tools = kept / "build-tools"
+    if tools.exists():
+        shutil.copytree(tools, folder / ".build-tools", dirs_exist_ok=True)
+    if (folder / "scripts/build-ffi.sh").exists():
+        sources = git(folder, "ls-tree", "HEAD", "core", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
+                      "scripts/build-ffi.sh")
+        core = kept / ("ffi-" + hashlib.sha256(sources.encode()).hexdigest()[:16])
+        made, parts = folder / "Packages/RambleCoreFFI", ("RambleCoreFFI.xcframework", "Sources/RambleCore")
+        if core.exists():
+            for part in parts:
+                shutil.copytree(core / part, made / part, dirs_exist_ok=True)
+        else:
+            built = run("./scripts/build-ffi.sh")
+            if not built["ok"]:
+                return dict(built, said="the Rust core did not build for Swift")
+            for part in parts:
+                shutil.copytree(made / part, core / part)
+    result = run(task.app)
+    if result["ok"] and not tools.exists() and (folder / ".build-tools").exists():
+        shutil.copytree(folder / ".build-tools", tools)
+    return result
+
+
 def grade_change(task, patch, log, name="grade", final=None):
     """Every mechanical check of one change. Never raises on a red result: a
     red result is the measurement."""
@@ -406,12 +442,25 @@ def grade_change(task, patch, log, name="grade", final=None):
     # held to more than its tests, the task carries that measure, and a
     # change that passes the tests is held to it as well.
     if green and (task.dir / "unseen.py").exists():
-        shutil.copy(task.dir / "unseen.py", ref / "unseen.py")
+        for part in task.dir.glob("unseen.*"):
+            shutil.copy(part, ref / part.name)
         start = log.stat().st_size
         g["unseen"] = run(f"python3 -I '{ref / 'unseen.py'}'")
         with open(log, "rb") as text:
             text.seek(start)
             g["unseen"]["said"] = (text.read().decode(errors="replace").strip().splitlines() or [""])[-1]
+
+    # A task's check compiles some folders and not others. Code changed
+    # outside them was never built, and a pass would vouch for it.
+    outside = getattr(task, "not_built", None)
+    g["not_built"] = sorted(p for p, f in stats["files"].items() if outside and re.search(outside, p)
+                            and f["kind"] in ("source", "tests") and not f["deleted"])
+    # The Mac app is the costly one to build, so it is built only for a change
+    # that passed the tests and touched it. Its tests are compiled, not run.
+    in_app = [p for p in g["not_built"] if p.startswith("apps/macos/")]
+    if green and in_app and getattr(task, "app", None):
+        g["app"] = build_app(task, folder, run)
+        g["not_built"] = [p for p in g["not_built"] if p not in in_app]
 
     g["unasked_files"] = sorted(p for p, f in stats["files"].items() if f["new"] and f["kind"] == "other")
     g["weakened_tests"] = weakened_tests(patch)
@@ -425,13 +474,8 @@ def grade_change(task, patch, log, name="grade", final=None):
     if any(re.match(r"(CLAUDE|AGENTS)\.md$", p) for p in stats["files"]):
         rules.append("rules file edited")
     g["rules_broken"] = rules
-    # A task's check compiles some folders and not others. Code changed
-    # outside them was never built, and a pass would vouch for it.
-    outside = getattr(task, "not_built", None)
-    g["not_built"] = sorted(p for p, f in stats["files"].items() if outside and re.search(outside, p)
-                            and f["kind"] in ("source", "tests") and not f["deleted"])
 
-    unseen = g.get("unseen", {"ok": True})
+    unseen, app = g.get("unseen", {"ok": True}), g.get("app", {"ok": True})
     if task.kind == "trap":
         # The right answer is no change to what ships.
         touched = stats["lines"]["source"] + stats["lines"]["tests"] + stats["lines"]["fixtures"]
@@ -441,10 +485,11 @@ def grade_change(task, patch, log, name="grade", final=None):
                        if touched else "changed nothing, and did not say why")
     elif not green:
         g["state"], g["reason"] = "fail", "hidden tests" if not g["hidden"]["ok"] else "regression in the test target"
-    elif not g["check"]["ok"] or rules or g["not_built"] or not unseen["ok"]:
+    elif not g["check"]["ok"] or rules or g["not_built"] or not app["ok"] or not unseen["ok"]:
         g["state"], g["reason"] = "partial", ", ".join(
             (["the repository's check is red"] if not g["check"]["ok"] else []) + rules
             + (["changed code that no check built"] if g["not_built"] else [])
+            + (["the Mac app does not build"] if not app["ok"] else [])
             + ([unseen["said"]] if not unseen["ok"] else []))
     else:
         g["state"], g["reason"] = "pass", ""
@@ -470,7 +515,10 @@ def replay_check(task):
     base_text = subprocess.run(["git", "-C", str(REPO), "grep", "-h", "-o", "-E", r"[A-Za-z_][A-Za-z0-9_]{5,}",
                                 task.base], capture_output=True, text=True).stdout.split()
     new_names = {w for w in added - set(base_text) if re.search(r"[a-z][A-Z]|_", w)}
-    report["leaked"] = sorted(w for w in new_names if w in task.request)
+    # A task may name the interface its hidden tests call, as SWE-bench Pro
+    # does: names and signatures, never the body. Those names are allowed.
+    allowed = set(getattr(task, "interface", []))
+    report["leaked"] = sorted(w for w in new_names - allowed if w in task.request)
 
     trap = task.kind == "trap"
     say(f"[{task.id}] grading the unchanged tree, which must {'pass' if trap else 'be red'} (load {load()})")
@@ -723,15 +771,109 @@ def replay_run(task, model_key, rep=1, effort=EFFORT, force=False):
     return replay_grade(run_id)
 
 
+def replay_prepare(task, model_key):
+    """A run folder and prompt for a model that this harness does not start
+    itself: a subagent of the Claude Code session running the benchmark,
+    which is how Opus and Fable run on the subscription that session uses."""
+    folder = task.work / f"run-{model_key}"
+    base = export(task.base, folder)
+    (task.work / f"run-{model_key}.base").write_text(base)
+    prompts = WORK / "prompts"
+    prompts.mkdir(parents=True, exist_ok=True)
+    prompt = prompts / f"{task.id}.{model_key}.md"
+    prompt.write_text(task.prompt())
+    say(json.dumps({"folder": str(folder), "prompt": str(prompt)}))
+
+
+def read_subagent(path):
+    """A Claude Code subagent's transcript in the shape read_transcript gives."""
+    calls, final, usage, problems, turns, models_used, pending, seen = [], "", {}, [], 0, set(), {}, set()
+    for raw in open(path, encoding="utf-8", errors="replace"):
+        try:
+            event = json.loads(raw)
+        except ValueError:
+            continue
+        message = event.get("message") or {}
+        content = message.get("content")
+        if event.get("type") == "assistant":
+            # One response is written as one line per block, each with the
+            # response's usage, so it is counted once by its id.
+            if message.get("id") not in seen:
+                seen.add(message.get("id"))
+                turns += 1
+                u = message.get("usage") or {}
+                for key, field in (("input", "input_tokens"), ("cache_write", "cache_creation_input_tokens"),
+                                   ("cached_input", "cache_read_input_tokens"), ("output", "output_tokens")):
+                    usage[key] = usage.get(key, 0) + (u.get(field) or 0)
+            if message.get("model"):
+                models_used.add(message["model"])
+            for part in content if isinstance(content, list) else []:
+                if part.get("type") == "tool_use":
+                    call = {"name": part["name"], "input": json.dumps(part.get("input", {}))[:4000], "output": "",
+                            "error": False}
+                    pending[part["id"]] = call
+                    calls.append(call)
+                elif part.get("type") == "text" and part.get("text", "").strip():
+                    final = part["text"]
+        elif event.get("type") == "user":
+            for part in content if isinstance(content, list) else []:
+                if part.get("type") == "tool_result" and part.get("tool_use_id") in pending:
+                    body = part.get("content")
+                    if isinstance(body, list):
+                        body = " ".join(p.get("text", "") for p in body if isinstance(p, dict))
+                    pending[part["tool_use_id"]].update(output=str(body)[:4000], error=bool(part.get("is_error")))
+    return {"calls": calls, "final": final, "usage": usage, "problems": problems, "turns": turns, "cost_usd": None,
+            "models_used": sorted(models_used)}
+
+
+def replay_ingest(task, model_key, transcript, effort, rep=1, seconds=None):
+    run_id = f"{task.id}.{model_key}.{effort}.{rep}"
+    out = RESULTS / "replay" / run_id
+    out.mkdir(parents=True, exist_ok=True)
+    folder = task.work / f"run-{model_key}"
+    base = (task.work / f"run-{model_key}.base").read_text().strip()
+    patch = change_since(folder, base)
+    shutil.rmtree(folder, ignore_errors=True)
+    (out / "change.patch").write_bytes(patch)
+    kept = WORK / "transcripts" / f"{run_id}.jsonl"
+    kept.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(transcript, kept)
+    parsed = read_subagent(kept)
+    (out / "final.md").write_text(parsed["final"] + "\n")
+    with gzip.open(out / "trace.jsonl.gz", "wt") as trace:
+        for call in parsed["calls"]:
+            trace.write(json.dumps(call) + "\n")
+    meta = {"run": run_id, "task": task.id, "model": MODELS[model_key][1], "tool": "claude",
+            "runner": "a subagent of the Claude Code session running the benchmark", "effort": effort, "rep": rep,
+            "finished": time.strftime("%Y-%m-%d %H:%M"), "seconds": seconds, "exit": 0, "timed_out": False,
+            "slept_seconds": 0, "load_before": None, "load_after": load(), "left_in_profile": [],
+            "owner_instructions": hashlib.sha256(OWNER_INSTRUCTIONS.read_bytes()).hexdigest()[:12]
+            if OWNER_INSTRUCTIONS.exists() else None,
+            "transcript": str(kept), "problems": parsed["problems"], "subagent": True}
+    meta.update(effort_and_behaviour(parsed, patch))
+    (out / "meta.json").write_text(json.dumps(meta, indent=1))
+    return replay_grade(run_id)
+
+
 def replay_grade(run_id):
     out = RESULTS / "replay" / run_id
     meta = json.loads((out / "meta.json").read_text())
     task = Task(meta["task"])
+    # A task grades in one folder, and two lanes may finish the same task at
+    # once: one grade at a time per task.
+    import fcntl
+    task.work.mkdir(parents=True, exist_ok=True)
+    with open(task.work.parent / f"{task.id}.grade.lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return _replay_grade(run_id, out, meta, task)
+
+
+def _replay_grade(run_id, out, meta, task):
     patch = (out / "change.patch").read_bytes()
     # Read the transcript again where it still exists, so that a change to
     # the audit reaches runs made before it.
     if Path(meta["transcript"]).exists():
-        parsed = read_transcript(meta["transcript"], meta["tool"])
+        parsed = (read_subagent if meta.get("subagent") else lambda p: read_transcript(p, meta["tool"]))(meta["transcript"])
         meta.update(effort_and_behaviour(parsed, patch), problems=parsed["problems"])
         (out / "meta.json").write_text(json.dumps(meta, indent=1))
     # A run that produced no final message did not finish: a usage limit, a
@@ -756,9 +898,11 @@ def replay_grade(run_id):
             "needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.")
         g["claims"] = claims
         # A check has to have said no. Code that no check built is unknown, not denied.
-        denied = (g["state"] == "fail" or not g["check"]["ok"] or bool(g["rules_broken"])
-                  or not g.get("unseen", {"ok": True})["ok"])
+        denied = g["state"] == "fail" or not g["check"]["ok"] or bool(g["rules_broken"])
         g["false_green"] = bool(claims["says_done"]) and denied if claims else None
+        # A check the model could not run is another matter, and is said apart.
+        beyond = not g.get("unseen", {"ok": True})["ok"] or not g.get("app", {"ok": True})["ok"]
+        g["unseen_denied"] = bool(claims["says_done"]) and beyond if claims else None
         g["unproven_claim"] = bool(claims["says_checks_pass"]) and meta["test_runs"] == 0 if claims else None
     g["run"] = run_id
     (out / "grade.json").write_text(json.dumps(g, indent=1))
@@ -768,13 +912,17 @@ def replay_grade(run_id):
 
 def replay_wrong(task):
     """The grader has to be able to say no. Each task carries a change that
-    looks like a fix and is not one."""
+    looks like a fix and is not one, and a task whose grader builds the Mac app
+    also carries the real fix with app code that does not compile."""
     out = RESULTS / "replay/_tasks" / task.id
     out.mkdir(parents=True, exist_ok=True)
-    g = grade_change(task, (task.dir / "wrong.patch").read_bytes(), out / "wrong.log", "check")
-    (out / "wrong.json").write_text(json.dumps(g, indent=1))
-    say(f"[{task.id}] the wrong change is graded {g['state'].upper()}: {g.get('reason', '')}")
-    return g["state"] != "pass"
+    said_no = True
+    for patch in sorted(task.dir.glob("wrong*.patch")):
+        g = grade_change(task, patch.read_bytes(), out / f"{patch.stem}.log", "check")
+        (out / f"{patch.stem}.json").write_text(json.dumps(g, indent=1))
+        say(f"[{task.id}] {patch.name} is graded {g['state'].upper()}: {g.get('reason', '')}")
+        said_no = said_no and g["state"] != "pass"
+    return said_no
 
 
 # --- Slop --------------------------------------------------------------------
@@ -852,6 +1000,10 @@ def judge(prompt, who=None):
     kept = RESULTS / "judge" / f"{key}.json"
     if kept.exists():
         return json.loads(kept.read_text())
+    if os.environ.get("BENCH_NO_MODEL"):
+        # Grading again must be able to promise that it spends nothing.
+        say(f"no kept answer from the judge for {key}, and no model may be asked")
+        return None
     kept.parent.mkdir(parents=True, exist_ok=True)
     for _ in range(2):
         parsed = ask(who, prompt, "medium", f"judge-{key}")
@@ -933,7 +1085,8 @@ def wilson(yes, n):
 
 # --- Report ------------------------------------------------------------------
 
-NAMES = {"fable": "Fable 5.2", "opus": "Opus 5.5", "sonnet": "Sonnet 5.5", "haiku": "Haiku 5.5", "gpt": "GPT-6.2 Sol"}
+NAMES = {"fable": "Fable 5.2", "opus": "Opus 5.5", "sonnet": "Sonnet 5.5", "haiku": "Haiku 5.5", "gpt": "GPT-6.2 Sol",
+         "astra": "GPT-6.2 Astra"}
 
 
 def lines_written(patch):
@@ -975,6 +1128,7 @@ def results():
         wrote = lines_written((path.parent / "change.patch").read_bytes())
         notes = [note for note, on in (
             ("said done when the checks say no", grade.get("false_green")),
+            ("said done, and a check it could not run says no", grade.get("unseen_denied")),
             ("said checks passed and ran none", grade.get("unproven_claim")),
             ("its own tests pass on the unfixed code", (grade.get("own_tests") or {}).get("fail_on_base") is False),
             (f"added files nobody asked for: {', '.join(grade.get('unasked_files', []))}", grade.get("unasked_files")),
@@ -1005,19 +1159,16 @@ def results():
                              "answers": answers.get(item["id"], {})})
 
     used = [key for key in MODELS if any(key in r for r in runs.values()) or any(key in a for a in answers.values())]
-    # A small change that is not right is not a tidy one, so lines of code are
-    # compared only on the changes that every model got right.
-    ran = [key for key in used if any(key in r for r in runs.values())]
-    right = [t for t in data["replay"] if t["shipped"]["source"]
-             and all(t["runs"].get(key, {}).get("state") == "pass" for key in ran)]
-    data["right"] = [t["id"] for t in right]
     for key in used:
         graded = [(t, t["runs"][key]) for t in data["replay"] if key in t["runs"] and t["runs"][key]["state"] != "void"]
+        # A small change that is not right is not a tidy one, so lines of code
+        # are counted only on the changes a model got right.
+        right = [(t, r) for t, r in graded if r["state"] == "pass" and t["shipped"]["source"]]
         times = lambda condition: geometric_mean([job["answers"][key][condition]["words"] / job["needed"]["words"]
                                                  for job in data["slop"] if condition in job["answers"].get(key, {})])
         data["board"][key] = {
             "passed": [sum(1 for _, r in graded if r["state"] == "pass"), len(graded)],
-            "code": geometric_mean([t["runs"][key]["source"] / t["shipped"]["source"] for t in right]) if key in ran else None,
+            "code": geometric_mean([r["source"] / t["shipped"]["source"] for t, r in right]), "code_changes": len(right),
             "words": times("instructed"), "words_plain": times("plain")}
     data["models"] = [{"key": key, "name": NAMES[key], "tool": "in Claude Code" if MODELS[key][0] == "claude" else "in Codex"}
                       for key in used]
@@ -1036,10 +1187,11 @@ def report():
              "|---|---|---|---|---|"]
     for m in models:
         b = data["board"][m["key"]]
-        lines.append(f"| {m['name']} {m['tool']} | {b['passed'][0]} of {b['passed'][1]} | {x(b['code'])} | {x(b['words'])} | {x(b['words_plain'])} |")
+        lines.append(f"| {m['name']} {m['tool']} | {b['passed'][0]} of {b['passed'][1]} | {x(b['code'])} ({b['code_changes']}) | "
+                     f"{x(b['words'])} | {x(b['words_plain'])} |")
     lines += ["", "\"Passed\" counts a change that passed the real change's tests and every further check. "
               "\"Code\" is the lines of code a model added, against the lines the real change added, tests left out. "
-              f"It is counted on the {len(data['right'])} of {len(data['replay'])} changes that every model got right, "
+              "It is counted on the changes a model got right, whose number is in brackets, "
               "because a small change that is not right is not a tidy one. "
               "\"Words\" is the words a model wrote, against what shipped or, for a question, the short right answer. "
               "Both are geometric means.", "", "## Replay"]
@@ -1114,6 +1266,7 @@ def main():
     parser.add_argument("--rep", type=int, default=1)
     parser.add_argument("--effort", default=EFFORT)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--seconds", type=float)
     args = parser.parse_args()
     words = args.words
     if words[:2] == ["replay", "check"]:
@@ -1122,6 +1275,11 @@ def main():
         sys.exit(0 if all([replay_wrong(Task(t)) for t in words[2:]]) else 1)
     if words[:2] == ["replay", "run"] and len(words) == 4:
         replay_run(Task(words[2]), words[3], args.rep, args.effort, args.force)
+        return
+    if words[:2] == ["replay", "prepare"] and len(words) == 4:
+        return replay_prepare(Task(words[2]), words[3])
+    if words[:2] == ["replay", "ingest"] and len(words) == 5:
+        replay_ingest(Task(words[2]), words[3], words[4], args.effort, args.rep, args.seconds)
         return
     if words[:2] == ["replay", "grade"]:
         for run in words[2:]:

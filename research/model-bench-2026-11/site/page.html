@@ -232,8 +232,6 @@ const replay = () => {
   const tasks = DATA.replay, done = (m, t) => t.runs[m.key] && t.runs[m.key].state !== "void" ? t.runs[m.key] : null;
   const models = DATA.models.filter((m) => tasks.some((t) => t.runs[m.key]));
   const shared = tasks.filter((t) => models.every((m) => done(m, t)));
-  // A small change that is not right is not a tidy one, so size is compared only where every model was right.
-  const right = tasks.filter((t) => t.shipped.source && models.every((m) => done(m, t) && done(m, t).state === "pass"));
   let rows, title, caption, body, figure, note = () => null, order;
   if (S.tab === "passed") {
     title = "Real changes each model got right";
@@ -246,10 +244,13 @@ const replay = () => {
     figure = (r) => r.value + "/" + r.of;
   } else if (S.tab === "code") {
     title = "Lines of code written for every line that shipped";
-    caption = `${right.length} ${right.length === 1 ? "change" : "changes"} that every model got right / tests are not counted`;
-    rows = models.map((m) => ({ m, value: mean(right.map((t) => t.runs[m.key].source / t.shipped.source)) }));
-    order = (a, b) => a.value - b.value;
-    figure = (r) => times(r.value);
+    // A small change that is not right is not a tidy one, so size is counted only on the changes a model got right.
+    caption = "counted on the changes a model got right / tests are not counted";
+    rows = models.map((m) => { const mine = tasks.filter((t) => t.shipped.source && done(m, t) && done(m, t).state === "pass");
+      return { m, value: mean(mine.map((t) => t.runs[m.key].source / t.shipped.source)), n: mine.length }; });
+    order = (a, b) => (a.value === null) - (b.value === null) || a.value - b.value;
+    figure = (r) => (r.value === null ? "–" : times(r.value));
+    note = (r) => (r.n ? `${r.n} ${r.n === 1 ? "change" : "changes"}` : "none right");
   } else if (S.tab === "tokens") {
     title = "Tokens spent on the same tasks";
     caption = `${shared.length} tasks every model finished / one block is a million tokens`;
@@ -263,7 +264,7 @@ const replay = () => {
     order = (a, b) => (a.value === null) - (b.value === null) || a.value - b.value;
     figure = (r) => (r.value === null ? "–" : "$" + r.value.toFixed(2));
   }
-  rows = rows.filter((r) => r.value !== null || S.tab === "cost").sort(order);
+  rows = rows.filter((r) => r.value !== null || S.tab === "cost" || S.tab === "code").sort(order);
   const most = Math.max(...rows.map((r) => r.value || 0), 1);
   if (!rows.some((r) => r.m.key === S.model)) S.model = (rows[0] ? rows[0].m : models[0]).key;
   if (!body) body = (r) => (r.value === null ? h("div", { class: "strip" }) : strip(r.value, most, (b) => (S.tab === "code" ? (b ? "extra" : "first") : "plain")));

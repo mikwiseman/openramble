@@ -1,0 +1,26 @@
+{
+ "title": "A dictionary file to move and keep",
+ "kind": "replay",
+ "area": "a feature in Swift, with an interface given",
+ "source": "#15, feat: import & export the personal dictionary (its DictationCore half; the Settings buttons are left out)",
+ "base": "d2b1f42f8d941ada9d49f6eb6d75996fe8dafb78",
+ "reference": "7ee556c54ede961c0cbf0c69c8c4ffb9b857fb1d",
+ "hidden": [
+  "Packages/DictationCore/Tests/DictationCoreTests/DictionaryTransferTests.swift"
+ ],
+ "interface": [
+  "DictionaryTransfer",
+  "TransferError",
+  "MergeResult",
+  "currentVersion",
+  "notADictionaryFile",
+  "newerFormat",
+  "damaged",
+  "openRambleDictionary",
+  "replacements"
+ ],
+ "authored_tests": "The pull request's own DictationCore tests. Their new names come from the interface the request gives, as SWE-bench Pro gives one; the app half of the pull request (Settings buttons, AppState) is not asked for.",
+ "suite": "swift test --package-path Packages/DictationCore",
+ "check": "swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors && ./scripts/check-network-surface.sh",
+ "not_built": "^apps/"
+}

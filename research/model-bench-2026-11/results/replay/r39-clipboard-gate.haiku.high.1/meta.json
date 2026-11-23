@@ -35,5 +35,8 @@
  "test_runs": 11,
  "last_test_run_failed": false,
  "asked_instead": false,
- "final_words": 217
+ "final_words": 217,
+ "models_used": [
+  "claude-haiku-5-5"
+ ]
 }
