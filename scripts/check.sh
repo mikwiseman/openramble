@@ -1,10 +1,11 @@
 #!/bin/bash
 # Banish everything that should be green before committing.
 #
-# ./scripts/check.sh both packages + application + iPhone app + network gate
+# ./scripts/check.sh both packages + application + network gate
 # ./scripts/check.sh --fast packets and gate only (seconds, no Xcode)
 # ./scripts/check.sh --app application only
-# ./scripts/check.sh --ios the iPhone app only, in the iOS Simulator
+# ./scripts/check.sh --ios the iPhone app, in the iOS Simulator (CI runs it on
+#                          every pull request; it needs an iOS simulator here)
 #
 # The script itself fixes the build freeze, which everyone else stumbles over: SwiftPM
 # asks Keychain for credentials for the binary artifact download host
@@ -238,7 +239,7 @@ case "$MODE" in
   --fast) run_packages; run_shared_core; run_network_gate ;;
   --app)  run_app ;;
   --ios)  run_ios ;;
-  all|*)  run_packages; run_shared_core; run_app; run_ios; run_network_gate ;;
+  all|*)  run_packages; run_shared_core; run_app; run_network_gate ;;
 esac
 
 green "
