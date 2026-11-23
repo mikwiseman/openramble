@@ -37,6 +37,9 @@ final class AppModel {
         setup.start { [dictation] phase in
             await Self.follow(phase, dictation: dictation)
         }
+        #if DEBUG
+        setup.importFromLaunchArguments()
+        #endif
     }
 
     /// Waits a few seconds for the model to open, for an intent that arrived
@@ -72,18 +75,6 @@ final class AppModel {
     }
 }
 
-final class AppDelegate: NSObject, UIApplicationDelegate {
-    /// The system woke the app because the model download needs it.
-    func application(
-        _ application: UIApplication,
-        handleEventsForBackgroundURLSession identifier: String,
-        completionHandler: @escaping () -> Void
-    ) {
-        guard identifier == BackgroundModelDownloader.sessionIdentifier else {
-            completionHandler()
-            return
-        }
-        nonisolated(unsafe) let completion = completionHandler
-        BackgroundModelDownloader.shared.handleEvents { completion() }
-    }
-}
+/// Receives what UIKit hands the app outside SwiftUI; the model download's
+/// background events are handled beside the download, in ModelDownload.swift.
+final class AppDelegate: NSObject, UIApplicationDelegate {}

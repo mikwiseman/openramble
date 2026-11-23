@@ -51,15 +51,15 @@ struct SetupView: View {
                     .frame(maxWidth: .infinity, minHeight: 120)
             case .absent:
                 about
-                Button("Download") { setup.download() }
-                    .buttonStyle(.glassProminent)
-                    .controlSize(.extraLarge)
-                    .frame(maxWidth: .infinity)
+                wide("Download") { setup.download() }
+                    .padding(.top, 10)
             case let .downloading(received, total):
                 about
                 progress(Double(received) / Double(max(total, 1)))
                 HStack {
-                    Text("\(received.formatted(.byteCount(style: .file))) of \(total.formatted(.byteCount(style: .file)))")
+                    Text(received == 0
+                         ? "Starting…"
+                         : "\(received.formatted(.byteCount(style: .file))) of \(total.formatted(.byteCount(style: .file)))")
                         .font(Theme.caption)
                         .foregroundStyle(.secondary)
                         .contentTransition(.numericText())
@@ -80,15 +80,23 @@ struct SetupView: View {
                 Text(message)
                     .font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
-                Button("Try again") { setup.download() }
-                    .buttonStyle(.glassProminent)
-                    .controlSize(.extraLarge)
-                    .frame(maxWidth: .infinity)
+                wide("Try Again") { setup.download() }
+                    .padding(.top, 10)
             case .ready:
                 EmptyView()
             }
         }
         .animation(.smooth, value: setup.phase)
+    }
+
+    /// The one action, across the column, where the thumb is.
+    private func wide(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glassProminent)
+        .controlSize(.extraLarge)
     }
 
     private var about: some View {

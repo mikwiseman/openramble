@@ -82,6 +82,22 @@ final class ModelSetup {
         }
     }
 
+    #if DEBUG
+    /// Installs the model from a folder holding its file, through the same
+    /// checksum check as a download: `-import-model /path/to/folder`. For the
+    /// Simulator; not compiled into release builds.
+    func importFromLaunchArguments() {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let store, let index = arguments.firstIndex(of: "-import-model"),
+              arguments.indices.contains(index + 1) else { return }
+        let folder = URL(filePath: arguments[index + 1], directoryHint: .isDirectory)
+        install = Task { [weak self] in
+            await store.importModel(from: folder)
+            self?.install = nil
+        }
+    }
+    #endif
+
     func cancel() {
         guard let store else { return }
         Task { await store.cancelInstall() }

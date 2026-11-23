@@ -1,5 +1,6 @@
 import Foundation
 import LocalASR
+import UIKit
 
 /// The iPhone app's one network area: the voice model, downloaded once, when
 /// the person taps Download after reading its size.
@@ -226,5 +227,21 @@ extension BackgroundModelDownloader: URLSessionDownloadDelegate {
         if let completion {
             DispatchQueue.main.async { completion() }
         }
+    }
+}
+
+extension AppDelegate {
+    /// The system woke the app because the model download needs it.
+    func application(
+        _ application: UIApplication,
+        handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        guard identifier == BackgroundModelDownloader.sessionIdentifier else {
+            completionHandler()
+            return
+        }
+        nonisolated(unsafe) let completion = completionHandler
+        BackgroundModelDownloader.shared.handleEvents { completion() }
     }
 }
