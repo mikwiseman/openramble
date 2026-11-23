@@ -37,6 +37,12 @@ if(MSVC)
 else()
     # No contraction: the code names its fused multiply-adds itself.
     target_compile_options(ore PRIVATE -Wall -Wextra -ffp-contract=off)
+    # The baseline is named. Left to the compiler it is whatever the
+    # distribution chose, and Ubuntu 26.04's compiler assumes AVX. A Mac keeps
+    # Apple's own baseline, which every Intel Mac meets.
+    if(NOT APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+        target_compile_options(ore PRIVATE -march=x86-64)
+    endif()
     if(NOT APPLE)
         target_compile_definitions(ore PRIVATE _POSIX_C_SOURCE=200809L _DEFAULT_SOURCE)
     endif()

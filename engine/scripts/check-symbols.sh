@@ -7,8 +7,7 @@
 # symbol the static library leaves for the system to supply and fails on any
 # that is not on the short list below: memory, strings, math, one file mapped
 # read-only, a clock, threads, and the compiler's own helpers (stack checks,
-# the processor-feature query on x86, and on Linux arm64 the atomic operations
-# GCC keeps out of line).
+# and on Linux arm64 the atomic operations GCC keeps out of line).
 #
 #   check-symbols.sh path/to/libore.a
 set -euo pipefail
@@ -27,7 +26,6 @@ ore_[a-z0-9_]+
 |(sin|cos|exp|log|tanh|sqrt|fma|fabs|floor|ceil|nearbyint)f?|llround|lround|__sincosf?_stret|sincosf?
 |__stack_chk_(fail|guard)|___chkstk_darwin|__chkstk_darwin|_GLOBAL_OFFSET_TABLE_
 |__aarch64_(cas|swp|ldadd|ldset|ldclr|ldeor)[0-9]+_(relax|acq|rel|acq_rel|sync)|__aarch64_have_lse_atomics
-|__cpu_(model|features2|indicator_init)
 )$'
 allowed="$(printf '%s' "$allowed" | tr -d '\n')"
 

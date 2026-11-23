@@ -4,66 +4,65 @@
 #include "ore_kernels.h"
 
 #if ORE_X86
+// CPUID and the register that says which vector state the system saves, read
+// directly. The compiler's own feature query would do the same, but it lives
+// in the compiler's runtime library, which a Rust link on an Intel Mac does
+// not bring.
 #if defined(_MSC_VER)
 #include <immintrin.h>
 #include <intrin.h>
-static int x86_has_avx2_fma_f16c(void) {
+static void x86_cpuid(unsigned leaf, unsigned sub, unsigned out[4]) {
     int r[4];
-    __cpuid(r, 0);
+    __cpuidex(r, (int) leaf, (int) sub);
+    for (int i = 0; i < 4; ++i) out[i] = (unsigned) r[i];
+}
+static unsigned x86_xcr0(void) { return (unsigned) _xgetbv(0); }
+#else
+#include <cpuid.h>
+static void x86_cpuid(unsigned leaf, unsigned sub, unsigned out[4]) {
+    out[0] = out[1] = out[2] = out[3] = 0;
+    __get_cpuid_count(leaf, sub, &out[0], &out[1], &out[2], &out[3]);
+}
+static unsigned x86_xcr0(void) {
+    unsigned eax, edx;
+    __asm__ volatile(".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(0));  // xgetbv
+    (void) edx;
+    return eax;
+}
+#endif
+
+static int x86_has_avx2_fma_f16c(void) {
+    unsigned r[4];
+    x86_cpuid(0, 0, r);
     if (r[0] < 7) return 0;
-    __cpuid(r, 1);
-    const int osxsave = (r[2] >> 27) & 1, avx = (r[2] >> 28) & 1, fma = (r[2] >> 12) & 1, f16c = (r[2] >> 29) & 1;
+    x86_cpuid(1, 0, r);
+    const unsigned osxsave = (r[2] >> 27) & 1, avx = (r[2] >> 28) & 1, fma = (r[2] >> 12) & 1, f16c = (r[2] >> 29) & 1;
     if (!osxsave || !avx || !fma || !f16c) return 0;
-    if ((_xgetbv(0) & 6) != 6) return 0;  // the system saves YMM state
-    __cpuidex(r, 7, 0);
-    return (r[1] >> 5) & 1;
+    if ((x86_xcr0() & 6) != 6) return 0;  // the system saves YMM state
+    x86_cpuid(7, 0, r);
+    return (int) ((r[1] >> 5) & 1);
 }
 static int x86_has_sse41(void) {
-    int r[4];
-    __cpuid(r, 1);
+    unsigned r[4];
+    x86_cpuid(1, 0, r);
     return ((r[2] >> 9) & 1) && ((r[2] >> 19) & 1);  // SSSE3 and SSE4.1
 }
 static int x86_has_avx512_vnni(void) {
-    int r[4];
+    unsigned r[4];
     if (!x86_has_avx2_fma_f16c()) return 0;
-    if ((_xgetbv(0) & 0xe6) != 0xe6) return 0;  // the system saves the mask and ZMM state
-    __cpuidex(r, 7, 0);
-    const int f = (r[1] >> 16) & 1, bw = (r[1] >> 30) & 1, vl = (r[1] >> 31) & 1, vnni = (r[2] >> 11) & 1;
+    if ((x86_xcr0() & 0xe6) != 0xe6) return 0;  // the system saves the mask and ZMM state
+    x86_cpuid(7, 0, r);
+    const unsigned f = (r[1] >> 16) & 1, bw = (r[1] >> 30) & 1, vl = (r[1] >> 31) & 1, vnni = (r[2] >> 11) & 1;
     return f && bw && vl && vnni;
 }
-static void x86_cpuid(unsigned leaf, unsigned out[4]) {
-    int r[4];
-    __cpuid(r, (int) leaf);
-    for (int i = 0; i < 4; ++i) out[i] = (unsigned) r[i];
-}
-#else
-#include <cpuid.h>
-static void x86_cpuid(unsigned leaf, unsigned out[4]) {
-    out[0] = out[1] = out[2] = out[3] = 0;
-    __get_cpuid(leaf, &out[0], &out[1], &out[2], &out[3]);
-}
-static int x86_has_avx2_fma_f16c(void) {
-    __builtin_cpu_init();
-    return __builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma") && __builtin_cpu_supports("f16c");
-}
-static int x86_has_sse41(void) {
-    __builtin_cpu_init();
-    return __builtin_cpu_supports("ssse3") && __builtin_cpu_supports("sse4.1");
-}
-static int x86_has_avx512_vnni(void) {
-    __builtin_cpu_init();
-    return x86_has_avx2_fma_f16c() && __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw") &&
-           __builtin_cpu_supports("avx512vl") && __builtin_cpu_supports("avx512vnni");
-}
-#endif
 
 // AMD's Zen 4 (family 19h; its predecessor in that family has no AVX-512) runs
 // a 512-bit instruction as two 256-bit halves.
 static int x86_512_in_halves(void) {
     unsigned r[4];
-    x86_cpuid(0, r);
+    x86_cpuid(0, 0, r);
     if (r[1] != 0x68747541u || r[3] != 0x69746e65u || r[2] != 0x444d4163u) return 0;  // "AuthenticAMD"
-    x86_cpuid(1, r);
+    x86_cpuid(1, 0, r);
     const unsigned base = (r[0] >> 8) & 0xf;
     return base == 0xf && base + ((r[0] >> 20) & 0xff) == 0x19;
 }

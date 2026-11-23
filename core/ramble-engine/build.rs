@@ -51,6 +51,12 @@ fn main() {
             // No contraction: the code names its fused multiply-adds itself,
             // which is what keeps every kernel set giving the same numbers.
             build.std("c11").flag("-ffp-contract=off");
+            // The baseline is named. Left to the compiler it is whatever the
+            // distribution chose, and Ubuntu 26.04's compiler assumes AVX.
+            // A Mac keeps Apple's own baseline, which every Intel Mac meets.
+            if target_arch == "x86_64" && target_os != "macos" {
+                build.flag("-march=x86-64");
+            }
             if target_os != "macos" && target_os != "windows" {
                 build
                     .define("_POSIX_C_SOURCE", "200809L")
