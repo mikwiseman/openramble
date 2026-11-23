@@ -37,7 +37,8 @@ copy() {
   cp "$REPOSITORY_ROOT/Cargo.toml" "$REPOSITORY_ROOT/Cargo.lock" "$tree/"
   cp -R "$REPOSITORY_ROOT/core" "$tree/core"
   cp -R "$REPOSITORY_ROOT/apps/desktop/src-tauri/src" "$tree/apps/desktop/src-tauri/src"
-  mkdir -p "$tree/apps/cli"
+  mkdir -p "$tree/apps/cli" "$tree/engine"
+  cp -R "$REPOSITORY_ROOT/engine/src" "$REPOSITORY_ROOT/engine/include" "$tree/engine/"
   cp "$REPOSITORY_ROOT/apps/cli/Cargo.toml" "$tree/apps/cli/"
   cp -R "$REPOSITORY_ROOT/apps/cli/src" "$tree/apps/cli/src"
   echo "$tree"
@@ -112,6 +113,14 @@ pub fn fetch() {
 }
 EOF
 expect_fail "$tree" "decode.rs starting a program other than ffmpeg passed"
+
+tree=$(copy)
+echo '#include <sys/socket.h>' >> "$tree/engine/src/ore_model.c"
+expect_fail "$tree" "the engine including a socket header passed"
+
+tree=$(copy)
+echo 'static const char * where(void) { return getenv("HOME"); }' >> "$tree/engine/src/ore.c"
+expect_fail "$tree" "the engine reading the environment passed"
 
 tree=$(copy)
 expect_pass "$tree" "the clean tree fails with cargo available"
