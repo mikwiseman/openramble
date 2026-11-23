@@ -140,16 +140,23 @@ struct TakeList: View {
 /// Before the first take.
 struct EmptyPage: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Say anything.")
-                .font(Theme.display)
-            Text("Tap the button and talk. Your words appear here, written on this iPhone, and are copied, ready to paste.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        // Centred when it fits; scrolls at the largest text sizes.
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Say anything.")
+                        .font(Theme.display)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Tap the button and talk. Your words appear here, written on this iPhone, and are copied, ready to paste.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, Theme.margin)
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .leading)
+            }
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .padding(.horizontal, Theme.margin)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 

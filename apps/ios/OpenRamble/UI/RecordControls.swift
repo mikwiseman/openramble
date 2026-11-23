@@ -44,6 +44,10 @@ struct RecordControls: View {
                 if case let .recording(since) = dictation.phase {
                     Text(timerInterval: since...since.addingTimeInterval(24 * 3600), countsDown: false)
                         .font(.subheadline.monospacedDigit())
+                        // It lives inside a 56-point circle; past this size
+                        // the time is read from the Dynamic Island instead.
+                        .dynamicTypeSize(...DynamicTypeSize.xLarge)
+                        .minimumScaleFactor(0.6)
                         .foregroundStyle(.secondary)
                         .frame(width: 56, height: 56)
                         .glassEffect(.regular, in: .circle)
