@@ -16,10 +16,12 @@ const SOURCES: [&str; 12] = [
     "ore_gguf.c",
     "ore_kernels_generic.c",
     "ore_kernels_neon.c",
+    "ore_kernels_sme.c",
     "ore_kernels_sse.c",
     "ore_longform.c",
     "ore_mel.c",
     "ore_model.c",
+    "ore_r8.c",
     "ore_threads.c",
 ];
 /// The one file MSVC must be told the instruction set of: every other
