@@ -40,13 +40,22 @@ jobs:
       # 22.04 rather than latest: the AppImage and .deb link against whatever
       # glibc built them, so building on the newest runner would produce
       # packages that refuse to start on the distributions people actually run.
+      #
+      # The image's default compiler is a different matter. Built by GCC 12
+      # instead of GCC 11, recognition takes 6 to 13% less time, depending on
+      # the processor, which is level with a GCC 13 build. GCC 12 is Ubuntu
+      # 22.04's own package, and the executable it builds asks a system for
+      # exactly what the GCC 11 one did: the same libraries, glibc 2.34,
+      # GLIBCXX_3.4.29. The image's clang is slower than GCC 12 on AMD.
       - name: Linux system dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
-            libasound2-dev libxdo-dev libxkbcommon-dev
+            libasound2-dev libxdo-dev libxkbcommon-dev gcc-12 g++-12
+          echo "CC=gcc-12" >> "$GITHUB_ENV"
+          echo "CXX=g++-12" >> "$GITHUB_ENV"
 
       - name: Install the Tauri CLI
         shell: bash
