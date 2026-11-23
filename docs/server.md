@@ -127,7 +127,7 @@ git clone https://github.com/mikwiseman/openramble.git && cd openramble
 apps/cli/deploy/install.sh
 ```
 
-`install.sh` builds on the machine itself (ggml tunes itself to the processor), checks the model's size and SHA-256 with the new binary before replacing the old one, keeps the previous binary as `.prev`, installs and enables `openramble.service`, restarts it only once no job is running, waits for `/health`, and only then switches the ssh path (below).
+`install.sh` builds on the machine itself, checks the model's size and SHA-256 with the new binary before replacing the old one, keeps the previous binary as `.prev`, installs and enables `openramble.service`, restarts it only once no job is running, waits for `/health`, and only then switches the ssh path (below).
 
 The server is the only process on the machine that keeps engines loaded. A second set, such as a command-line run with `--workers 3`, would compete with its four for the same cores and slow every job, voice notes past their callers' deadlines. `install.sh` creates `/var/lib/openramble/engines.lock` for that: the server holds it while its engines are loaded, a file-mode run of the command-line tool refuses to start while the server holds it, and a server that starts while a file-mode run is going waits for it to finish, answering 429 `starting` meanwhile. Send files to the server instead, as `transcribe-stdin` does.
 

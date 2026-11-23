@@ -46,8 +46,8 @@ for the check.
    appear and nothing should be said. Then hold it for two seconds in silence
    and confirm the app says the microphone gave nothing.
 10. Quit from the tray while a dictation is being transcribed. The process must
-    exit cleanly — no crash dialog, no report. ggml aborts the process if the
-    model is still loaded at exit, so this is the check for that.
+    exit cleanly — no crash dialog, no report. The engine's threads are
+    stopped on the way out, so this is the check for that.
 11. Dictate into a password field and confirm the text does not appear in the
     system clipboard history afterwards.
 
