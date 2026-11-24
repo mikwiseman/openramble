@@ -1,0 +1,16 @@
+{
+ "item": "i-paste-failed",
+ "situation": "interface copy",
+ "condition": "plain",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "Couldn't paste into that app. Your text is saved, so you can paste it with ⌘V whenever you're ready.",
+ "usage": {
+  "input": 2,
+  "cache_write": 653,
+  "cached_input": 1870,
+  "output": 40
+ },
+ "cost_usd": 0.003203,
+ "seconds": 2
+}

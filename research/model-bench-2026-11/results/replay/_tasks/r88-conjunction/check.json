@@ -1,0 +1,101 @@
+{
+ "task": "r88-conjunction",
+ "checked_at": "2026-11-23 00:00",
+ "load": "4.5",
+ "leaked": [],
+ "parent": {
+  "task": "r88-conjunction",
+  "load": "4.5",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 30
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 1
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": false,
+   "code": 1,
+   "seconds": 2,
+   "failed": [
+    "DictationCoreTests.CleanVerbatimTests testAWordSaidAgainAfterAConjunctionAndAHesitationStays"
+   ],
+   "tries": 2
+  },
+  "suite": {
+   "ok": false,
+   "code": 1,
+   "seconds": 4,
+   "failed": [
+    "DictationCoreTests.CleanVerbatimTests testAWordSaidAgainAfterAConjunctionAndAHesitationStays"
+   ],
+   "tries": 2
+  },
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "not_built": [],
+  "state": "fail",
+  "reason": "hidden tests"
+ },
+ "reference": {
+  "task": "r88-conjunction",
+  "load": "5.3",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 24
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 1
+  },
+  "own_tests": {
+   "files": 1,
+   "fail_on_base": true
+  },
+  "hidden": {
+   "ok": true,
+   "code": 0,
+   "seconds": 8,
+   "failed": [],
+   "tries": 1
+  },
+  "suite": {
+   "ok": true,
+   "code": 0,
+   "seconds": 5,
+   "failed": [],
+   "tries": 1
+  },
+  "unseen": {
+   "ok": true,
+   "code": 0,
+   "seconds": 47,
+   "said": "no real word lost in 54,840 unseen sentences"
+  },
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": true,
+  "rules_broken": [],
+  "not_built": [],
+  "state": "pass",
+  "reason": ""
+ },
+ "usable": true
+}

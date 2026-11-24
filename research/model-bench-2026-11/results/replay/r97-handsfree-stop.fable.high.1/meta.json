@@ -1,0 +1,46 @@
+{
+ "run": "r97-handsfree-stop.fable.high.1",
+ "task": "r97-handsfree-stop",
+ "model": "claude-fable-5-2",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 19:07",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 921,
+ "slept_seconds": 0,
+ "load_before": "7.6",
+ "load_after": "6.1",
+ "memories_written": 0,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r97-handsfree-stop.fable.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 46,
+ "by_kind": {
+  "Bash": 34,
+  "Read": 4,
+  "Edit": 8
+ },
+ "turns": 48,
+ "usage": {
+  "input": 2208,
+  "cache_write": 174503,
+  "cached_input": 3526861,
+  "output": 53540
+ },
+ "tokens": 3757112,
+ "cost_usd": 5.6524002,
+ "models_used": [
+  "claude-fable-5-2"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [
+  "{\"command\": \"cat scripts/build-ffi.sh | head -60; cat scripts/pinned-xcodegen.sh | head -40; grep -n \\\"packages:\\\" -A25 apps/macos/project.yml | head -50; ls core/target 2>/dev/null | head -3; ls ~/Li"
+ ],
+ "test_runs": 11,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 305
+}

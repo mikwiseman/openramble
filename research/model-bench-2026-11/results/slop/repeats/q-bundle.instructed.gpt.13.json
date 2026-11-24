@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 13,
+ "output": "Yes, if you’re willing to change the release rule and have anyone who already installed a build grant Accessibility access again. macOS treats `is.waiwai.openramble` as a different app, even before public launch.\n\nIf the goal is to launch under the OpenRamble name, I’d change the display name and keep `is.waiwai.dictation`. That preserves existing grants.",
+ "cost_usd": null
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 15,
+ "output": "**No, not while the rules stand.** macOS keys Accessibility grants to the bundle ID, so every installed copy would lose its permission. Sparkle also won't update an app across a bundle ID change, so users would have to reinstall and re-grant manually.\n\nIf nothing has shipped yet, the risk is gone, but the invariant would still need to change in the rules file, which is your decision. Check that there are no published builds or appcast entries first. I can't inspect the repo from here.\n\nTo change the name people see, update `CFBundleDisplayName` and `CFBundleName` and keep `is.waiwai.dictation`.",
+ "cost_usd": 0.0016887
+}

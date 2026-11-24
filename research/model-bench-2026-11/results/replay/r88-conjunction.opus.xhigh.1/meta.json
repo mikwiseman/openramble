@@ -1,0 +1,49 @@
+{
+ "run": "r88-conjunction.opus.xhigh.1",
+ "task": "r88-conjunction",
+ "model": "claude-opus-5-5",
+ "tool": "claude",
+ "runner": "a subagent of the Claude Code session running the benchmark",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 03:20",
+ "seconds": 1119.0,
+ "exit": 0,
+ "timed_out": false,
+ "slept_seconds": 0,
+ "load_before": null,
+ "load_after": "3.8",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r88-conjunction.opus.xhigh.1.jsonl",
+ "problems": [],
+ "subagent": true,
+ "tool_calls": 77,
+ "by_kind": {
+  "Bash": 52,
+  "Read": 10,
+  "Edit": 10,
+  "ToolSearch": 2,
+  "Monitor": 1,
+  "TaskStop": 2
+ },
+ "turns": 66,
+ "usage": {
+  "input": 138,
+  "cache_write": 538587,
+  "cached_input": 15846047,
+  "output": 65378
+ },
+ "tokens": 16450150,
+ "cost_usd": null,
+ "models_used": [
+  "claude-opus-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 18,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 478
+}

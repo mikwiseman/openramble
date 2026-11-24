@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 19,
+ "output": "**No, not without changing the release invariant first.** The rules file says `is.waiwai.dictation` is permanent because existing Accessibility grants depend on it. macOS ties those grants to the bundle identifier, so a renamed app would appear to users as a new app. They would lose Accessibility permission and have to re-grant it. Sparkle would also treat the renamed build as a different app rather than an update to the installed one. I'm working only from the excerpt you pasted, since I can't open `docs/release.md` or `AGENTS.md` in this session.\n\nIf you still want the rename, the rule needs to be changed deliberately, and the migration plan for existing users needs to be written first. That is a decision for the project owner, not something to do quietly before launch.\n\nIf the goal is branding as \"OpenRamble,\" you can likely get it without touching the identifier:\n\n- **Display name:** change `CFBundleDisplayName` / `CFBundleName` and the product name to OpenRamble. The Finder and menu-bar name will update, and the identifier stays the same.\n- **Keep `is.waiwai.dictation` as the identifier.** Everything that depends on it (Accessibility grants, Sparkle continuity) is unaffected.\n\nOne check before launch: if no build with Accessibility grants has ever shipped outside your own machines, the migration cost is much lower. Even then, the rule treats the identifier as permanent, so I'd leave it alone unless you decide otherwise.",
+ "cost_usd": 0.0012920000000000002
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 5,
+ "output": "**Yes, but it breaks your own release invariant, so it only makes sense if almost nobody has the app installed yet.**\n\nRenaming means every existing install:\n\n- loses its Accessibility grant, because macOS ties the grant to the bundle ID, so users must re-approve\n- loses its preferences, which live under the old defaults domain\n\nThe identifier is invisible to users. The app can be called OpenRamble everywhere while keeping `is.waiwai.dictation`.\n\nMy recommendation:\n\n- **Only you and a few testers have it:** rename now. Pre-launch is the only cheap moment. Update the rules file to make the new ID permanent, and keep the Sparkle key.\n- **Real users are on auto-update:** keep it.\n\nWho has it installed today?",
+ "cost_usd": 0.112224
+}

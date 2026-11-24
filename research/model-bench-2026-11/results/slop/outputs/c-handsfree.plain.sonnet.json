@@ -1,0 +1,16 @@
+{
+ "item": "c-handsfree",
+ "situation": "commit message",
+ "condition": "plain",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "```\nReplay a hands-free second press queued during insertion\n\nA press that arrives while a landed paste finishes is queued in\npressDuringInsertion and replayed once the paste is done. For a hold,\nthe release is recorded and replayed with it, so a tap stays a tap.\nA hands-free press ends with a second press, not a release, and\nstopHandsFree() during .inserting was ignored. The replay then started\na hands-free take that nothing stopped: the session stayed listening,\nthe microphone stayed on, and the next dictation inserted nothing.\n\nRecord the stop for either kind of press. The `released` flag becomes\n`stopped`. stop() records it only for a hold, and stopHandsFree()\nrecords it for a hands-free press. The replay calls stopHandsFree() or\nstop() to match the press.\n\nThe shipping app does not reach this path: AppState begins hands-free\nonly from a double tap while idle. The bug was found by the gesture\nstorm test, which failed once in CI with seed 45.\n\nThe storm test's inserter now holds 20 ms after the text lands, which\nmakes the window reproducible. Without the fix 14 of 200 seeds fail;\nwith it none do.\n```",
+ "usage": {
+  "input": 2,
+  "cache_write": 1960,
+  "cached_input": 1869,
+  "output": 482
+ },
+ "cost_usd": 0.012850899999999998,
+ "seconds": 4
+}

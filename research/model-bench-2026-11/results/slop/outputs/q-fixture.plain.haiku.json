@@ -1,0 +1,16 @@
+{
+ "item": "q-fixture",
+ "situation": "reply",
+ "condition": "plain",
+ "model": "haiku",
+ "effort": "high",
+ "output": "No, don't edit the fixture by hand. A fixture in `core/conformance/` is a recording of what the shipping Swift pipeline produced. If you change it to match your new Swift output, the test passes but asserts behaviour the Mac does not have, and the Rust port is left unverified.\n\nThe red test is doing its job: the Swift side now differs from the Rust port. The fix is to bring the two in line and regenerate in the same commit:\n\n1. **Decide whether the Swift change is intended.** If it isn't, revert it and stop there.\n2. **Port the change to the Rust side** in `ramble-text` so it matches the new Swift behaviour. If the change touches file cutting, also update `apps/cli/src/plan.rs` and `FileAudioChunks.swift` together, since their tests pin the same cut frames.\n3. **Run the generator** from `core/conformance/` against the Swift pipeline. It rewrites `corpus-text.json` and the recorded outputs from the real Mac behaviour.\n4. **Run `cargo test -p ramble-text --test conformance`** and confirm it passes against the regenerated fixtures.\n5. **Commit the Swift change, the Rust change, and the regenerated fixtures together.**\n\nI can't run any of this from here because the session has no tools or repository access. If you paste the Swift diff, I can work out the matching Rust change and tell you which cases the regenerated corpus should show.",
+ "usage": {
+  "input": 2,
+  "cache_write": 4209,
+  "cached_input": 0,
+  "output": 804
+ },
+ "cost_usd": 0.001244,
+ "seconds": 6
+}

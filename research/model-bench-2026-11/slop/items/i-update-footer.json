@@ -1,0 +1,14 @@
+{
+ "id": "i-update-footer",
+ "situation": "interface copy",
+ "ask": "Write the text under the switch \"Check for updates automatically\".",
+ "label": "Shipped",
+ "prompt": "Write the footer text that sits under the Settings switch \"Check for updates automatically\" in OpenRamble, a dictation app that promises your voice never leaves your Mac.\n\nFacts: the switch is on by default, so that security fixes arrive. Once a day the app reads a small version list. The request contains the app version and the IP address. It contains no device profile and no dictated content. Turning the switch off stops all scheduled network access.\n\nGive only the footer text.",
+ "required": [
+  "The switch is on by default",
+  "The check happens once a day",
+  "The request contains the app version and the IP address",
+  "Turning it off stops scheduled network access"
+ ],
+ "reference": "On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access."
+}

@@ -1,0 +1,43 @@
+{
+ "run": "t-exists.fable.high.1",
+ "task": "t-exists",
+ "model": "claude-fable-5-2",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "started": "2026-11-22 18:49",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 51,
+ "slept_seconds": 0,
+ "load_before": "8.7",
+ "load_after": "9.0",
+ "memories_written": 1,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/t-exists.fable.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 10,
+ "by_kind": {
+  "Bash": 9,
+  "Read": 1
+ },
+ "turns": 11,
+ "usage": {
+  "input": 20,
+  "cache_write": 40710,
+  "cached_input": 371495,
+  "output": 4390
+ },
+ "tokens": 416615,
+ "cost_usd": 0.9014190000000001,
+ "models_used": [
+  "claude-fable-5-2"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 1,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 115
+}

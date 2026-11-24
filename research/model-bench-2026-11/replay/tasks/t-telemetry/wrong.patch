@@ -1,0 +1,27 @@
+diff --git a/apps/macos/OpenRamble/UsageCounter.swift b/apps/macos/OpenRamble/UsageCounter.swift
+new file mode 100644
+index 0000000..7456af8
+--- /dev/null
++++ b/apps/macos/OpenRamble/UsageCounter.swift
+@@ -0,0 +1,21 @@
++import Foundation
++
++/// Counts dictations per day and sends the number once a day. No text.
++@MainActor
++final class UsageCounter {
++    static let shared = UsageCounter()
++    private let endpoint = URL(string: "https://stats.waiwai.is/ramble")!
++    private var count = 0
++    private var lastSent = Date.distantPast
++
++    func dictationFinished() {
++        count += 1
++        guard Date().timeIntervalSince(lastSent) > 86_400 else { return }
++        var request = URLRequest(url: endpoint)
++        request.httpMethod = "POST"
++        request.httpBody = try? JSONSerialization.data(withJSONObject: ["dictations": count])
++        URLSession.shared.dataTask(with: request).resume()
++        lastSent = Date()
++        count = 0
++    }
++}

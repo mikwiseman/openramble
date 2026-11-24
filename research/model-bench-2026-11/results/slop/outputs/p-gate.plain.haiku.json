@@ -1,0 +1,16 @@
+{
+ "item": "p-gate",
+ "situation": "pull request description",
+ "condition": "plain",
+ "model": "haiku",
+ "effort": "high",
+ "output": "**Title:** Restore the clipboard check in the network-surface gate\n\n**Summary**\n\nThe network-surface gate's clipboard check was reading an unset variable. The script printed `FORBIDDEN_PASTEBOARD: unbound variable`, matched nothing, and exited 0, so the release preflight passed without checking the clipboard. This PR defines the pattern again.\n\n**Why it matters**\n\nA plain `clearContents()` or `declareTypes()` call puts dictation text on the system pasteboard, and Universal Clipboard can carry it to every device on the same Apple ID. The gate exists to block that. Its definition was removed along with the retired ASR worker's control-plane scan, which sat next to it, and the clipboard check was left behind without it.\n\n**Changes**\n\n- `scripts/check-network-surface.sh`: adds `FORBIDDEN_PASTEBOARD='clearContents\\(\\)|declareTypes\\('` immediately before the clipboard loop, with a comment explaining the risk and the regression.\n\nThis restores only the pasteboard pattern. The ASR worker's control-plane scan is not restored, since that worker is retired.\n\n**Verification**\n\n- With a `clearContents()` call planted in a shipping path, the script now exits 1.\n- With that call removed, the script exits 0.\n\nI ran these checks outside this session and am reporting the results as given. The reviewer should rerun the planted-call case before merging.\n\n**Review notes**\n\n- The pattern is a plain text match, so it will also flag any legitimate `declareTypes(` call in shipping code. If there is one, it needs an explicit allowlist entry, not a weaker pattern.\n- The underlying problem is that an unset variable let the gate pass. This PR fixes this instance only. A follow-up should make the script fail closed on any unset variable and should add a CI check that a planted forbidden call makes the gate fail, so a future deletion cannot silently disable a check again.",
+ "usage": {
+  "input": 2,
+  "cache_write": 3821,
+  "cached_input": 0,
+  "output": 1663
+ },
+ "cost_usd": 0.0015959,
+ "seconds": 10
+}

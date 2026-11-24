@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 2,
+ "output": "Yes, but it breaks the repo's first release invariant, and pre-launch is the only cheap time to do it.\n\nmacOS ties Accessibility and Microphone grants to the bundle identifier. After the rename, every existing install becomes a new app to the system: dictation stops working until the user re-grants both, and preferences reset unless we migrate them.\n\nMy recommendation is to keep `is.waiwai.dictation`. Users never see it, and the app name can be OpenRamble regardless.\n\nIf existing installs are just you and a few testers and you want the clean ID, say so. I'd rename it and update the rules file to make the new one permanent.",
+ "cost_usd": 0.12234400000000001
+}

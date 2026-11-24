@@ -1,0 +1,103 @@
+{
+ "task": "r97-handsfree-stop",
+ "checked_at": "2026-11-23 21:38",
+ "load": "6.4",
+ "leaked": [],
+ "parent": {
+  "task": "r97-handsfree-stop",
+  "load": "6.4",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 30
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 1
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": false,
+   "code": 1,
+   "seconds": 69,
+   "failed": [
+    "DictationCoreTests.DictationControllerRaceTests testRandomGestureStormsAlwaysLeaveTheMicrophoneOff",
+    "DictationCoreTests.DictationControllerTests testAHandsFreeTakeEndedWhileALandedPasteFinishesIsStopped"
+   ],
+   "tries": 2
+  },
+  "suite": {
+   "ok": false,
+   "code": 1,
+   "seconds": 124,
+   "failed": [
+    "DictationCoreTests.DictationControllerRaceTests testRandomGestureStormsAlwaysLeaveTheMicrophoneOff",
+    "DictationCoreTests.DictationControllerTests testAHandsFreeTakeEndedWhileALandedPasteFinishesIsStopped"
+   ],
+   "tries": 2
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "fail",
+  "reason": "hidden tests"
+ },
+ "reference": {
+  "task": "r97-handsfree-stop",
+  "load": "138.8",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 69
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 3
+  },
+  "own_tests": {
+   "files": 2,
+   "fail_on_base": true
+  },
+  "hidden": {
+   "ok": true,
+   "code": 0,
+   "seconds": 46,
+   "failed": [],
+   "tries": 1
+  },
+  "suite": {
+   "ok": true,
+   "code": 0,
+   "seconds": 90,
+   "failed": [],
+   "tries": 1
+  },
+  "unseen": {
+   "ok": true,
+   "code": 0,
+   "seconds": 93,
+   "said": "every unseen press sequence and storm leaves the microphone off"
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "pass",
+  "reason": ""
+ },
+ "usable": true
+}

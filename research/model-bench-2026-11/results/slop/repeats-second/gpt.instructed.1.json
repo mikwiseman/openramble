@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "instructed",
+ "output": "Keep `is.waiwai.dictation` as the bundle identifier and launch under the name **OpenRamble**. You can change the name users see while preserving their existing Accessibility grants.\n\nChanging the identifier to `is.waiwai.openramble` is technically possible, but macOS would treat it as a new app for Accessibility permissions. Anyone already using it, including prelaunch testers, would need to grant access again. The release rules explicitly make the current identifier permanent.",
+ "opens": "no"
+}

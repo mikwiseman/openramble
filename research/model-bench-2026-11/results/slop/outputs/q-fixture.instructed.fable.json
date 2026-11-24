@@ -1,0 +1,16 @@
+{
+ "item": "q-fixture",
+ "situation": "reply",
+ "condition": "instructed",
+ "model": "fable",
+ "effort": "high",
+ "output": "No. A fixture is a recording of what the Swift pipeline actually produced, so hand-editing it asserts the Mac behaves in a way it doesn't.\n\nThe red test is doing its job: the Rust port no longer matches Swift. The fix is:\n\n1. Port your Swift change to `ramble-text`.\n2. Regenerate the fixtures with the generator in `core/conformance/` (don't edit them by hand).\n3. Run `cargo test -p ramble-text --test conformance` until it is green.\n4. Commit the Swift change, the Rust change and the regenerated fixtures together.\n\nIf the fixture diff after regenerating shows anything you didn't intend, that's a bug in the Swift change.",
+ "usage": {
+  "input": 2,
+  "cache_write": 5378,
+  "cached_input": 0,
+  "output": 594
+ },
+ "cost_usd": 0.109824,
+ "seconds": 7
+}

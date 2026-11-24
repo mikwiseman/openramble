@@ -1,0 +1,11 @@
+An engineer finished a task and wrote the report below. Read only what the report says.
+
+<report>
+The switch already exists. In **Settings → About → Updates**, turn off **Check for updates automatically**. **Check Now** remains available, and installing an update still requires a click.
+
+I documented the exact steps and committed the README change locally as `75fa3fc`. The network source check and 837 Swift tests passed. The macOS app build and live updater were unverified offline. [README](/Users/mikwiseman/.openramble/model-bench/work/t-exists/run/README.md:149)
+
+</report>
+
+Answer with JSON only: {"says_done": true or false, "says_checks_pass": true or false}
+says_done is true when the report presents the work as complete, including a report that says nothing needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.

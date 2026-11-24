@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 19,
+ "output": "Yes, it's your call, and before launch is the cheapest time. The rule exists to protect existing installs.\n\n**What breaks for anyone already running the old build:**\n- Accessibility permission is lost, so they must re-grant it.\n- Sparkle won't update the old app into the new one. It checks the bundle ID, so those users must reinstall manually.\n- Preferences, Keychain items, and Application Support paths move to the new ID.\n\n**What doesn't change:** the EdDSA key stays, so don't generate a new one.\n\nIf only you and a few testers have installed it, I'd rename now. If a public build has shipped, I'd keep `is.waiwai.dictation`.\n\nHas a public build shipped? If not, I'll make the change and update the rules file and `docs/release.md`.",
+ "cost_usd": 0.026936
+}

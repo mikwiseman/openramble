@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "instructed",
+ "output": "**No, not without breaking existing installs.** The rules file marks `is.waiwai.dictation` as permanent because macOS ties Accessibility grants to the bundle identifier. A rename would drop those grants for anyone who already has the app, and I haven't checked whether any users have it yet.\n\nIf you want the OpenRamble name before launch, change the product name and display name and keep the bundle ID. If you still want the new ID, change the invariant in the rules file first, since it's written as permanent. I can't read the repo from here, so I haven't confirmed the current state of those files.",
+ "opens": "no"
+}

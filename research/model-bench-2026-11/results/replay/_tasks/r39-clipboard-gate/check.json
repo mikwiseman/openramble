@@ -1,0 +1,85 @@
+{
+ "task": "r39-clipboard-gate",
+ "checked_at": "2026-11-23 17:35",
+ "load": "17.6",
+ "leaked": [],
+ "parent": {
+  "task": "r39-clipboard-gate",
+  "load": "18.8",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 4
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 0
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": false,
+   "code": 1,
+   "seconds": 0,
+   "failed": [
+    "FAIL: the gate still reads an unset variable"
+   ],
+   "tries": 2
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "fail",
+  "reason": "hidden tests"
+ },
+ "reference": {
+  "task": "r39-clipboard-gate",
+  "load": "17.5",
+  "check": {
+   "ok": true,
+   "code": 0,
+   "seconds": 1
+  },
+  "network_gate": {
+   "ok": true,
+   "code": 0,
+   "seconds": 0
+  },
+  "own_tests": {
+   "files": 0,
+   "fail_on_base": null
+  },
+  "hidden": {
+   "ok": true,
+   "code": 0,
+   "seconds": 1,
+   "failed": [],
+   "tries": 1
+  },
+  "unseen": {
+   "ok": true,
+   "code": 0,
+   "seconds": 4,
+   "said": "the gate answers all 14 unseen planted lines as the shipped gate does"
+  },
+  "not_built": [],
+  "unasked_files": [],
+  "weakened_tests": {
+   "removed": 0,
+   "skipped": 0
+  },
+  "fixtures_touched": false,
+  "rules_broken": [],
+  "state": "pass",
+  "reason": ""
+ },
+ "usable": true
+}

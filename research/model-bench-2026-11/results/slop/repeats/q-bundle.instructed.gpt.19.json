@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 19,
+ "output": "Yes, if you’re willing to make an explicit exception to the release rule. Existing users would need to grant Accessibility access again after switching to `is.waiwai.openramble`.\n\nI’d keep `is.waiwai.dictation` and launch under the name **OpenRamble**. The display name can change independently. If you want the new identifier, keep the existing Sparkle key and verify the upgrade from a currently shipped build before launch.",
+ "cost_usd": null
+}

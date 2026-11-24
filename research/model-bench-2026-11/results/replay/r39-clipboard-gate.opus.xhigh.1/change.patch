@@ -1,0 +1,346 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index d453560..4ffc48c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -82,6 +82,11 @@ jobs:
+       - name: Check that the network is only where it is allowed
+         run: ./scripts/check-network-surface.sh
+ 
++      # A green gate means something only if it can turn red. Plant each thing
++      # it guards in a scratch copy and require a failure that names it.
++      - name: Check that the gate fails on what it guards
++        run: ./scripts/tests/test-network-surface.sh
++
+   arm64-build:
+     name: Apple Silicon only
+     runs-on: macos-26
+diff --git a/scripts/check-network-surface.sh b/scripts/check-network-surface.sh
+index f578dac..a18b961 100755
+--- a/scripts/check-network-surface.sh
++++ b/scripts/check-network-surface.sh
+@@ -35,11 +35,26 @@ FORBIDDEN+='|SFSpeechRecognizer'
+ FORBIDDEN+='|NSUbiquitousKeyValueStore|CKContainer|CKDatabase'
+ # Loading models past our manifest.
+ FORBIDDEN+='|MLModelCollection'
++# scripts/tests/test-network-surface.sh plants one real line for every entry
++# here and requires the gate to fail on it; add the line when adding an entry.
+ 
+ status=0
+ 
++# grep exits 1 when nothing matches, which here is the passing case. Anything
++# higher means the search itself never ran: a pattern that is not defined or
++# does not compile, a shipping path that moved. Every search therefore runs as
++# `hits=$(...)` in this shell, never inside `< <(...)`, so under `set -e` such a
++# failure stops the gate instead of reading as "found nothing". Violations go
++# to stderr, because the release preflight and check.sh discard stdout.
++matching() { grep "$@" || [[ $? -eq 1 ]]; }
++
+ echo "Checking network symbols..."
++hits=$(matching -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" \
++  | matching -v '^Binary' \
++  | matching -vE ':[0-9]+: *//' \
++  | matching -vE 'URLSessionModelDownloader\(\)|: ModelDownloading')
+ while IFS= read -r hit; do
++  [[ -n "$hit" ]] || continue
+   file="${hit%%:*}"
+   if [[ "$file" =~ $ALLOWED ]]; then
+     continue
+@@ -50,14 +65,23 @@ while IFS= read -r hit; do
+     status=1
+   fi
+   echo "  $hit"
+-done < <(grep -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" 2>/dev/null \
+-  | grep -v '^Binary' \
+-  | grep -vE ':[0-9]+: *//' \
+-  | grep -vE 'URLSessionModelDownloader\(\)|: ModelDownloading' \
+-  || true)
++done <<<"$hits" >&2
++
++# Each of these starts a new clipboard entry that Universal Clipboard hands to
++# every device on the Apple ID. prepareForNewContents is the one way in, and
++# only with .currentHostOnly; with no options it is clearContents() renamed.
++FORBIDDEN_PASTEBOARD='clearContents\(|declareTypes\(|prepareForNewContents\((\)|with: *\[ *\]\))'
+ 
+ echo "Checking the clipboard entry..."
++# Comments are excluded in the same way as in network symbol checking. Without this
++# the gate crashed on a line that itself explains why you can’t write it like that -
++# and a false positive here is more expensive than a pass: they start to bypass it, and
++# one day they will bypass the present.
++hits=$(matching -rnE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" \
++  | matching -v '^Binary' \
++  | matching -vE ':[0-9]+: *//')
+ while IFS= read -r hit; do
++  [[ -n "$hit" ]] || continue
+   if [[ $status -eq 0 ]]; then
+     echo ""
+     echo "VIOLATION: flushing buffer past .currentHostOnly takes away dictation"
+@@ -66,14 +90,7 @@ while IFS= read -r hit; do
+     status=1
+   fi
+   echo "  $hit"
+-  # Comments are excluded in the same way as in network symbol checking. Without this
+-  # the gate crashed on a line that itself explains why you can’t write it like that -
+-  # and a false positive here is more expensive than a pass: they start to bypass it, and
+-  # one day they will bypass the present.
+-done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" 2>/dev/null \
+-  | grep -v '^Binary' \
+-  | grep -vE ':[0-9]+: *//' \
+-  || true)
++done <<<"$hits" >&2
+ 
+ # Updates must remain silent until enabled. This is not cosmetics:
+ # without SUEnableAutomaticChecks=false Sparkle will ask itself on the second launch
+@@ -106,19 +123,21 @@ for required in "${REQUIRED_UPDATE_KEYS[@]}"; do
+     status=1
+   fi
+   echo "$PROJECT_YML does not have the line '$required'"
+-done
++done >&2
+ 
+ # Logging the dictation text itself is something that the user definitely does not expect.
+ echo "Checking text logging..."
++hits=$(matching -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|dictatedText|recognizedText)' \
++  "${SHIPPING_PATHS[@]}")
+ while IFS= read -r hit; do
++  [[ -n "$hit" ]] || continue
+   if [[ $status -eq 0 ]]; then
+     echo ""
+     echo "VIOLATION: recognized text is included in the log."
+     status=1
+   fi
+   echo "  $hit"
+-done < <(grep -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|dictatedText|recognizedText)' \
+-  "${SHIPPING_PATHS[@]}" 2>/dev/null || true)
++done <<<"$hits" >&2
+ 
+ # The inference runtime is a prebuilt third-party binary, so reading its source
+ # proves nothing about what ships. Audit the Mach-O we actually link: a library
+@@ -132,25 +151,29 @@ if [[ -z "$RUNTIME_BINARY" ]]; then
+   echo "  runtime not resolved yet (run a build first); skipping the binary audit"
+ else
+   NETWORK_SYMBOLS='curl_easy|NSURLSession|NSURLConnection|NSURLRequest|CFNetwork|CFURLConnection|CFReadStream|_socket$|_connect$|_getaddrinfo$|_gethostby|SSLCreateContext|nw_connection|dns_sd'
++  hits=$(nm -u "$RUNTIME_BINARY" | matching -E "$NETWORK_SYMBOLS")
+   while IFS= read -r hit; do
++    [[ -n "$hit" ]] || continue
+     if [[ $status -eq 0 ]]; then
+       echo ""
+       echo "VIOLATION: the inference runtime references a network API."
+       status=1
+     fi
+     echo "  $hit"
+-  done < <(nm -u "$RUNTIME_BINARY" 2>/dev/null | grep -E "$NETWORK_SYMBOLS" || true)
++  done <<<"$hits" >&2
+ 
+   # NSURL alone is the file-path value type; the runtime uses fileURLWithPath:
+   # to load its model and Metal library. Anything beyond that is worth failing on.
++  hits=$(otool -L "$RUNTIME_BINARY" | matching -E "CFNetwork|Network\.framework|Security\.framework|libcurl")
+   while IFS= read -r hit; do
++    [[ -n "$hit" ]] || continue
+     if [[ $status -eq 0 ]]; then
+       echo ""
+       echo "VIOLATION: the inference runtime links a networking framework."
+       status=1
+     fi
+     echo "  $hit"
+-  done < <(otool -L "$RUNTIME_BINARY" 2>/dev/null | grep -E "CFNetwork|Network\.framework|Security\.framework|libcurl" || true)
++  done <<<"$hits" >&2
+ fi
+ 
+ if [[ $status -eq 0 ]]; then
+diff --git a/scripts/check.sh b/scripts/check.sh
+index 7a84aca..31531e1 100755
+--- a/scripts/check.sh
++++ b/scripts/check.sh
+@@ -148,6 +148,8 @@ run_app() {
+ run_network_gate() {
+   echo "→ Network Surface"
+   ./scripts/check-network-surface.sh > /dev/null || fail "Network gate failed."
++  ./scripts/tests/test-network-surface.sh > /dev/null \
++    || fail "The network gate no longer fails on what it guards."
+   green "the promise about the network stands"
+   echo "→ Diagnostics Surface"
+   ./scripts/check-diagnostics-surface.sh > /dev/null || fail "Diagnostics gate failed."
+diff --git a/scripts/tests/test-network-surface.sh b/scripts/tests/test-network-surface.sh
+new file mode 100755
+index 0000000..1bfe87d
+--- /dev/null
++++ b/scripts/tests/test-network-surface.sh
+@@ -0,0 +1,178 @@
++#!/bin/bash
++# The network gate earns its green line only if it turns red when it should.
++#
++# Every case copies what the gate reads into a scratch tree, plants one thing
++# the gate exists to stop, and requires the gate to fail, name what it found,
++# and not also claim the surface is clean. The untouched copy must pass first,
++# so a gate that fails on everything proves nothing.
++#
++# The last two cases break the gate itself. Its clipboard pattern once went
++# undefined: the search died inside a subshell, the error scrolled past, and
++# the gate still reported a clean surface. A check that cannot run must fail.
++
++set -euo pipefail
++
++REPOSITORY_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
++TEMP_DIRECTORY="$(mktemp -d)"
++PLANTED="apps/macos/OpenRamble/Planted.swift"
++RUNTIME="Packages/LocalASR/.build/artifacts/ctranscribe/CTranscribe.framework/Versions/A/CTranscribe"
++CLEAN_LINE="Network source surface is limited to model downloads and update checks"
++
++cleanup() {
++  local exit_code=$?
++  find "$TEMP_DIRECTORY" -depth -delete 2>/dev/null || true
++  exit "$exit_code"
++}
++trap cleanup EXIT
++
++fail_test() {
++  printf 'FAIL: %s\n' "$1" >&2
++  exit 1
++}
++
++# A scratch copy of everything the gate reads.
++new_tree() {
++  TREE="$(mktemp -d "$TEMP_DIRECTORY/tree.XXXXXX")"
++  mkdir -p "$TREE/scripts" "$TREE/Packages/DictationCore" "$TREE/Packages/LocalASR" "$TREE/apps/macos"
++  cp "$REPOSITORY_ROOT/scripts/check-network-surface.sh" "$TREE/scripts/"
++  cp -R "$REPOSITORY_ROOT/Packages/DictationCore/Sources" "$TREE/Packages/DictationCore/"
++  cp -R "$REPOSITORY_ROOT/Packages/LocalASR/Sources" "$TREE/Packages/LocalASR/"
++  cp -R "$REPOSITORY_ROOT/apps/macos/OpenRamble" "$TREE/apps/macos/"
++  cp "$REPOSITORY_ROOT/apps/macos/project.yml" "$TREE/apps/macos/"
++}
++
++run_gate() {
++  GATE_STATUS=0
++  GATE_OUTPUT=$(cd "$TREE" && ./scripts/check-network-surface.sh 2>&1) || GATE_STATUS=$?
++}
++
++expect_pass() {
++  run_gate
++  [[ $GATE_STATUS -eq 0 ]] || fail_test "$1: the gate failed a clean tree:
++$GATE_OUTPUT"
++  printf 'passed: %s\n' "$1"
++}
++
++# The gate must fail, report every expected text, and not also say all is well.
++expect_caught() {
++  local name="$1" expected
++  shift
++  run_gate
++  [[ $GATE_STATUS -ne 0 ]] || fail_test "$name: the gate passed:
++$GATE_OUTPUT"
++  for expected in "$@"; do
++    grep -Fq -- "$expected" <<<"$GATE_OUTPUT" \
++      || fail_test "$name: the gate failed without reporting '$expected':
++$GATE_OUTPUT"
++  done
++  if grep -Fq -- "$CLEAN_LINE" <<<"$GATE_OUTPUT"; then
++    fail_test "$name: the gate failed and still declared the surface clean:
++$GATE_OUTPUT"
++  fi
++  printf 'caught: %s\n' "$name"
++}
++
++# Plants each line in a new shipping Swift file, then requires the gate to fail
++# under the header and to report every planted line by its number.
++expect_lines_caught() {
++  local name="$1" header="$2" number=0 line
++  shift 2
++  new_tree
++  printf '%s\n' "$@" >"$TREE/$PLANTED"
++  local expected=("$header")
++  for line in "$@"; do
++    number=$((number + 1))
++    expected+=("$PLANTED:$number:$line")
++  done
++  expect_caught "$name" "${expected[@]}"
++}
++
++# Compiles C source into the place the gate looks for the inference runtime.
++build_runtime() {
++  local source="$TEMP_DIRECTORY/runtime.c"
++  printf '%s\n' "$1" >"$source"
++  shift
++  mkdir -p "$(dirname "$TREE/$RUNTIME")"
++  clang -dynamiclib -o "$TREE/$RUNTIME" "$source" "$@"
++}
++
++new_tree
++expect_pass "the shipping tree as it is"
++
++expect_lines_caught "every network API on the denied list" \
++  "VIOLATION: network outside permitted locations." \
++  'let session = URLSession.shared' \
++  'let connection = NWConnection(host: "example.com", port: 443, using: .tcp)' \
++  'let browser = NWBrowser(for: .bonjour(type: "_ramble._tcp", domain: nil), using: .tcp)' \
++  'import CFNetwork' \
++  'CFStreamCreatePairWithSocketToHost(nil, host, 443, &input, &output)' \
++  'let view = WKWebView()' \
++  'let service = NSNetService(domain: "", type: "_ramble._tcp", name: "ramble")' \
++  'let legacy = NSURLConnection(request: request, delegate: nil)' \
++  'let data = try Data(contentsOf: remote)' \
++  'let page = try String(contentsOf: remote)' \
++  'let rich = try NSAttributedString(url: remote, documentAttributes: nil)' \
++  'let image = NSImage(contentsOf: remote)' \
++  'let asset = AVAsset(url: remote)' \
++  'let recognizer = SFSpeechRecognizer()' \
++  'NSUbiquitousKeyValueStore.default.set(text, forKey: "last")' \
++  'let container = CKContainer.default()' \
++  'let database: CKDatabase = container.privateCloudDatabase' \
++  'MLModelCollection.beginAccessing(identifier: "ramble") { _ in }'
++
++expect_lines_caught "every clipboard write that can reach other devices" \
++  "VIOLATION: flushing buffer past .currentHostOnly" \
++  'NSPasteboard.general.clearContents()' \
++  'pasteboard.declareTypes([.string], owner: nil)' \
++  'pasteboard.prepareForNewContents()' \
++  'pasteboard.prepareForNewContents(with: [])'
++
++expect_lines_caught "dictated text in the log" \
++  "VIOLATION: recognized text is included in the log." \
++  'logger.info("inserted \(transcript)")' \
++  'log.debug("raw: \(dictatedText)")' \
++  'logger.error("failed on \(recognizedText)")'
++
++new_tree
++sed -e 's/SUEnableAutomaticChecks: true/SUEnableAutomaticChecks: false/' \
++  -e 's/SUSendProfileInfo: false/SUSendProfileInfo: true/' \
++  -e 's/SUAllowsAutomaticUpdates: false/SUAllowsAutomaticUpdates: true/' \
++  "$REPOSITORY_ROOT/apps/macos/project.yml" >"$TREE/apps/macos/project.yml"
++expect_caught "update settings that break the promise" \
++  "VIOLATION: Updates are not configured as promised to the user." \
++  "'SUEnableAutomaticChecks: true'" \
++  "'SUSendProfileInfo: false'" \
++  "'SUAllowsAutomaticUpdates: false'"
++
++new_tree
++build_runtime 'int transcribe(void) { return 0; }'
++expect_pass "an inference runtime that cannot reach the network"
++if grep -Fq 'skipping the binary audit' <<<"$GATE_OUTPUT"; then
++  fail_test "the gate did not find the planted runtime, so the binary cases prove nothing"
++fi
++
++new_tree
++build_runtime '#include <netdb.h>
++int resolve(const char *host) { struct addrinfo *found; return getaddrinfo(host, "443", 0, &found); }'
++expect_caught "an inference runtime that resolves host names" \
++  "VIOLATION: the inference runtime references a network API." \
++  "_getaddrinfo"
++
++new_tree
++build_runtime 'int transcribe(void) { return 0; }' -framework Network
++expect_caught "an inference runtime linked against Network.framework" \
++  "VIOLATION: the inference runtime links a networking framework." \
++  "Network.framework"
++
++new_tree
++grep -v '^FORBIDDEN_PASTEBOARD' "$REPOSITORY_ROOT/scripts/check-network-surface.sh" \
++  >"$TREE/scripts/check-network-surface.sh"
++expect_caught "the gate with its clipboard pattern undefined" \
++  "FORBIDDEN_PASTEBOARD: unbound variable"
++
++new_tree
++find "$TREE/Packages/LocalASR/Sources" -depth -delete
++expect_caught "a shipping directory that is not where the gate looks" \
++  "Packages/LocalASR/Sources: No such file or directory"
++
++printf 'PASS: the network gate fails on everything it guards, and on itself breaking\n'

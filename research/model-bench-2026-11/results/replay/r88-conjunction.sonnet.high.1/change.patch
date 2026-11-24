@@ -1,0 +1,652 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift b/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
+index a3fc2dc..534a0ae 100644
+--- a/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
++++ b/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
+@@ -181,6 +181,16 @@ enum CleanVerbatim {
+         "they", "about", "think", "know", "there", "their", "it's", "don't", "i'm", "let's",
+     ]
+ 
++    /// Words that join what comes after them to what came before: "it and, um,
++    /// it works". Said once, they are the sentence's own, so a restart never
++    /// takes one back unless it also takes back a whole clause ("I think that,
++    /// um, I think we should").
++    static let connectingWords: Set<String> = [
++        "and", "or", "but", "so", "because", "if", "when", "that", "than", "then", "which", "who", "whom",
++        "whose", "about", "и", "а", "но", "или", "что", "чтобы", "если", "когда", "потому", "как", "который",
++        "которая", "которое", "которые",
++    ]
++
+     /// Words that cannot end a phrase, so a comma after one before a
+     /// hesitation can only be the pause: "should, um,", "что, э,".
+     static let pauseCommaWords: Set<String> = [
+@@ -564,6 +574,11 @@ extension CleanVerbatim {
+             index == 0 || endsSentence(at: index - 1)
+         }
+ 
++        /// A sentence or a comma-closed phrase starts at `index`.
++        private func opensClause(at index: Int) -> Bool {
++            opensSentence(at: index) || items[index - 1].endsWithComma
++        }
++
+         /// Whether "um" is a word in this take: German or Portuguese in it.
+         private var umIsAWord: Bool {
+             items.contains { token in
+@@ -910,6 +925,8 @@ extension CleanVerbatim {
+                       last.punctuation.isEmpty || last.punctuation == ",",
+                       !before.dropLast().contains(where: { !$0.punctuation.isEmpty }),
+                       !before.contains(where: isKept), !again.contains(where: isKept),
++                      // "it and, um, it works" keeps its "and"; "I think that, um, I think" does not.
++                      !CleanVerbatim.connectingWords.contains(lastWord) || (length == 3 && opensClause(at: index - length)),
+                       zip(again, before).allSatisfy({ $0.punctuation.isEmpty && $0.word == $1.word })
+                 else { continue }
+                 return length
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
+index 33e005b..7cbdbb0 100644
+--- a/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
++++ b/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
+@@ -807,6 +807,42 @@ final class CleanVerbatimTests: XCTestCase {
+         }
+     }
+ 
++    /// "um" between two words that merely begin alike is not a restart: the
++    /// word before it is a conjunction, a complementizer or a preposition that
++    /// the sentence needs ("it and, um, it works"). Only the hesitation goes.
++    func testAHesitationAfterAConnectorDoesNotEatRealWords() {
++        let cases = [
++            ("We shipped it and, um, it works.", "We shipped it and it works."),
++            ("I'll ask Sam and, uh, Sam will know.", "I'll ask Sam and Sam will know."),
++            ("Ship it if, um, it passes review.", "Ship it if it passes review."),
++            ("I told you that, um, you should come.", "I told you that you should come."),
++            ("We talked to them about, um, them joining.", "We talked to them about them joining."),
++            ("Мы сделали это и, э, это работает.", "Мы сделали это и это работает."),
++            ("Ship the thing if, um, the thing passes.", "Ship the thing if the thing passes."),
++        ]
++        for (input, expected) in cases {
++            for corrections in [true, false] {
++                XCTAssertEqual(CleanVerbatim.clean(input, spokenCorrections: corrections), expected, input)
++            }
++        }
++    }
++
++    /// A real restart still collapses when the phrase it takes back opens the
++    /// sentence or a clause.
++    func testARestartAfterAConnectorStillCollapses() {
++        let cases = [
++            ("I think that, um, I think we should wait.", "I think we should wait."),
++            ("Okay, I think that, um, I think we should wait.", "Okay, I think we should wait."),
++            ("Let's meet at, uh, let's meet on Monday.", "Let's meet on Monday."),
++            ("I talked with the, um, with Kowalski's team.", "I talked with Kowalski's team."),
++        ]
++        for (input, expected) in cases {
++            for corrections in [true, false] {
++                XCTAssertEqual(CleanVerbatim.clean(input, spokenCorrections: corrections), expected, input)
++            }
++        }
++    }
++
+     func testRoundSixKeepsWhatWasMeant() {
+         for text in [
+             "Is it safe to merge? Uh uh.",
+diff --git a/core/conformance/corpus-text.json b/core/conformance/corpus-text.json
+index 2389d37..1246879 100644
+--- a/core/conformance/corpus-text.json
++++ b/core/conformance/corpus-text.json
+@@ -4452,7 +4452,7 @@
+     "allowPressReturnCommand": false,
+     "phoneticMatching": true,
+     "mode": "prose",
+-    "input": "Dear John. \u0301new line."
++    "input": "Dear John. ́new line."
+   },
+   {
+     "name": "send it after a hesitation in a terminal",
+@@ -4691,5 +4691,140 @@
+     "allowPressReturnCommand": false,
+     "phoneticMatching": true,
+     "input": "it works ."
++  },
++  {
++    "name": "connector before a hesitation 1",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We shipped it and, um, it works."
++  },
++  {
++    "name": "connector before a hesitation 1 without corrections",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "We shipped it and, um, it works."
++  },
++  {
++    "name": "connector before a hesitation 2",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I'll ask Sam and, uh, Sam will know."
++  },
++  {
++    "name": "connector before a hesitation 2 without corrections",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I'll ask Sam and, uh, Sam will know."
++  },
++  {
++    "name": "connector before a hesitation 3",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Ship it if, um, it passes review."
++  },
++  {
++    "name": "connector before a hesitation 3 without corrections",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Ship it if, um, it passes review."
++  },
++  {
++    "name": "connector before a hesitation 4",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I told you that, um, you should come."
++  },
++  {
++    "name": "connector before a hesitation 4 without corrections",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I told you that, um, you should come."
++  },
++  {
++    "name": "connector before a hesitation 5",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We talked to them about, um, them joining."
++  },
++  {
++    "name": "connector before a hesitation 5 without corrections",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "We talked to them about, um, them joining."
++  },
++  {
++    "name": "connector before a hesitation 6",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Мы сделали это и, э, это работает."
++  },
++  {
++    "name": "connector before a hesitation 6 without corrections",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Мы сделали это и, э, это работает."
++  },
++  {
++    "name": "connector before a hesitation 7",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I think that, um, I think we should wait."
++  },
++  {
++    "name": "connector before a hesitation 7 without corrections",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I think that, um, I think we should wait."
++  },
++  {
++    "name": "connector before a hesitation 8",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Okay, I think that, um, I think we should wait."
++  },
++  {
++    "name": "connector before a hesitation 8 without corrections",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Okay, I think that, um, I think we should wait."
++  },
++  {
++    "name": "connector before a hesitation 9",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Let's meet at, uh, let's meet on Monday."
++  },
++  {
++    "name": "connector before a hesitation 9 without corrections",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Let's meet at, uh, let's meet on Monday."
+   }
+ ]
+diff --git a/core/conformance/fixtures/text/pipeline.json b/core/conformance/fixtures/text/pipeline.json
+index 01cc324..f368118 100644
+--- a/core/conformance/fixtures/text/pipeline.json
++++ b/core/conformance/fixtures/text/pipeline.json
+@@ -8009,5 +8009,266 @@
+ 
+     ],
+     "text" : "It works."
++  },
++  {
++    "afterDictionary" : "We shipped it and, um, it works.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We shipped it and, um, it works.",
++    "name" : "connector before a hesitation 1",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We shipped it and it works."
++  },
++  {
++    "afterDictionary" : "We shipped it and, um, it works.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We shipped it and, um, it works.",
++    "name" : "connector before a hesitation 1 without corrections",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "We shipped it and it works."
++  },
++  {
++    "afterDictionary" : "I'll ask Sam and, uh, Sam will know.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I'll ask Sam and, uh, Sam will know.",
++    "name" : "connector before a hesitation 2",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I'll ask Sam and Sam will know."
++  },
++  {
++    "afterDictionary" : "I'll ask Sam and, uh, Sam will know.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I'll ask Sam and, uh, Sam will know.",
++    "name" : "connector before a hesitation 2 without corrections",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I'll ask Sam and Sam will know."
++  },
++  {
++    "afterDictionary" : "Ship it if, um, it passes review.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Ship it if, um, it passes review.",
++    "name" : "connector before a hesitation 3",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Ship it if it passes review."
++  },
++  {
++    "afterDictionary" : "Ship it if, um, it passes review.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Ship it if, um, it passes review.",
++    "name" : "connector before a hesitation 3 without corrections",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Ship it if it passes review."
++  },
++  {
++    "afterDictionary" : "I told you that, um, you should come.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I told you that, um, you should come.",
++    "name" : "connector before a hesitation 4",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I told you that you should come."
++  },
++  {
++    "afterDictionary" : "I told you that, um, you should come.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I told you that, um, you should come.",
++    "name" : "connector before a hesitation 4 without corrections",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I told you that you should come."
++  },
++  {
++    "afterDictionary" : "We talked to them about, um, them joining.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We talked to them about, um, them joining.",
++    "name" : "connector before a hesitation 5",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We talked to them about them joining."
++  },
++  {
++    "afterDictionary" : "We talked to them about, um, them joining.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We talked to them about, um, them joining.",
++    "name" : "connector before a hesitation 5 without corrections",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "We talked to them about them joining."
++  },
++  {
++    "afterDictionary" : "Мы сделали это и, э, это работает.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Мы сделали это и, э, это работает.",
++    "name" : "connector before a hesitation 6",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Мы сделали это и это работает."
++  },
++  {
++    "afterDictionary" : "Мы сделали это и, э, это работает.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Мы сделали это и, э, это работает.",
++    "name" : "connector before a hesitation 6 without corrections",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Мы сделали это и это работает."
++  },
++  {
++    "afterDictionary" : "I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I think that, um, I think we should wait.",
++    "name" : "connector before a hesitation 7",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I think we should wait."
++  },
++  {
++    "afterDictionary" : "I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I think that, um, I think we should wait.",
++    "name" : "connector before a hesitation 7 without corrections",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I think we should wait."
++  },
++  {
++    "afterDictionary" : "Okay, I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Okay, I think that, um, I think we should wait.",
++    "name" : "connector before a hesitation 8",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Okay, I think we should wait."
++  },
++  {
++    "afterDictionary" : "Okay, I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Okay, I think that, um, I think we should wait.",
++    "name" : "connector before a hesitation 8 without corrections",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Okay, I think we should wait."
++  },
++  {
++    "afterDictionary" : "Let's meet at, uh, let's meet on Monday.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Let's meet at, uh, let's meet on Monday.",
++    "name" : "connector before a hesitation 9",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Let's meet on Monday."
++  },
++  {
++    "afterDictionary" : "Let's meet at, uh, let's meet on Monday.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Let's meet at, uh, let's meet on Monday.",
++    "name" : "connector before a hesitation 9 without corrections",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Let's meet on Monday."
+   }
+ ]
+\ No newline at end of file
+diff --git a/core/ramble-text/src/clean.rs b/core/ramble-text/src/clean.rs
+index 6e0bf3c..803c858 100644
+--- a/core/ramble-text/src/clean.rs
++++ b/core/ramble-text/src/clean.rs
+@@ -148,6 +148,42 @@ const ENGLISH_MARKERS: &[&str] = &[
+     "about", "think", "know", "there", "their", "it's", "don't", "i'm", "let's",
+ ];
+ 
++/// Words that join what comes after them to what came before: "it and, um,
++/// it works". Said once, they are the sentence's own, so a restart never
++/// takes one back unless it also takes back a whole clause ("I think that,
++/// um, I think we should").
++const CONNECTING_WORDS: &[&str] = &[
++    "and",
++    "or",
++    "but",
++    "so",
++    "because",
++    "if",
++    "when",
++    "that",
++    "than",
++    "then",
++    "which",
++    "who",
++    "whom",
++    "whose",
++    "about",
++    "и",
++    "а",
++    "но",
++    "или",
++    "что",
++    "чтобы",
++    "если",
++    "когда",
++    "потому",
++    "как",
++    "который",
++    "которая",
++    "которое",
++    "которые",
++];
++
+ /// Words that cannot end a phrase, so a comma after one before a hesitation
+ /// can only be the pause: "should, um,", "что, э,".
+ const PAUSE_COMMA_WORDS: &[&str] = &[
+@@ -920,6 +956,11 @@ impl<'a> Tokens<'a> {
+         index == 0 || self.ends_sentence(index - 1)
+     }
+ 
++    /// A sentence or a comma-closed phrase starts at `index`.
++    fn opens_clause(&self, index: usize) -> bool {
++        self.opens_sentence(index) || self.items[index - 1].ends_with_comma()
++    }
++
+     /// A capitalized word just before, in the middle of a sentence: a German
+     /// noun with its separable verb ("Stell die Config um"), or a name.
+     fn follows_a_name(&self, index: usize) -> bool {
+@@ -1461,6 +1502,9 @@ impl<'a> Tokens<'a> {
+                     .all(|token| token.punctuation().is_empty())
+                 && !before.iter().any(|token| self.is_kept(token))
+                 && !again.iter().any(|token| self.is_kept(token))
++                // "it and, um, it works" keeps its "and"; "I think that, um, I think" does not.
++                && (!CONNECTING_WORDS.contains(&last_word.as_str())
++                    || (length == 3 && self.opens_clause(index - length)))
+                 && again.iter().zip(before.iter()).all(|(second, first)| {
+                     second.punctuation().is_empty() && second.word() == first.word()
+                 })
+@@ -2012,6 +2056,67 @@ mod tests {
+         clean(text, true, &HashSet::new(), PromptMode::Verbatim)
+     }
+ 
++    /// A connector before a hesitation is the sentence's own word; a restart
++    /// that takes back a whole clause still collapses.
++    #[test]
++    fn a_hesitation_after_a_connector_does_not_eat_real_words() {
++        let cases = [
++            (
++                "We shipped it and, um, it works.",
++                "We shipped it and it works.",
++            ),
++            (
++                "I'll ask Sam and, uh, Sam will know.",
++                "I'll ask Sam and Sam will know.",
++            ),
++            (
++                "Ship it if, um, it passes review.",
++                "Ship it if it passes review.",
++            ),
++            (
++                "I told you that, um, you should come.",
++                "I told you that you should come.",
++            ),
++            (
++                "We talked to them about, um, them joining.",
++                "We talked to them about them joining.",
++            ),
++            (
++                "Мы сделали это и, э, это работает.",
++                "Мы сделали это и это работает.",
++            ),
++            (
++                "Ship the thing if, um, the thing passes.",
++                "Ship the thing if the thing passes.",
++            ),
++            (
++                "I think that, um, I think we should wait.",
++                "I think we should wait.",
++            ),
++            (
++                "Okay, I think that, um, I think we should wait.",
++                "Okay, I think we should wait.",
++            ),
++            (
++                "Let's meet at, uh, let's meet on Monday.",
++                "Let's meet on Monday.",
++            ),
++            (
++                "I talked with the, um, with Kowalski's team.",
++                "I talked with Kowalski's team.",
++            ),
++        ];
++        for (input, expected) in cases {
++            for corrections in [true, false] {
++                assert_eq!(
++                    clean(input, corrections, &HashSet::new(), PromptMode::Verbatim),
++                    expected,
++                    "{input}"
++                );
++            }
++        }
++    }
++
+     /// The same cases as `CleanVerbatimTests.swift`. The conformance fixtures
+     /// check the two against each other through the whole pipeline; these keep
+     /// the stage readable on its own.

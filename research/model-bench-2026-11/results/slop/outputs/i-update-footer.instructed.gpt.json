@@ -1,0 +1,16 @@
+{
+ "item": "i-update-footer",
+ "situation": "interface copy",
+ "condition": "instructed",
+ "model": "gpt",
+ "effort": "high",
+ "output": "On by default so you can get security fixes. OpenRamble fetches a small version list once a day. The request includes only your app version and IP address. Your dictation stays on your Mac. Turning this off stops all scheduled network access.",
+ "usage": {
+  "input": 15117,
+  "cached_input": 0,
+  "cache_write": 0,
+  "output": 295
+ },
+ "cost_usd": null,
+ "seconds": 11
+}

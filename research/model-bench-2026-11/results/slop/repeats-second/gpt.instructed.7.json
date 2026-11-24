@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "instructed",
+ "output": "Keep `is.waiwai.dictation` for launch. The release rules make it permanent because changing it would require existing users to grant Accessibility access again.\n\nWe can launch as **OpenRamble** by changing the app’s display name and keeping its bundle identifier.",
+ "opens": "no"
+}

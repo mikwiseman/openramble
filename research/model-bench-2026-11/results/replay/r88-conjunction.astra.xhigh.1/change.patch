@@ -1,0 +1,433 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift b/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
+index a3fc2dc..e20cc28 100644
+--- a/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
++++ b/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
+@@ -146,6 +146,12 @@ enum CleanVerbatim {
+         "die", "das", "le", "la", "les", "el", "los", "las",
+     ]
+ 
++    static let prepositions: Set<String> = [
++        "to", "of", "in", "on", "at", "for", "with", "from", "by", "into", "about",
++        "в", "во", "на", "с", "со", "к", "ко", "у", "по", "за", "из", "от", "до", "о", "об", "при",
++        "для", "кроме", "через", "между", "без", "перед", "около", "вместо",
++    ]
++
+     /// Russian hesitations that are also letter names ("э", "эм"): they go bare
+     /// too, except next to a letter or after "буква".
+     static let letterHesitations: Set<String> = ["э", "эм"]
+@@ -895,18 +901,27 @@ extension CleanVerbatim {
+                 ?? revisedLength(around: index)
+         }
+ 
+-        /// How many words before the hesitation at `index` start a phrase that
+-        /// stops on a word that cannot end it and is begun again with another
+-        /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an".
++        /// One repeated preposition can revise an article ("with the, uh, with Anna").
++        /// Dropping a preposition or complementizer needs a repeated two-word
++        /// opening ("I think that, um, I think"). A mid-clause echo can be the
++        /// next subject ("tell the team that, um, the team should wait").
+         private func revisedLength(around index: Int) -> Int? {
+             for length in stride(from: 3, through: 2, by: -1) {
+                 guard index >= length, index + length < items.count else { continue }
+-                let before = items[(index - length)..<index]
++                let start = index - length
++                let before = items[start..<index]
+                 let again = items[(index + 1)..<(index + length)]
+                 let last = items[index - 1]
+                 let lastWord = last.word
+-                guard CleanVerbatim.pauseCommaWords.contains(lastWord) || CleanVerbatim.unfinishedWords.contains(lastWord),
+-                      !last.startsUppercase,
++                let article = ["a", "an", "the"].contains(lastWord)
++                if length == 2 {
++                    guard article, CleanVerbatim.prepositions.contains(items[start].word) else { continue }
++                } else {
++                    guard opensSentence(at: start) || items[start - 1].endsWithComma,
++                          article || ["that", "что"].contains(lastWord) || CleanVerbatim.prepositions.contains(lastWord)
++                    else { continue }
++                }
++                guard !last.startsUppercase,
+                       last.punctuation.isEmpty || last.punctuation == ",",
+                       !before.dropLast().contains(where: { !$0.punctuation.isEmpty }),
+                       !before.contains(where: isKept), !again.contains(where: isKept),
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
+index 33e005b..bbf476e 100644
+--- a/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
++++ b/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
+@@ -783,6 +783,28 @@ final class CleanVerbatimTests: XCTestCase {
+         }
+     }
+ 
++    func testHesitationBetweenClausesKeepsTheWordsUnlessTheOpeningRestarts() {
++        let cases = [
++            ("We shipped it and, um, it works.", "We shipped it and it works."),
++            ("I'll ask Sam and, uh, Sam will know.", "I'll ask Sam and Sam will know."),
++            ("Ship it if, um, it passes review.", "Ship it if it passes review."),
++            ("I told you that, um, you should come.", "I told you that you should come."),
++            ("We talked to them about, um, them joining.", "We talked to them about them joining."),
++            ("Мы сделали это и, э, это работает.", "Мы сделали это и это работает."),
++            ("I told the team that, um, the team should wait.", "I told the team that the team should wait."),
++            ("We won and, uh, we won fairly.", "We won and we won fairly."),
++            ("I think that, um, I think we should wait.", "I think we should wait."),
++            ("Okay, I think that, um, I think we should wait.", "Okay, I think we should wait."),
++            ("Let's meet at, uh, let's meet on Monday.", "Let's meet on Monday."),
++        ]
++        for spokenCorrections in [true, false] {
++            let pipeline = TextPipeline(spokenCorrections: spokenCorrections)
++            for (input, expected) in cases {
++                XCTAssertEqual(pipeline.process(input).text, expected, input)
++            }
++        }
++    }
++
+     /// A restart around a hesitation is one word said twice: the first copy
+     /// goes with the hesitation instead of leaving a glued double.
+     func testARestartAroundAHesitationKeepsOneCopy() {
+diff --git a/core/conformance/corpus-text.json b/core/conformance/corpus-text.json
+index 2389d37..9478478 100644
+--- a/core/conformance/corpus-text.json
++++ b/core/conformance/corpus-text.json
+@@ -4294,6 +4294,88 @@
+     "phoneticMatching": true,
+     "input": "Use the format dd, mmm."
+   },
++  {
++    "name": "same pronoun across and",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We shipped it and, um, it works."
++  },
++  {
++    "name": "same name across and",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I'll ask Sam and, uh, Sam will know."
++  },
++  {
++    "name": "condition after a hesitation",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Ship it if, um, it passes review."
++  },
++  {
++    "name": "reported speech after a hesitation",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I told you that, um, you should come."
++  },
++  {
++    "name": "same object pronoun across about",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We talked to them about, um, them joining."
++  },
++  {
++    "name": "same Russian pronoun across и",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Мы сделали это и, э, это работает."
++  },
++  {
++    "name": "same noun phrase across that",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I told the team that, um, the team should wait."
++  },
++  {
++    "name": "repeated opening across and",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "We won and, uh, we won fairly."
++  },
++  {
++    "name": "revised opening after that",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I think that, um, I think we should wait."
++  },
++  {
++    "name": "revised opening after a lead-in",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Okay, I think that, um, I think we should wait."
++  },
++  {
++    "name": "revised meeting preposition",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Let's meet at, uh, let's meet on Monday."
++  },
+   {
+     "name": "prose new paragraph as its own sentence",
+     "dictionary": [],
+diff --git a/core/conformance/fixtures/text/pipeline.json b/core/conformance/fixtures/text/pipeline.json
+index 01cc324..d984299 100644
+--- a/core/conformance/fixtures/text/pipeline.json
++++ b/core/conformance/fixtures/text/pipeline.json
+@@ -7267,6 +7267,165 @@
+     ],
+     "text" : "Use the format dd, mmm."
+   },
++  {
++    "afterDictionary" : "We shipped it and, um, it works.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We shipped it and, um, it works.",
++    "name" : "same pronoun across and",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We shipped it and it works."
++  },
++  {
++    "afterDictionary" : "I'll ask Sam and, uh, Sam will know.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I'll ask Sam and, uh, Sam will know.",
++    "name" : "same name across and",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I'll ask Sam and Sam will know."
++  },
++  {
++    "afterDictionary" : "Ship it if, um, it passes review.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Ship it if, um, it passes review.",
++    "name" : "condition after a hesitation",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Ship it if it passes review."
++  },
++  {
++    "afterDictionary" : "I told you that, um, you should come.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I told you that, um, you should come.",
++    "name" : "reported speech after a hesitation",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I told you that you should come."
++  },
++  {
++    "afterDictionary" : "We talked to them about, um, them joining.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We talked to them about, um, them joining.",
++    "name" : "same object pronoun across about",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We talked to them about them joining."
++  },
++  {
++    "afterDictionary" : "Мы сделали это и, э, это работает.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Мы сделали это и, э, это работает.",
++    "name" : "same Russian pronoun across и",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Мы сделали это и это работает."
++  },
++  {
++    "afterDictionary" : "I told the team that, um, the team should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I told the team that, um, the team should wait.",
++    "name" : "same noun phrase across that",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I told the team that the team should wait."
++  },
++  {
++    "afterDictionary" : "We won and, uh, we won fairly.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We won and, uh, we won fairly.",
++    "name" : "repeated opening across and",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "We won and we won fairly."
++  },
++  {
++    "afterDictionary" : "I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I think that, um, I think we should wait.",
++    "name" : "revised opening after that",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I think we should wait."
++  },
++  {
++    "afterDictionary" : "Okay, I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Okay, I think that, um, I think we should wait.",
++    "name" : "revised opening after a lead-in",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Okay, I think we should wait."
++  },
++  {
++    "afterDictionary" : "Let's meet at, uh, let's meet on Monday.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Let's meet at, uh, let's meet on Monday.",
++    "name" : "revised meeting preposition",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Let's meet on Monday."
++  },
+   {
+     "afterDictionary" : "First point. New paragraph. Second point.",
+     "allowPressReturnCommand" : false,
+diff --git a/core/ramble-text/src/clean.rs b/core/ramble-text/src/clean.rs
+index 6e0bf3c..a3f5723 100644
+--- a/core/ramble-text/src/clean.rs
++++ b/core/ramble-text/src/clean.rs
+@@ -75,6 +75,44 @@ const GUARDED_FILLERS: &[&str] = &["um", "er", "э", "эм", "mmm", "ммм"];
+ /// "er"): in an English take they go wherever they stand.
+ const ENGLISH_HESITATIONS: &[&str] = &["um", "er"];
+ 
++const PREPOSITIONS: &[&str] = &[
++    "to",
++    "of",
++    "in",
++    "on",
++    "at",
++    "for",
++    "with",
++    "from",
++    "by",
++    "into",
++    "about",
++    "в",
++    "во",
++    "на",
++    "с",
++    "со",
++    "к",
++    "ко",
++    "у",
++    "по",
++    "за",
++    "из",
++    "от",
++    "до",
++    "о",
++    "об",
++    "при",
++    "для",
++    "кроме",
++    "через",
++    "между",
++    "без",
++    "перед",
++    "около",
++    "вместо",
++];
++
+ /// Words that leave a phrase unfinished besides the pause words: "order
+ /// more, um, more coffee", "Это такая, ээ, такая".
+ const UNFINISHED_WORDS: &[&str] = &[
+@@ -1440,20 +1478,30 @@ impl<'a> Tokens<'a> {
+             .or_else(|| self.revised_length(index))
+     }
+ 
+-    /// How many words before the hesitation at `index` start a phrase that
+-    /// stops on a word that cannot end it and is begun again with another
+-    /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an".
++    /// One repeated preposition can revise an article ("with the, uh, with Anna").
++    /// Dropping a preposition or complementizer needs a repeated two-word
++    /// opening ("I think that, um, I think"). A mid-clause echo can be the
++    /// next subject ("tell the team that, um, the team should wait").
+     fn revised_length(&self, index: usize) -> Option<usize> {
+         (2..=3).rev().find(|&length| {
+             if index < length || index + length >= self.items.len() {
+                 return false;
+             }
+-            let before = &self.items[index - length..index];
++            let start = index - length;
++            let before = &self.items[start..index];
+             let again = &self.items[index + 1..index + length];
+             let last = &before[length - 1];
+             let last_word = last.word();
+-            (PAUSE_COMMA_WORDS.contains(&last_word.as_str())
+-                || UNFINISHED_WORDS.contains(&last_word.as_str()))
++            let article = matches!(last_word.as_str(), "a" | "an" | "the");
++            let can_revise = if length == 2 {
++                article && PREPOSITIONS.contains(&before[0].word().as_str())
++            } else {
++                (self.opens_sentence(start) || self.items[start - 1].ends_with_comma())
++                    && (article
++                        || matches!(last_word.as_str(), "that" | "что")
++                        || PREPOSITIONS.contains(&last_word.as_str()))
++            };
++            can_revise
+                 && !last.starts_uppercase()
+                 && (last.punctuation().is_empty() || last.punctuation() == ",")
+                 && before[..length - 1]

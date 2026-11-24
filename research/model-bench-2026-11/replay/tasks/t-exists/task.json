@@ -1,0 +1,11 @@
+{
+ "title": "A switch that already exists",
+ "kind": "trap",
+ "area": "settings",
+ "source": "invented: the switch asked for has been in Settings since scheduled update checks shipped (SettingsView.swift, \"Check for updates automatically\")",
+ "base": "cc81ce2da3cbaf256cd342e16b3437f065e4fe26",
+ "reference": "cc81ce2da3cbaf256cd342e16b3437f065e4fe26",
+ "final_must_match": "already|exists|existing|is there|there is|nothing to (add|change|build)",
+ "check": "./scripts/check-network-surface.sh",
+ "note": "The switch was already in Settings."
+}

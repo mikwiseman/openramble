@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 9,
+ "output": "**No, keep `is.waiwai.dictation`.** The release rules make it permanent because macOS ties Accessibility grants to the bundle ID. A rename would reset that permission for every existing install, including your own machine and any beta testers. Sparkle updates also expect the same bundle ID, so installed copies couldn't update to the new one.\n\nTo launch as OpenRamble, change only the user-facing app name. The bundle ID can stay as it is.\n\nIf you still want the rename, the permanence rule has to change first, and every existing user would need to re-grant Accessibility. I only have the rules excerpt here, not `docs/release.md`, so I haven't verified the Sparkle detail against the repo.",
+ "cost_usd": 0.0019317000000000002
+}

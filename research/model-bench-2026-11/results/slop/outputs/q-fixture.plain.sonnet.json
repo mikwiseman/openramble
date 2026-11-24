@@ -1,0 +1,16 @@
+{
+ "item": "q-fixture",
+ "situation": "reply",
+ "condition": "plain",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "No, don't edit the fixture by hand. The rules file says a fixture is a recording of what the shipping Swift pipeline produced, so hand-editing it would assert behavior the Mac doesn't have. The red test is doing its job: it shows the Rust port has drifted from your Swift change.\n\nWhat to do instead:\n\n1. **Decide whether the Swift change was intended.** If the new output is what you wanted, continue. If it was accidental, fix the Swift side and the test goes green again.\n2. **Regenerate the fixtures with the generator.** It runs the Swift pipeline over `corpus-text.json` and records the output, so the fixture will reflect the new Mac behavior. I can't see the generator's name or invocation in what you pasted, so check `core/conformance/` for it.\n3. **Port the same change to the Rust side** in `ramble-text`. Swift is the source of truth and Rust follows, so the replay test will stay red until the port matches the regenerated fixtures.\n4. **Commit all of it together.** The Swift change, the Rust port and the regenerated fixtures go in one commit, as the rules require.\n5. **Review the fixture diff before committing.** It should show only the changes you meant to make. Unexpected changes in other cases mean your Swift edit had side effects.\n\nIf your change touches file cutting, the rules also say to change `apps/cli/src/plan.rs` and `FileAudioChunks.swift` together, or neither.",
+ "usage": {
+  "input": 2,
+  "cache_write": 1519,
+  "cached_input": 1868,
+  "output": 550
+ },
+ "cost_usd": 0.011766800000000001,
+ "seconds": 5
+}

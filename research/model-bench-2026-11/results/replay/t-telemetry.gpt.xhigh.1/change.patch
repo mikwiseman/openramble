@@ -1,0 +1,719 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 35ec948..5471281 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -12,21 +12,24 @@ receive text in the active application.
+ 
+ ## Network boundary
+ 
+-The shipping app has exactly two network areas:
++The shipping Mac app has exactly three network areas:
+ 
+ 1. Explicit model downloads through `LocalASR/ModelDownloading.swift`.
+ 2. Sparkle update checks and downloads through `SparkleUpdater.swift`.
+    Scheduled checks are enabled by default and can be disabled in Settings;
+    downloading and installing an update always requires a click.
++3. Daily successful dictation counts through `DailyDictationUsage.swift`.
++   An HTTPS POST to `https://stats.waiwai.is/ramble` carries only completed UTC
++   day numbers and counts, with at most one attempt per UTC day.
+ 
+ The desktop app (Windows, Linux) has one:
+ 
+-3. Explicit model downloads through
++4. Explicit model downloads through
+    `apps/desktop/src-tauri/src/adapters/download.rs`.
+ 
+ The Linux server has one, inbound only:
+ 
+-4. `apps/cli/src/listen.rs`. ffmpeg is spawned only from
++5. `apps/cli/src/listen.rs`. ffmpeg is spawned only from
+    `apps/cli/src/decode.rs` with a file-only protocol whitelist.
+ 
+ No other shipping code may access the network. The complete denied API list is
+@@ -104,7 +107,8 @@ No package depends on the application layer.
+   `prepareForNewContents(with: .currentHostOnly)` and the required transient and
+   concealed markers. A plain `clearContents()` can leak dictation through
+   Universal Clipboard and is prohibited.
+-- Do not add telemetry, analytics, cloud sync, or third-party reporting SDKs.
++- The Mac's daily dictation count is the only analytics allowed. Do not add
++  other telemetry, analytics, cloud sync, or third-party reporting SDKs.
+ - Surface failures to the user; never silently discard a recording or result.
+ 
+ ## Release invariants
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index baf168d..97524ed 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -5,11 +5,12 @@ and text stay on the user's Mac.
+ 
+ ## Non-negotiable boundaries
+ 
+-- Network access is limited to explicit model downloads and Sparkle updates.
+-  Scheduled update checks are enabled by default and can be disabled in
+-  Settings; downloading and installing an update always requires a click.
+-- Do not add analytics, telemetry, cloud sync, crash-reporting services, or new
+-  dependencies without prior discussion.
++- The Mac app uses the network for explicit model downloads, Sparkle updates,
++  and daily dictation counts. Scheduled update checks are enabled by default
++  and can be disabled in Settings. Downloading or installing an update always
++  requires a click.
++- Do not add other analytics, telemetry, cloud sync, crash-reporting services,
++  or new dependencies without prior discussion.
+ - Do not log speech, recognized text, keystrokes, or user file names.
+ - Clipboard writes must remain local to the current Mac.
+ - Do not include recordings or dictated text in issues or pull requests.
+diff --git a/Packages/DictationCore/Sources/DictationCore/Resources/en.lproj/Localizable.strings b/Packages/DictationCore/Sources/DictationCore/Resources/en.lproj/Localizable.strings
+index 96b2a96..8bab3e0 100644
+--- a/Packages/DictationCore/Sources/DictationCore/Resources/en.lproj/Localizable.strings
++++ b/Packages/DictationCore/Sources/DictationCore/Resources/en.lproj/Localizable.strings
+@@ -241,8 +241,7 @@
+ "Move selected recordings to Trash" = "Move selected recordings to Trash";
+ "Move to Trash" = "Move to Trash";
+ "Neither your microphone nor the other side of this call was captured." = "Neither your microphone nor the other side of this call was captured.";
+-"No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder." = "No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder.";
+-"No accounts, no analytics, no automatic reports. The code is open — you can check." = "No accounts, no analytics, no automatic reports. The code is open — you can check.";
++"The daily count includes no device ID, audio, or text. The statistics server can see your IP address. Error reports contain technical events and available crash details and are saved locally. Models and any recordings kept after a failure live in the support folder." = "The daily count includes no device ID, audio, or text. The statistics server can see your IP address. Error reports contain technical events and available crash details and are saved locally. Models and any recordings kept after a failure live in the support folder.";
+ "No display available" = "No display available";
+ "No microphone access. Open System Settings." = "No microphone access. Open System Settings.";
+ "No new terms to learn — only term-like corrections become replacements." = "No new terms to learn — only term-like corrections become replacements.";
+@@ -270,7 +269,7 @@
+ "Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac." = "Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac.";
+ "On" = "On";
+ "On an external keyboard without a 🌐 key, dictation won't start at all." = "On an external keyboard without a 🌐 key, dictation won't start at all.";
+-"On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access." = "On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access.";
++"On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled update checks." = "On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled update checks.";
+ "One download, two permissions — speech never leaves this Mac." = "One download, two permissions — speech never leaves this Mac.";
+ "One silent recognition, so your first real dictation is fast." = "One silent recognition, so your first real dictation is fast.";
+ "Only in hands-free mode. While you hold the key, a pause is never treated as the end." = "Only in hands-free mode. While you hold the key, a pause is never treated as the end.";
+@@ -481,7 +480,6 @@
+ "The model is getting ready for this Mac — usually 20–40 seconds, and only once." = "The model is getting ready for this Mac — usually 20–40 seconds, and only once.";
+ "The model rests until your next dictation, then loads in a moment." = "The model rests until your next dictation, then loads in a moment.";
+ "The model's file list is corrupted: %@" = "The model's file list is corrupted: %@";
+-"The only switch that changes the app's network behavior" = "The only switch that changes the app's network behavior";
+ "The other side is being captured." = "The other side is being captured.";
+ "The other side is not being captured." = "The other side is not being captured.";
+ "The other side isn't being recorded (%@). Only your microphone is." = "The other side isn't being recorded (%@). Only your microphone is.";
+@@ -689,7 +687,7 @@
+ "Hold to talk. Double-press for hands-free." = "Hold to talk. Double-press for hands-free.";
+ "Follows your Mac." = "Follows your Mac.";
+ "Always this one, while it is connected." = "Always this one, while it is connected.";
+-"Speech is recognized on this Mac. OpenRamble goes online only to download the speech model and to check for updates." = "Speech is recognized on this Mac. OpenRamble goes online only to download the speech model and to check for updates.";
++"Speech stays on this Mac. OpenRamble goes online for model downloads, updates, and a daily dictation count." = "Speech stays on this Mac. OpenRamble goes online for model downloads, updates, and a daily dictation count.";
+ "Almost ready" = "Almost ready";
+ "Set up" = "Set up";
+ "Allow the microphone so OpenRamble can hear you." = "Allow the microphone so OpenRamble can hear you.";
+diff --git a/Packages/DictationCore/Sources/DictationCore/Resources/ru.lproj/Localizable.strings b/Packages/DictationCore/Sources/DictationCore/Resources/ru.lproj/Localizable.strings
+index a2f52ed..4c4f680 100644
+--- a/Packages/DictationCore/Sources/DictationCore/Resources/ru.lproj/Localizable.strings
++++ b/Packages/DictationCore/Sources/DictationCore/Resources/ru.lproj/Localizable.strings
+@@ -241,8 +241,7 @@
+ "Move selected recordings to Trash" = "Переместить выбранные записи в Корзину";
+ "Move to Trash" = "В Корзину";
+ "Neither your microphone nor the other side of this call was captured." = "Ни ваш микрофон, ни звук собеседников не были записаны.";
+-"No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder." = "Без аккаунта, аналитики и облачной расшифровки. В отчётах только технические события и сведения о сбоях, никогда — ваша речь. Ничего не отправляется автоматически. Интернет используется только для загрузки моделей и проверки обновлений. Модели и записи, сохранённые после сбоя, находятся в папке поддержки.";
+-"No accounts, no analytics, no automatic reports. The code is open — you can check." = "Без аккаунтов, аналитики и автоматических отчётов. Код открыт — можно проверить.";
++"The daily count includes no device ID, audio, or text. The statistics server can see your IP address. Error reports contain technical events and available crash details and are saved locally. Models and any recordings kept after a failure live in the support folder." = "Ежедневный отчёт о количестве диктовок не содержит идентификатора устройства, аудио или текста. Сервер статистики видит ваш IP-адрес. Отчёты об ошибках содержат технические события и доступные сведения о сбоях и сохраняются на Mac. Модели и записи, сохранённые после сбоя, находятся в папке поддержки.";
+ "No display available" = "Нет доступных экранов";
+ "No microphone access. Open System Settings." = "Нет доступа к микрофону. Откройте Системные настройки.";
+ "No new terms to learn — only term-like corrections become replacements." = "Новых терминов нет — в словарь попадают только исправления названий и терминов.";
+@@ -270,7 +269,7 @@
+ "Off by default. After a paste, OpenRamble can re-read only that field at 8 and 25 seconds to learn a correction. The content stays on this Mac." = "По умолчанию выключено. После вставки OpenRamble может перечитать только это поле через 8 и 25 секунд, чтобы запомнить исправление. Текст остаётся на этом Mac.";
+ "On" = "Вкл.";
+ "On an external keyboard without a 🌐 key, dictation won't start at all." = "На внешней клавиатуре без клавиши 🌐 диктовка не запустится.";
+-"On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access." = "По умолчанию включено, чтобы вы получали исправления безопасности. Раз в день приложение читает небольшой список версий. Запрос содержит версию приложения и ваш IP-адрес, но не сведения об устройстве или диктовках. Отключите, чтобы остановить проверки по расписанию.";
++"On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled update checks." = "По умолчанию включено, чтобы вы получали исправления безопасности. Раз в день приложение читает небольшой список версий. Запрос содержит версию приложения и ваш IP-адрес, но не сведения об устройстве или диктовках. Отключите, чтобы остановить проверки по расписанию.";
+ "One download, two permissions — speech never leaves this Mac." = "Одна загрузка, два разрешения. Речь никогда не покидает этот Mac.";
+ "One silent recognition, so your first real dictation is fast." = "Один запуск в тишине, чтобы первая настоящая диктовка прошла быстро.";
+ "Only in hands-free mode. While you hold the key, a pause is never treated as the end." = "Только в режиме без удержания клавиши. Пока клавиша нажата, пауза не завершает диктовку.";
+@@ -481,7 +480,6 @@
+ "The model is getting ready for this Mac — usually 20–40 seconds, and only once." = "Модель готовится для этого Mac. Обычно это занимает 20–40 секунд и происходит один раз.";
+ "The model rests until your next dictation, then loads in a moment." = "Модель отдыхает до следующей диктовки, затем быстро загружается.";
+ "The model's file list is corrupted: %@" = "Список файлов модели повреждён: %@";
+-"The only switch that changes the app's network behavior" = "Единственный переключатель, меняющий сетевое поведение приложения";
+ "The other side is being captured." = "Звук собеседников записывается.";
+ "The other side is not being captured." = "Звук собеседников не записывается.";
+ "The other side isn't being recorded (%@). Only your microphone is." = "Звук собеседников не записывается (%@). Записывается только ваш микрофон.";
+@@ -689,7 +687,7 @@
+ "Hold to talk. Double-press for hands-free." = "Удерживайте, чтобы говорить. Двойное нажатие: без удержания.";
+ "Follows your Mac." = "Тот же, что у Mac.";
+ "Always this one, while it is connected." = "Всегда этот, пока он подключён.";
+-"Speech is recognized on this Mac. OpenRamble goes online only to download the speech model and to check for updates." = "Речь распознаётся на этом Mac. OpenRamble выходит в интернет, только чтобы скачать модель речи и проверить обновления.";
++"Speech stays on this Mac. OpenRamble goes online for model downloads, updates, and a daily dictation count." = "Речь остаётся на этом Mac. OpenRamble подключается к интернету для загрузки моделей, обновлений и ежедневной отправки количества диктовок.";
+ "Almost ready" = "Почти готово";
+ "Set up" = "Настроить";
+ "Allow the microphone so OpenRamble can hear you." = "Разрешите микрофон, чтобы OpenRamble вас слышал.";
+diff --git a/README.md b/README.md
+index 3b95869..4131b4c 100644
+--- a/README.md
++++ b/README.md
+@@ -131,13 +131,13 @@ Run `openramble --help` for every option.
+ 
+ ## Privacy
+ 
+-Your voice and text never leave your Mac. OpenRamble turns speech into text on your Mac without the network, so dictation works offline once the model is installed. OpenRamble has no account, no analytics, no telemetry, no crash reporting service and no cloud sync, and it never writes dictated text, words or keystrokes to its logs.
++Your voice and text never leave your Mac. OpenRamble turns speech into text on your Mac without the network, so dictation works offline once the model is installed. OpenRamble has no account, no crash reporting service and no cloud sync, and it never writes dictated text, words or keystrokes to its logs.
+ 
+ "Learn from your edits" is off by default. When you turn it on, OpenRamble reads the text field it pasted into 8 seconds and 25 seconds after the paste, so that it can learn a word you corrected. It reads no other field.
+ 
+ ### When OpenRamble uses the network
+ 
+-The Mac app connects to the internet only to download a speech model and to check for and download updates.
++The Mac app connects to the internet to download speech models, check for and download updates, and send a daily dictation count.
+ 
+ | Action | When | Goes to | What the service can see |
+ |---|---|---|---|
+@@ -145,10 +145,13 @@ The Mac app connects to the internet only to download a speech model and to chec
+ | Download the optional Hebrew model | When you start that download | Hugging Face | Your IP address and the download request |
+ | Check for updates | About once a day, unless you turn it off in Settings → About | GitHub Pages | Your IP address and the app version |
+ | Download an update | Only after you click | GitHub Releases | Your IP address and the download request |
++| Report dictation counts | At most once per UTC day while the app is running, when a completed day has a count to send | `stats.waiwai.is` | Your IP address, UTC day numbers and counts |
++
++OpenRamble counts successful dictations in local app preferences. The daily HTTPS POST to `https://stats.waiwai.is/ramble` sends a JSON array such as `[{"day":20781,"count":3}]`, where `day` is the number of UTC days since January 1, 1970. Each row counts one active installation for that day. The report includes no device or account ID, audio, or text. Unsent days stay in preferences for a later report and are cleared after the server returns a 2xx response. If a response is lost after the server accepts a report, a retry can count that day twice.
+ 
+ The update check sends no report about your Mac, its system version or its language. OpenRamble downloads fixed versions of the model files and checks each file against its SHA-256 checksum before it installs the model. The early Windows and Linux version connects to the internet only to download the speech model when you start the download. The Linux transcription server in `apps/cli` accepts connections from your own applications and makes none.
+ 
+-You can verify the network limits yourself. On every pull request and every push to main, an automated check runs [`scripts/check-network-surface.sh`](scripts/check-network-surface.sh). The check fails the build if any app code uses a network API outside the model download code, the update code and one file that opens local recordings for playback. With a model installed, the first script below runs recognition with the network blocked. The second script records every network call and fails if recognition makes one.
++You can verify the network limits yourself. On every pull request and every push to main, an automated check runs [`scripts/check-network-surface.sh`](scripts/check-network-surface.sh). The check restricts network APIs to the model download, update, and daily count code, with an exception for a file that only opens local recordings for playback. With a model installed, the first script below runs recognition with the network blocked. The second script records every network call and fails if recognition makes one.
+ 
+ ```bash
+ ./scripts/test-zero-network.sh
+@@ -222,7 +225,7 @@ Yes. OpenRamble is free, and its source code is under the MIT License. There is
+ 
+ ### Does OpenRamble work offline? Does anything leave my Mac?
+ 
+-Yes, OpenRamble works offline once the model is installed, because it turns speech into text on your Mac without the network. Your voice and text never leave your Mac. The app goes online only to download the model, to check for updates and to download an update you click to install. [The privacy section](#when-openramble-uses-the-network) lists what each connection sends.
++Yes. Dictation works offline once the model is installed. Your voice and text never leave your Mac. The app goes online for model downloads, updates, and daily dictation counts. [What each connection sends](#when-openramble-uses-the-network)
+ 
+ ### How is OpenRamble different from Handy?
+ 
+diff --git a/apps/macos/OpenRamble/AppState.swift b/apps/macos/OpenRamble/AppState.swift
+index 9361843..00a7a77 100644
+--- a/apps/macos/OpenRamble/AppState.swift
++++ b/apps/macos/OpenRamble/AppState.swift
+@@ -105,8 +105,9 @@ public struct AppEnvironment {
+     public var recordingRecoveryIdleScanInterval: TimeInterval
+     /// How often to request permissions in the busiest mode. Zero - do not poll.
+     public var permissionPollInterval: TimeInterval
+-    /// How to download the model. The only network that the application has.
++    /// How to download the model.
+     public var modelDownloader: any ModelDownloading
++    var dailyDictationUsage: DailyDictationUsage?
+     /// System microphone prompt and the app/window transition that follows it.
+     public var requestMicrophoneAccess: () async -> Bool
+     public var openMicrophoneSettings: () -> Void
+@@ -353,7 +354,7 @@ public struct AppEnvironment {
+         let transcriber = LocalTranscriber()
+         let restoreReporter = ClipboardRestoreReporter()
+         let activeApplication = ActiveApplicationSnapshot()
+-        return AppEnvironment(
++        var environment = AppEnvironment(
+             defaults: .standard,
+             paths: .standard(),
+             permissions: SystemPermissions(),
+@@ -420,6 +421,8 @@ public struct AppEnvironment {
+                 )
+             },
+         )
++        environment.dailyDictationUsage = DailyDictationUsage(defaults: environment.defaults)
++        return environment
+     }
+ }
+ 
+@@ -1040,6 +1043,7 @@ public final class AppState: ObservableObject {
+     }
+ 
+     private let defaults: UserDefaults
++    private let dailyDictationUsage: DailyDictationUsage?
+     let diagnostics: DictationLogFile
+     private let paths: AppPaths
+     private let permissions: any PermissionReading
+@@ -1221,6 +1225,7 @@ public final class AppState: ObservableObject {
+ 
+     public init(environment: AppEnvironment) {
+         defaults = environment.defaults
++        dailyDictationUsage = environment.dailyDictationUsage
+         diagnostics = DictationLogFile(
+             directory: environment.paths.diagnosticEvents,
+             enabled: environment.defaults.object(forKey: Keys.detailedLogging) as? Bool
+@@ -1338,6 +1343,7 @@ public final class AppState: ObservableObject {
+         EngineNotes.isDetailed = detailedLogging
+         diagnostics.record(.appLaunched)
+         setUp()
++        dailyDictationUsage?.start()
+         // Observers do not run in an initializer; the loaded dictionary still
+         // has to reach the recognizers.
+         publishVocabulary()
+@@ -2156,10 +2162,15 @@ public final class AppState: ObservableObject {
+     private func recordSuccessfulDictation(_ text: String) {
+         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+         guard !trimmed.isEmpty else { return }
+-        successfulDictationCount += 1
++        countSuccessfulDictation()
+         recoveredText = nil
+     }
+ 
++    private func countSuccessfulDictation() {
++        successfulDictationCount += 1
++        dailyDictationUsage?.recordDictation()
++    }
++
+     // MARK: - The last take
+ 
+     /// The newest take's words, landed or not: the one thing "the last take"
+@@ -2424,7 +2435,7 @@ public final class AppState: ObservableObject {
+                     // provenance slot is cleared too: it still holds the
+                     // PREVIOUS dictation, and correction learning may not act
+                     // on it once these words have landed over it.
+-                    self.successfulDictationCount += 1
++                    self.countSuccessfulDictation()
+                     // It is no longer the last take, and it is still a take
+                     // the menu offers.
+                     self.rememberAsEarlierTake(self.lastDictation)
+@@ -2557,6 +2568,7 @@ public final class AppState: ObservableObject {
+     /// Restarting tracking is the only thing that erases the memory of the started gesture.
+     private func handleWake() {
+         diagnostics.record(.systemWoke)
++        Task { [weak self] in await self?.dailyDictationUsage?.reportIfDue() }
+         hotkeyMonitor.stop()
+         lastTakeShortcutMonitor?.stop()
+         recordingShortcutMonitor?.stop()
+diff --git a/apps/macos/OpenRamble/System/DailyDictationUsage.swift b/apps/macos/OpenRamble/System/DailyDictationUsage.swift
+new file mode 100644
+index 0000000..65632d7
+--- /dev/null
++++ b/apps/macos/OpenRamble/System/DailyDictationUsage.swift
+@@ -0,0 +1,111 @@
++import Foundation
++
++/// A local count of successful dictations, grouped by completed UTC day.
++@MainActor
++final class DailyDictationUsage {
++    private struct State: Codable {
++        var counts: [Int: Int] = [:]
++        var lastAttemptDay: Int?
++    }
++
++    private struct Report: Encodable {
++        let day: Int
++        let count: Int
++    }
++
++    private static let defaultsKey = "dailyDictationUsage"
++    private static let endpoint = URL(string: "https://stats.waiwai.is/ramble")!
++    private static let secondsPerDay: TimeInterval = 86_400
++
++    private let defaults: UserDefaults
++    private let session: URLSession
++    private var state: State
++    private var isSending = false
++    nonisolated(unsafe) private var timer: Timer?
++
++    init(defaults: UserDefaults, configuration: URLSessionConfiguration = .ephemeral) {
++        self.defaults = defaults
++        state = defaults.data(forKey: Self.defaultsKey)
++            .flatMap { try? JSONDecoder().decode(State.self, from: $0) } ?? State()
++
++        configuration.httpShouldSetCookies = false
++        configuration.httpCookieStorage = nil
++        configuration.urlCredentialStorage = nil
++        configuration.urlCache = nil
++        configuration.waitsForConnectivity = true
++        configuration.timeoutIntervalForResource = 30
++        session = URLSession(configuration: configuration, delegate: NoRedirects(), delegateQueue: nil)
++    }
++
++    deinit {
++        timer?.invalidate()
++        session.invalidateAndCancel()
++    }
++
++    func start() {
++        guard timer == nil else { return }
++        let interval = Self.secondsPerDay
++        let nextMidnight = Date(timeIntervalSince1970: Double(Self.day(at: .now) + 1) * interval)
++        let timer = Timer(fire: nextMidnight, interval: interval, repeats: true) { [weak self] _ in
++            Task { await self?.reportIfDue() }
++        }
++        timer.tolerance = 60
++        RunLoop.main.add(timer, forMode: .common)
++        self.timer = timer
++        Task { [weak self] in await self?.reportIfDue() }
++    }
++
++    func recordDictation(at date: Date = .now) {
++        state.counts[Self.day(at: date), default: 0] += 1
++        save()
++    }
++
++    func reportIfDue(at date: Date = .now) async {
++        let day = Self.day(at: date)
++        guard !isSending, day > (state.lastAttemptDay ?? .min) else { return }
++
++        let reports = state.counts.filter { $0.key < day }.sorted { $0.key < $1.key }
++            .map { Report(day: $0.key, count: $0.value) }
++        guard !reports.isEmpty, let body = try? JSONEncoder().encode(reports) else { return }
++        var request = URLRequest(url: Self.endpoint)
++        request.httpMethod = "POST"
++        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
++        request.setValue("OpenRamble", forHTTPHeaderField: "User-Agent")
++        request.setValue("*", forHTTPHeaderField: "Accept-Language")
++        request.httpBody = body
++
++        // Persist the attempt before sending so a relaunch cannot retry it the same day.
++        state.lastAttemptDay = day
++        save()
++        isSending = true
++        defer { isSending = false }
++        guard let (_, response) = try? await session.data(for: request),
++              let status = (response as? HTTPURLResponse)?.statusCode,
++              (200..<300).contains(status) else { return }
++
++        // A clock change may have added counts to a reported day during the request.
++        for report in reports {
++            let remaining = state.counts[report.day, default: 0] - report.count
++            state.counts[report.day] = remaining > 0 ? remaining : nil
++        }
++        save()
++    }
++
++    private static func day(at date: Date) -> Int {
++        Int((date.timeIntervalSince1970 / secondsPerDay).rounded(.down))
++    }
++
++    private func save() {
++        if let data = try? JSONEncoder().encode(state) {
++            defaults.set(data, forKey: Self.defaultsKey)
++        }
++    }
++}
++
++private final class NoRedirects: NSObject, URLSessionTaskDelegate {
++    func urlSession(_ session: URLSession, task: URLSessionTask,
++                    willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
++                    completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
++        completionHandler(nil)
++    }
++}
+diff --git a/apps/macos/OpenRamble/System/SparkleUpdater.swift b/apps/macos/OpenRamble/System/SparkleUpdater.swift
+index a6f5b30..a9e164d 100644
+--- a/apps/macos/OpenRamble/System/SparkleUpdater.swift
++++ b/apps/macos/OpenRamble/System/SparkleUpdater.swift
+@@ -4,7 +4,6 @@ import Sparkle
+ 
+ /// Application updates.
+ ///
+-/// Sparkle is the second and last place in the product that can go online.
+ /// Scheduled checks are on by default and can be turned off in Settings;
+ /// downloading and installing an update always waits for a click.
+ ///
+@@ -15,9 +14,7 @@ import Sparkle
+ /// The key is set explicitly rather than left absent: without it Sparkle asks
+ /// the person on the second launch, and a modal about update policy in the
+ /// first minute of a dictation app is a question nobody came here to answer.
+-/// This is the one place the app reaches the network without being asked,
+-/// and it is a deliberate trade — a security fix that never arrives helps
+-/// nobody. The switch is in Settings, and turning it off silences it fully.
++/// The switch in Settings turns off scheduled update checks.
+ /// - `SUSendProfileInfo = false` — a hardware report is not sent along with the request,
+ /// system version and language.
+ /// - `SUAllowsAutomaticUpdates = false` - no background downloading or installation
+diff --git a/apps/macos/OpenRamble/UI/SettingsView.swift b/apps/macos/OpenRamble/UI/SettingsView.swift
+index 4aa9dc5..5eca29f 100644
+--- a/apps/macos/OpenRamble/UI/SettingsView.swift
++++ b/apps/macos/OpenRamble/UI/SettingsView.swift
+@@ -422,10 +422,10 @@ struct WithoutToolbarTitle: ViewModifier {
+     }
+ }
+ 
+-/// The privacy promise, in one sentence that names its two exceptions.
++/// The privacy summary shared by Settings and onboarding.
+ enum PrivacySentence {
+     static var text: String {
+-        L10n.tr("Speech is recognized on this Mac. OpenRamble goes online only to download the speech model and to check for updates.")
++        L10n.tr("Speech stays on this Mac. OpenRamble goes online for model downloads, updates, and a daily dictation count.")
+     }
+ }
+ 
+@@ -1015,7 +1015,7 @@ private struct AboutView: View {
+ 
+             BlockSection(
+                 L10n.tr("Updates"),
+-                footer: L10n.tr("On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled network access.")
++                footer: L10n.tr("On by default so security fixes can reach you. Once a day, the app reads a small version list. The request contains the app version and your IP address, but no device profile or dictated content. Turn this off to stop scheduled update checks.")
+             ) {
+                 BlockRow(title: L10n.tr("Check for updates automatically")) {
+                     // Disabled together with the updater: a switch that
+@@ -1025,7 +1025,6 @@ private struct AboutView: View {
+                         .labelsHidden()
+                         .toggleStyle(.switch)
+                         .accessibilityLabel(L10n.tr("Check for updates automatically"))
+-                        .accessibilityHint(L10n.tr("The only switch that changes the app's network behavior"))
+                         .disabled(updater.startupFailure != nil)
+                 }
+                 BlockDivider()
+@@ -1048,7 +1047,7 @@ private struct AboutView: View {
+ 
+             BlockSection(
+                 L10n.tr("Privacy"),
+-                footer: L10n.tr("No account, analytics, or cloud transcription. Reports contain technical events and available crash details, never your speech. Nothing is sent automatically. Network access is limited to model downloads and update checks. Models and any recordings kept after a failure live in the support folder.")
++                footer: L10n.tr("The daily count includes no device ID, audio, or text. The statistics server can see your IP address. Error reports contain technical events and available crash details and are saved locally. Models and any recordings kept after a failure live in the support folder.")
+             ) {
+                 BlockCell {
+                     Text(PrivacySentence.text)
+diff --git a/apps/macos/OpenRambleTests/DailyDictationUsageTests.swift b/apps/macos/OpenRambleTests/DailyDictationUsageTests.swift
+new file mode 100644
+index 0000000..fb10d40
+--- /dev/null
++++ b/apps/macos/OpenRambleTests/DailyDictationUsageTests.swift
+@@ -0,0 +1,143 @@
++import Foundation
++import os
++import XCTest
++
++@MainActor
++final class DailyDictationUsageTests: XCTestCase {
++    func testLaunchReportsEarlierCounts() async throws {
++        let usage = makeUsage(defaults: UsageDefaults())
++        usage.recordDictation(at: .now.addingTimeInterval(-86_400))
++        let loaded = expectation(description: "daily report request")
++        UsageURLProtocol.state.withLock { $0.loaded = loaded }
++
++        usage.start()
++        await fulfillment(of: [loaded], timeout: 2)
++        XCTAssertEqual(try payload(XCTUnwrap(UsageURLProtocol.requests.first)).first?["count"], 1)
++    }
++
++    func testReportsCompletedDaysOnlyOnceAcrossRelaunch() async throws {
++        let defaults = UsageDefaults()
++        let usage = makeUsage(defaults: defaults)
++        usage.recordDictation(at: date(20_000))
++        usage.recordDictation(at: date(20_001).addingTimeInterval(-1))
++        await usage.reportIfDue(at: date(20_000))
++        XCTAssertTrue(UsageURLProtocol.requests.isEmpty)
++
++        let relaunched = makeUsage(defaults: defaults)
++        let reportDate = date(20_001)
++        relaunched.recordDictation(at: reportDate)
++        async let first: Void = relaunched.reportIfDue(at: reportDate)
++        async let second: Void = relaunched.reportIfDue(at: reportDate)
++        _ = await (first, second)
++        await makeUsage(defaults: defaults).reportIfDue(at: date(20_001))
++
++        let requests = UsageURLProtocol.requests
++        XCTAssertEqual(requests.count, 1)
++        let request = try XCTUnwrap(requests.first)
++        XCTAssertEqual(request.url?.absoluteString, "https://stats.waiwai.is/ramble")
++        XCTAssertEqual(request.httpMethod, "POST")
++        XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
++        XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "OpenRamble")
++        XCTAssertEqual(request.value(forHTTPHeaderField: "Accept-Language"), "*")
++        XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
++        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
++        XCTAssertEqual(try payload(request), [["day": 20_000, "count": 2]])
++
++        await relaunched.reportIfDue(at: date(20_002))
++        XCTAssertEqual(try UsageURLProtocol.requests.map(payload), [
++            [["day": 20_000, "count": 2]], [["day": 20_001, "count": 1]],
++        ])
++        await relaunched.reportIfDue(at: date(20_003))
++        XCTAssertEqual(UsageURLProtocol.requests.count, 2)
++    }
++
++    func testFailedUploadIsRetriedWithNewCountsOnTheNextDay() async throws {
++        let defaults = UsageDefaults()
++        let usage = makeUsage(defaults: defaults)
++        UsageURLProtocol.state.withLock { $0.status = 503 }
++        usage.recordDictation(at: date(20_000))
++        await usage.reportIfDue(at: date(20_001))
++        await makeUsage(defaults: defaults).reportIfDue(at: date(20_001))
++        XCTAssertEqual(UsageURLProtocol.requests.count, 1)
++
++        UsageURLProtocol.state.withLock { $0.status = 204 }
++        let relaunched = makeUsage(defaults: defaults)
++        relaunched.recordDictation(at: date(20_001))
++        await relaunched.reportIfDue(at: date(20_002))
++        XCTAssertEqual(try UsageURLProtocol.requests.map(payload), [
++            [["day": 20_000, "count": 1]], [["day": 20_000, "count": 1], ["day": 20_001, "count": 1]],
++        ])
++        XCTAssertNil(UsageURLProtocol.requests.last?.value(forHTTPHeaderField: "Cookie"))
++    }
++
++    private func makeUsage(defaults: UserDefaults) -> DailyDictationUsage {
++        let configuration = URLSessionConfiguration.ephemeral
++        configuration.protocolClasses = [UsageURLProtocol.self]
++        return DailyDictationUsage(defaults: defaults, configuration: configuration)
++    }
++
++    private func date(_ day: Int) -> Date {
++        Date(timeIntervalSince1970: Double(day) * 86_400)
++    }
++
++    private func payload(_ request: URLRequest) throws -> [[String: Int]] {
++        try JSONDecoder().decode([[String: Int]].self, from: XCTUnwrap(request.httpBody))
++    }
++
++    override func setUp() {
++        UsageURLProtocol.state.withLock { $0 = .init() }
++    }
++}
++
++private final class UsageDefaults: UserDefaults {
++    private var storedData: [String: Data] = [:]
++
++    override func data(forKey defaultName: String) -> Data? { storedData[defaultName] }
++
++    override func set(_ value: Any?, forKey defaultName: String) {
++        storedData[defaultName] = value as? Data
++    }
++}
++
++private final class UsageURLProtocol: URLProtocol, @unchecked Sendable {
++    struct State {
++        var requests: [URLRequest] = []
++        var status = 204
++        var loaded: XCTestExpectation?
++    }
++
++    static let state = OSAllocatedUnfairLock(initialState: State())
++    static var requests: [URLRequest] { state.withLock { $0.requests } }
++
++    override class func canInit(with request: URLRequest) -> Bool { true }
++    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
++
++    override func startLoading() {
++        var captured = request
++        if let stream = request.httpBodyStream {
++            stream.open()
++            defer { stream.close() }
++            var body = Data()
++            var buffer = [UInt8](repeating: 0, count: 512)
++            while true {
++                let count = stream.read(&buffer, maxLength: buffer.count)
++                guard count > 0 else { break }
++                body.append(buffer, count: count)
++            }
++            captured.httpBody = body
++        }
++        let (status, loaded) = Self.state.withLock { [captured] in
++            $0.requests.append(captured)
++            return ($0.status, $0.loaded)
++        }
++        let response = HTTPURLResponse(
++            url: request.url!, statusCode: status, httpVersion: "HTTP/1.1",
++            headerFields: ["Set-Cookie": "example=1; Secure"]
++        )!
++        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
++        client?.urlProtocolDidFinishLoading(self)
++        loaded?.fulfill()
++    }
++
++    override func stopLoading() {}
++}
+diff --git a/apps/macos/OpenRambleTests/SparkleUpdaterTests.swift b/apps/macos/OpenRambleTests/SparkleUpdaterTests.swift
+index fef243c..b6015fb 100644
+--- a/apps/macos/OpenRambleTests/SparkleUpdaterTests.swift
++++ b/apps/macos/OpenRambleTests/SparkleUpdaterTests.swift
+@@ -1,6 +1,5 @@
+ import XCTest
+ 
+-/// Updates are the second and last place the product goes online.
+ @MainActor
+ final class SparkleUpdaterTests: XCTestCase {
+     /// There is no public key signature in the test bundle - this is exactly the case, for the sake of
+diff --git a/apps/macos/project.yml b/apps/macos/project.yml
+index fee6fa7..5e853a4 100644
+--- a/apps/macos/project.yml
++++ b/apps/macos/project.yml
+@@ -151,8 +151,7 @@ targets:
+ 
+         # --- Updates (Sparkle) ---
+         #
+-        # Where is the list of versions. A regular static file on GitHub Pages,
+-        # The product does not have any server.
++        # The update list is a static file on GitHub Pages.
+         SUFeedURL: https://mikwiseman.github.io/openramble/appcast.xml
+         # Automatic checks are enabled deliberately so security fixes reach people.
+         # The setting is explicit to avoid Sparkle showing an unexpected policy modal
+diff --git a/scripts/check-network-surface.sh b/scripts/check-network-surface.sh
+index 38ddfdf..5890948 100755
+--- a/scripts/check-network-surface.sh
++++ b/scripts/check-network-surface.sh
+@@ -2,10 +2,11 @@
+ # Tests the core promise of the product: the network is only used where
+ # this is declared to the user.
+ #
+-# Exactly two places may reach the network:
++# Exactly three places in the Mac app may reach the network:
+ # • ModelDownloading.swift — downloading a model using a button
+ # • SparkleUpdater.swift — update checks (on by default, can be turned off)
+ #   and update downloads, which always need a click
++# • DailyDictationUsage.swift — daily POST of completed days' dictation counts
+ #
+ # The Linux transcription server (apps/cli) accepts connections and makes
+ # none: exactly one file, apps/cli/src/listen.rs, may name a socket, and it
+@@ -13,7 +14,7 @@
+ # allowlist. ffmpeg, the one program the server runs, is started only from
+ # apps/cli/src/decode.rs, and only with a file-only protocol whitelist.
+ #
+-# A third file is allowlisted without being a network place:
++# One more file is allowlisted to open local recordings:
+ # LocalRecordingAsset.swift is the one spelling of `AVURLAsset(` in the app,
+ # and it refuses anything but a local file URL, so playing a recording can
+ # never turn into a fetch.
+@@ -26,7 +27,7 @@ set -euo pipefail
+ cd "$(dirname "$0")/.."
+ 
+ # Files that are allowed by the network.
+-ALLOWED='^(Packages/LocalASR/Sources/LocalASR/ModelDownloading\.swift|apps/macos/OpenRamble/System/SparkleUpdater\.swift|apps/macos/OpenRamble/System/LocalRecordingAsset\.swift)$'
++ALLOWED='^(Packages/LocalASR/Sources/LocalASR/ModelDownloading\.swift|apps/macos/OpenRamble/System/(SparkleUpdater|DailyDictationUsage|LocalRecordingAsset)\.swift)$'
+ 
+ # We only check the shipping code. The tests intentionally create a URLSession, read
+ # local fixture files via Data(contentsOf:) and raise control-connect;
+@@ -140,10 +141,8 @@ while IFS= read -r hit; do
+ done < <(grep -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|dictatedText|recognizedText)' \
+   "${SHIPPING_PATHS[@]}" 2>/dev/null || true)
+ 
+-# Third-party reporting SDKs. CLAUDE.md bans telemetry, analytics and crash
+-# reporting, and nothing enforced it: the symbol scan above only sees an SDK once
+-# it is called. A port from a sibling project arrived carrying `import Sentry`,
+-# which is the moment to catch — before the first breadcrumb, not after.
++# The symbol scan above only sees a reporting SDK once it is called.
++# Catch imports too, even in a file that is allowed to use the network.
+ echo "Checking third-party SDK imports..."
+ FORBIDDEN_IMPORTS='^[[:space:]]*import[[:space:]]+(Sentry[A-Za-z]*|Firebase[A-Za-z]*|Crashlytics|Amplitude|Mixpanel|PostHog|Bugsnag|Datadog[A-Za-z]*|Segment|AppCenter[A-Za-z]*)'
+ while IFS= read -r hit; do
+@@ -396,6 +395,6 @@ fi
+ 
+ if [[ $status -eq 0 ]]; then
+   echo ""
+-  echo "Network source surface is limited to model downloads and update checks; the inference runtime and the shared Rust core cannot reach the network at all; the Linux server only accepts connections, in apps/cli/src/listen.rs, and makes none."
++  echo "Network source surface is limited to model downloads, updates and daily Mac dictation counts; the inference runtime and the shared Rust core cannot reach the network at all; the Linux server only accepts connections, in apps/cli/src/listen.rs, and makes none."
+ fi
+ exit $status
+diff --git a/scripts/tests/test-network-gate.sh b/scripts/tests/test-network-gate.sh
+index 8c7c990..da5fb82 100755
+--- a/scripts/tests/test-network-gate.sh
++++ b/scripts/tests/test-network-gate.sh
+@@ -31,9 +31,10 @@ chmod +x "$STUBS/cargo"
+ copy() {
+   local tree="$TEMP_DIRECTORY/tree"
+   rm -rf "$tree"
+-  mkdir -p "$tree/scripts" "$tree/apps/macos" "$tree/apps/desktop/src-tauri"
++  mkdir -p "$tree/scripts" "$tree/apps/macos/OpenRamble/System" "$tree/apps/desktop/src-tauri"
+   cp "$REPOSITORY_ROOT/scripts/check-network-surface.sh" "$tree/scripts/"
+   cp "$REPOSITORY_ROOT/apps/macos/project.yml" "$tree/apps/macos/"
++  cp "$REPOSITORY_ROOT/apps/macos/OpenRamble/System/DailyDictationUsage.swift" "$tree/apps/macos/OpenRamble/System/"
+   cp "$REPOSITORY_ROOT/Cargo.toml" "$REPOSITORY_ROOT/Cargo.lock" "$tree/"
+   cp -R "$REPOSITORY_ROOT/core" "$tree/core"
+   cp -R "$REPOSITORY_ROOT/apps/desktop/src-tauri/src" "$tree/apps/desktop/src-tauri/src"
+@@ -60,6 +61,10 @@ expect_fail() {
+ tree=$(copy)
+ expect_pass "$tree" "the gate fails on the clean tree"
+ 
++tree=$(copy)
++cp "$tree/apps/macos/OpenRamble/System/"{DailyDictationUsage,OtherReporting}.swift
++expect_fail "$tree" "the daily reporting network exception applies outside its allowed file"
++
+ tree=$(copy)
+ printf '\n// a TcpStream named in prose is not a connection\n' >> "$tree/apps/cli/src/serve.rs"
+ expect_pass "$tree" "a comment naming a socket failed the gate"

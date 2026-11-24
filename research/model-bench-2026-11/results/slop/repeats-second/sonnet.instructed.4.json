@@ -1,0 +1,6 @@
+{
+ "model": "sonnet",
+ "condition": "instructed",
+ "output": "Yes, it's possible. The rule exists to protect existing installs, so the answer depends on whether any exist.\n\n**If no build with `is.waiwai.dictation` has gone to anyone but you, rename it now.** Launch is the cheapest time. Only your own machines are affected: you'd re-grant Accessibility once, and settings stored under the old ID would start fresh.\n\n**If testers or users already have a build, I'd keep the old ID.** For them, the rename would:\n- Reset the Accessibility grant, since it's tied to the bundle ID. For a dictation app that means it silently stops working until they re-grant.\n- Probably break Sparkle updates from the old app to the new one, because Sparkle expects the bundle ID to match. They'd have to reinstall manually. I can't check this here, so verify against the Sparkle version you use.\n\nEither way, keep the existing EdDSA key and the inside-out signing. The rename doesn't touch those.\n\nIf you go ahead, the old ID needs updating in the Info.plist, entitlements, signing and release scripts, the appcast, and `docs/release.md`. The rules file line should change too, so it doesn't contradict the new ID. I'd also grep for the old ID to catch hardcoded copies.\n\nHas any build with the old ID left your machine?",
+ "opens": "yes"
+}

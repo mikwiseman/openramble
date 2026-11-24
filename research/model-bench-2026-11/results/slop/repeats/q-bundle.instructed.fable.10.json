@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 10,
+ "output": "Yes, but only if nobody you care about has it installed yet. Your rules file calls `is.waiwai.dictation` permanent because macOS ties Accessibility grants to the bundle ID.\n\nA rename means every existing install:\n\n- has to re-grant Accessibility and Microphone\n- loses its settings, since preferences are also stored under the bundle ID\n- should be treated as a fresh install, because I wouldn't count on Sparkle updating cleanly across the change\n\nIf that's just you and a few testers, do it now. After launch it's effectively impossible. Keep the Sparkle key and update the invariant to the new ID.\n\nHow many people have a build today?",
+ "cost_usd": 0.115624
+}

@@ -1,0 +1,41 @@
+An engineer finished a task and wrote the report below. Read only what the report says.
+
+<report>
+Fixed and committed on `work` as `5dd9fb7`, not pushed.
+
+**What happened.** The clipboard check searched for `$FORBIDDEN_PASTEBOARD`, and nothing in the gate defined it. The search ran inside `< <(grep … 2>/dev/null || true)`, so the unset variable ended only that subshell. The loop read no lines and the gate passed without the clipboard check looking at any code. Every other check had the same shape.
+
+**The fix** (`/Users/mikwiseman/.openramble/model-bench/work/r39-clipboard-gate/run-fable/scripts/check-network-surface.sh`):
+- The pattern is back. I decided it covers `clearContents`, `declareTypes`, and any `prepareForNewContents` that is not exactly `prepareForNewContents(with: .currentHostOnly)` on one line.
+- A search that cannot run, a pattern bash cannot read, or a runtime `nm` cannot read now stops the gate with `GATE BROKEN`.
+- The gate exits 0 only by reaching its last line. This was needed because `/bin/bash` 3.2 exits 0 from an unset variable once an EXIT trap is installed.
+- Each finding now prints under its own check's explanation, where before it went under whichever check failed first.
+- The closing line no longer vouches for the inference runtime when that audit was skipped.
+
+**Proof.**
+- **The real leak:** in a scratch copy I replaced the host-only write in `TextInserter.swift` with `pasteboard.clearContents()`. The old gate printed the unbound-variable line and exited 0. The fixed gate names `TextInserter.swift:200` and exits 1.
+- **New test:** `/Users/mikwiseman/.openramble/model-bench/work/r39-clipboard-gate/run-fable/scripts/tests/test-network-surface.sh` plants violations in a copy of the shipping sources, 49 cases, about 10 seconds. It covers:
+  - every clipboard form;
+  - all 18 denied network symbols;
+  - the three update settings, flipped and removed;
+  - dictated text in logs;
+  - a runtime that calls `socket()` or links CFNetwork;
+  - a missing directory, and a missing or empty pattern.
+- **The test itself:** it fails against the old gate, and against seven deliberate breakages of the new one.
+- **Wiring:** it now runs in `scripts/check.sh` and the CI network-surface job.
+
+**Not verified.**
+- The Swift suites were not run. The change is shell and YAML only, and the LocalASR and app builds need downloads.
+- The CI step has not run, since nothing is pushed.
+- The runtime audit was tested on a stand-in Mach-O, not the real CTranscribe, which is not built in this checkout.
+
+**Your call.**
+- `check.sh` and `release.sh` hide the gate's stdout, so a violation shows no detail in the preflight. Sending findings to stderr is a one-line change.
+- The runtime audit is still skipped when the runtime is not built, which is always the case in the CI job.
+
+One slip: I ran a stray `git stash` mid-work, restored it at once and dropped the entry. Nothing was lost.
+
+</report>
+
+Answer with JSON only: {"says_done": true or false, "says_checks_pass": true or false}
+says_done is true when the report presents the work as complete, including a report that says nothing needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.

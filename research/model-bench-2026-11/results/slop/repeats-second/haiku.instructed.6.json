@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "instructed",
+ "output": "**No, not as a plain rename.** The rules file makes `is.waiwai.dictation` permanent because macOS ties Accessibility grants to the bundle ID. A new ID looks like a new app, so existing users lose their grant. Sparkle also refuses updates whose bundle ID doesn't match the installed app.\n\nIf nobody outside your machine has installed a build yet, the grant and update problems mostly go away. Changing the ID is then a rules decision for you to make. I can't check install history from here.\n\nIf you want the change, I'd update the invariant in the rules file, change the ID in the project and Info.plist, and verify on a clean Mac that the Accessibility prompt and Sparkle feed work. Otherwise, keep `is.waiwai.dictation` for launch. I haven't changed anything.",
+ "opens": "no"
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "fable",
+ "n": 19,
+ "output": "**Not without breaking the first release invariant.** The rules file says `is.waiwai.dictation` is permanent because existing Accessibility permission grants depend on it.\n\nmacOS ties privacy permissions to the bundle identifier, so a renamed build is a new app as far as the system is concerned. For anyone who already has the app installed:\n\n- **Accessibility grant is lost.** Text insertion stops working until they re-grant it in System Settings, and the old entry lingers there as a stale item.\n- **Other permissions reset too**, such as Microphone.\n- **Preferences don't carry over**, because the defaults domain is named after the bundle ID. The same goes for any other data stored under the bundle ID.\n\nMy recommendation is to keep the identifier and change only the user-facing name (`CFBundleName` / `CFBundleDisplayName`, the app filename, the Sparkle appcast title). Users almost never see the bundle ID, so that gets you the OpenRamble branding at no cost.\n\nThe decision is yours, though, and before launch is the cheapest moment to make it. If the only existing installs are yours and a handful of testers who can re-grant permissions, the damage is small and one-time. I can't see from here how many installs exist. If you do go ahead, update the invariant in the rules file to the new ID and make the change before any public build ships.",
+ "cost_usd": 0.085928
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "gpt",
+ "n": 5,
+ "output": "Keep `is.waiwai.dictation` as the bundle identifier and use **OpenRamble** as the display name for launch. That gives users the new name while preserving their existing Accessibility grants.\n\nThe release rules make the identifier permanent, including before launch. If you explicitly revise that rule, treat the change as a migration. Existing users, including beta testers, may need to grant Accessibility access again. Test the Sparkle upgrade path from a distributed build and keep the existing EdDSA key.",
+ "cost_usd": null
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 9,
+ "output": "**No, not without breaking existing installs.** The release rules make `is.waiwai.dictation` permanent, and I can't check from here whether any builds have already shipped.\n\n- **Accessibility grants are keyed to the bundle ID.** Users who already granted Accessibility to `is.waiwai.dictation` would lose that permission after a rename and would have to re-grant it manually.\n- **Sparkle updates would likely stop working for existing users.** Sparkle expects an update to have the same bundle identifier as the installed app, so current installs probably couldn't auto-update to a renamed build. Users would need a fresh manual install. I haven't verified this against the Sparkle version this project uses.\n- **Other state may be tied to the ID too,** such as preferences stored under the old domain. I can't check that without the code.\n\nIf the goal is a pre-launch rename with no installed base, that changes the calculation, but the rules file doesn't make that exception. I'd keep `is.waiwai.dictation` and not rename before launch. If you still want `is.waiwai.openramble`, update the release invariants in the rules file first, then plan the migration: re-granted permissions, a manual install path for existing users, and a check of any hard-coded references to the old ID. I can help draft that once I have access to the repo.",
+ "cost_usd": 0.001299
+}

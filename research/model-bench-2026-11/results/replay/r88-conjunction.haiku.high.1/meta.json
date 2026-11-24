@@ -1,0 +1,46 @@
+{
+ "run": "r88-conjunction.haiku.high.1",
+ "task": "r88-conjunction",
+ "model": "claude-haiku-5-5",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 23:08",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 1489,
+ "slept_seconds": 0,
+ "load_before": "67.8",
+ "load_after": "24.0",
+ "left_in_profile": [
+  "c3bbae6f-915e-4762-a7ac-b70ff50057d0/tool-results/bsxxpz977.txt",
+  "c3bbae6f-915e-4762-a7ac-b70ff50057d0/tool-results/bdge0qspd.txt"
+ ],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r88-conjunction.haiku.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 64,
+ "by_kind": {
+  "Bash": 62,
+  "Monitor": 2
+ },
+ "turns": 65,
+ "usage": {
+  "input": 130,
+  "cache_write": 160489,
+  "cached_input": 6910736,
+  "output": 79030
+ },
+ "tokens": 7150385,
+ "cost_usd": 0.51336356,
+ "models_used": [
+  "claude-haiku-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 24,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 243
+}

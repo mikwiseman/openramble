@@ -1,0 +1,125 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index d453560..7ddca86 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -82,6 +82,9 @@ jobs:
+       - name: Check that the network is only where it is allowed
+         run: ./scripts/check-network-surface.sh
+ 
++      - name: Test the network surface gate
++        run: ./scripts/tests/test-network-surface.sh
++
+   arm64-build:
+     name: Apple Silicon only
+     runs-on: macos-26
+diff --git a/scripts/check-network-surface.sh b/scripts/check-network-surface.sh
+index f578dac..4f3de37 100755
+--- a/scripts/check-network-surface.sh
++++ b/scripts/check-network-surface.sh
+@@ -56,24 +56,22 @@ done < <(grep -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" 2>/dev/null \
+   | grep -vE 'URLSessionModelDownloader\(\)|: ModelDownloading' \
+   || true)
+ 
+-echo "Checking the clipboard entry..."
+-while IFS= read -r hit; do
+-  if [[ $status -eq 0 ]]; then
+-    echo ""
+-    echo "VIOLATION: flushing buffer past .currentHostOnly takes away dictation"
+-    echo "to Universal Clipboard - to all Apple ID devices."
+-    echo "Use prepareForNewContents(with: .currentHostOnly)."
++echo "Checking clipboard calls..."
++# Keep grep's status in this shell: 1 means no matches, higher statuses mean the scan failed.
++if clipboard_hits=$(grep -rInw 'clearContents' "${SHIPPING_PATHS[@]}"); then
++  while IFS= read -r hit; do
++    # Skip full-line comments, including Swift documentation comments.
++    if [[ "${hit#*:*:}" =~ ^[[:space:]]*// ]]; then
++      continue
++    fi
++    printf 'VIOLATION: clearContents() can expose dictation to Universal Clipboard.\n' >&2
++    printf '  %s\n  Use prepareForNewContents(with: .currentHostOnly).\n' "$hit" >&2
+     status=1
+-  fi
+-  echo "  $hit"
+-  # Comments are excluded in the same way as in network symbol checking. Without this
+-  # the gate crashed on a line that itself explains why you can’t write it like that -
+-  # and a false positive here is more expensive than a pass: they start to bypass it, and
+-  # one day they will bypass the present.
+-done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" 2>/dev/null \
+-  | grep -v '^Binary' \
+-  | grep -vE ':[0-9]+: *//' \
+-  || true)
++  done <<< "$clipboard_hits"
++elif [[ $? -ne 1 ]]; then
++  echo "ERROR: could not scan shipping sources for clipboard calls." >&2
++  exit 1
++fi
+ 
+ # Updates must remain silent until enabled. This is not cosmetics:
+ # without SUEnableAutomaticChecks=false Sparkle will ask itself on the second launch
+diff --git a/scripts/tests/test-network-surface.sh b/scripts/tests/test-network-surface.sh
+new file mode 100755
+index 0000000..621737e
+--- /dev/null
++++ b/scripts/tests/test-network-surface.sh
+@@ -0,0 +1,61 @@
++#!/bin/bash
++
++set -euo pipefail
++
++REPOSITORY_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
++TEST_ROOT=$(mktemp -d "$REPOSITORY_ROOT/.network-surface-test.XXXXXX")
++trap 'find "$TEST_ROOT" -depth -delete' EXIT
++cd "$TEST_ROOT"
++
++mkdir -p scripts Packages/DictationCore/Sources Packages/LocalASR/Sources/LocalASR \
++  apps/macos/OpenRamble apps/macos/OpenRambleTests
++cp "$REPOSITORY_ROOT/scripts/check-network-surface.sh" scripts/
++cp "$REPOSITORY_ROOT/apps/macos/project.yml" apps/macos/
++
++fail_test() {
++  printf 'FAIL: %s\n' "$1" >&2
++  cat gate.out gate.err >&2
++  exit 1
++}
++
++run_gate() {
++  local expected="$1" description="$2" actual=0
++  ./scripts/check-network-surface.sh > gate.out 2> gate.err || actual=$?
++  [[ "$actual" -eq "$expected" ]] \
++    || fail_test "$description (expected exit $expected, got $actual)"
++  if [[ "$expected" -eq 0 && -s gate.err ]]; then
++    fail_test "$description (unexpected stderr)"
++  fi
++}
++
++require_output() {
++  grep -Fq -- "$1" "$2" || fail_test "expected $2 to include $1"
++}
++
++PASTEBOARD_SOURCE=apps/macos/OpenRamble/PasteboardFixture.swift
++printf 'pasteboard.prepareForNewContents(with: .currentHostOnly)\n' > "$PASTEBOARD_SOURCE"
++run_gate 0 'host-only clipboard preparation'
++
++printf '    // Avoid pasteboard.clearContents()\n' >> "$PASTEBOARD_SOURCE"
++printf '\t/// Use host-only preparation instead of clearContents().\n' >> "$PASTEBOARD_SOURCE"
++printf 'pasteboard.clearContents()\n' > apps/macos/OpenRambleTests/PasteboardFixture.swift
++printf 'let session = URLSession.shared\n' > Packages/LocalASR/Sources/LocalASR/ModelDownloading.swift
++run_gate 0 'clipboard comments, test code and the allowed model downloader'
++
++printf 'pasteboard.clearContents()\n' >> "$PASTEBOARD_SOURCE"
++run_gate 1 'a shipping clearContents() call'
++require_output "$PASTEBOARD_SOURCE:4:pasteboard.clearContents()" gate.err
++require_output 'prepareForNewContents(with: .currentHostOnly)' gate.err
++
++NETWORK_SOURCE=Packages/DictationCore/Sources/NetworkFixture.swift
++printf 'let session = URLSession.shared\n' > "$NETWORK_SOURCE"
++run_gate 1 'simultaneous network and clipboard violations'
++require_output "$NETWORK_SOURCE:1:let session = URLSession.shared" gate.out
++require_output "$PASTEBOARD_SOURCE:4:pasteboard.clearContents()" gate.err
++
++printf 'pasteboard.prepareForNewContents(with: .currentHostOnly)\n' > "$PASTEBOARD_SOURCE"
++mv Packages/DictationCore/Sources Packages/DictationCore/MissingSources
++run_gate 1 'missing shipping sources'
++require_output 'could not scan shipping sources for clipboard calls' gate.err
++
++printf 'PASS: network surface gate accepts safe clipboard code and rejects violations and scan errors\n'

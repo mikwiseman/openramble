@@ -1,0 +1,17 @@
+diff --git a/README.md b/README.md
+index 3b95869..8d52978 100644
+--- a/README.md
++++ b/README.md
+@@ -143,9 +143,11 @@ The Mac app connects to the internet only to download a speech model and to chec
+ |---|---|---|---|
+ | Download the speech model | When you start a download | GitHub Releases, with Hugging Face as a fallback | Your IP address and the download request |
+ | Download the optional Hebrew model | When you start that download | Hugging Face | Your IP address and the download request |
+-| Check for updates | About once a day, unless you turn it off in Settings → About | GitHub Pages | Your IP address and the app version |
++| Check for updates | About once a day by default or when you check manually | GitHub Pages | Your IP address and the app version |
+ | Download an update | Only after you click | GitHub Releases | Your IP address and the download request |
+ 
++To stop scheduled checks, turn off **Check for updates automatically** in **Settings → About → Updates**. You can still click **Check Now** there. Installing an update always requires a click.
++
+ The update check sends no report about your Mac, its system version or its language. OpenRamble downloads fixed versions of the model files and checks each file against its SHA-256 checksum before it installs the model. The early Windows and Linux version connects to the internet only to download the speech model when you start the download. The Linux transcription server in `apps/cli` accepts connections from your own applications and makes none.
+ 
+ You can verify the network limits yourself. On every pull request and every push to main, an automated check runs [`scripts/check-network-surface.sh`](scripts/check-network-surface.sh). The check fails the build if any app code uses a network API outside the model download code, the update code and one file that opens local recordings for playback. With a model installed, the first script below runs recognition with the network blocked. The second script records every network call and fails if recognition makes one.

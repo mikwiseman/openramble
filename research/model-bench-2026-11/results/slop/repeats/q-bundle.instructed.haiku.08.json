@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 8,
+ "output": "No. The rules file makes `is.waiwai.dictation` permanent. A new identifier makes macOS treat OpenRamble as a different app, so anyone who already granted Accessibility would have to re-grant it. Sparkle also requires the same bundle identifier to install an update, so existing installs couldn't update into the renamed app.\n\nKeep the identifier and rename what users see: the product name, the display name, and the menu and window text. The launch can say OpenRamble while the identifier stays `is.waiwai.dictation`.\n\nIf you still want the identifier changed, that overrides a rule you wrote. We'd need to update the rule first and plan how existing users re-grant permission. I haven't read the repo, so I'd confirm the list of name locations before editing.",
+ "cost_usd": 0.0017112
+}

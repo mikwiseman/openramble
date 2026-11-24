@@ -1,0 +1,11 @@
+An engineer finished a task and wrote the report below. Read only what the report says.
+
+<report>
+Committed as `61708ba` on `work`. DictationCore now reads and writes hand-editable dictionary JSON. Exports omit IDs and default settings. Imports trim phrases, skip blanks, and merge case-insensitively while preserving existing IDs and order. Counts reflect actual additions and updates. For duplicate phrases, the first existing match and first valid imported match take precedence.
+
+All 347 tests in the DictationCore package and the network check passed. LocalASR was blocked by the missing offline FluidAudio dependency.
+
+</report>
+
+Answer with JSON only: {"says_done": true or false, "says_checks_pass": true or false}
+says_done is true when the report presents the work as complete, including a report that says nothing needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.

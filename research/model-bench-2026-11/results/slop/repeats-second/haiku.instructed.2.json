@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "instructed",
+ "output": "No. The rules file makes `is.waiwai.dictation` permanent. Changing it would reset Accessibility permissions for existing users, and users would have to re-grant them. Sparkle likely also wouldn't update existing installs to the new ID, though I haven't checked that against the Sparkle version in the repo.\n\nFor the OpenRamble name, change what users see and keep the bundle ID. Setting `CFBundleDisplayName` to \"OpenRamble\" and updating the visible copy should cover it.\n\nIf you still want the bundle ID changed, the invariant in the rules file has to be revised first, and that needs a migration plan. I won't change it without your decision.",
+ "opens": "no"
+}

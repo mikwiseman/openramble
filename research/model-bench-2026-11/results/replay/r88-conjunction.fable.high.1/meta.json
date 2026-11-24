@@ -1,0 +1,44 @@
+{
+ "run": "r88-conjunction.fable.high.1",
+ "task": "r88-conjunction",
+ "model": "claude-fable-5-2",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 23:36",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 1638,
+ "slept_seconds": 0,
+ "load_before": "12.5",
+ "load_after": "6.7",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r88-conjunction.fable.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 38,
+ "by_kind": {
+  "Bash": 33,
+  "Read": 4,
+  "Edit": 1
+ },
+ "turns": 40,
+ "usage": {
+  "input": 2174,
+  "cache_write": 212112,
+  "cached_input": 2408951,
+  "output": 80943
+ },
+ "tokens": 2704180,
+ "cost_usd": 7.0587902,
+ "models_used": [
+  "claude-fable-5-2"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 11,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 149
+}

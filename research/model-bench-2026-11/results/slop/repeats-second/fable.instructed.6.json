@@ -1,0 +1,6 @@
+{
+ "model": "fable",
+ "condition": "instructed",
+ "output": "Yes, and before launch is the cheapest time to do it, but it breaks the first release invariant in your rules file, so it should be a deliberate call.\n\n- **What it costs:** macOS ties Accessibility grants to the bundle ID, so every existing install becomes a new app. Users must re-grant Accessibility, and settings stored under the old ID are lost unless we migrate them.\n- **What it buys:** nothing users see. The name, icon and domain can all say OpenRamble while the ID stays `is.waiwai.dictation`.\n\nI'd keep it unless the existing installs are just you and a few testers. In that case, rename now and update the invariant to the new ID.\n\nHow many people have it installed today?",
+ "opens": "yes"
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 10,
+ "output": "Yes. If you’re willing to have existing testers grant Accessibility access again, I’d switch to `is.waiwai.openramble` before launch. macOS treats it as a new app identity. New users will go through the usual first-run permission flow.\n\nIf existing testers need a seamless upgrade, keep `is.waiwai.dictation`. If you choose to switch, update the release invariant, keep the existing Sparkle key, and verify the update from the current build before shipping.",
+ "cost_usd": null
+}

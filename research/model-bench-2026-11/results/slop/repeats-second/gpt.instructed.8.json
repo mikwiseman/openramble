@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "instructed",
+ "output": "Yes, if you’re willing to reset Accessibility access for everyone who already uses a prelaunch build. macOS will treat `is.waiwai.openramble` as a new app identity, so those users will need to grant access again.\n\nIf the goal is to launch under the OpenRamble name, I’d change the display name and keep `is.waiwai.dictation`. If you want the new bundle ID too, make that an explicit change to the release invariant, keep the existing Sparkle key, and verify the upgrade from a prelaunch build before shipping.",
+ "opens": "yes"
+}

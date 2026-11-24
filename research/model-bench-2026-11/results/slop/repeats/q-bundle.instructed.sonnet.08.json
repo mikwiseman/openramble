@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 8,
+ "output": "Yes, it's your call, but it isn't free. The rules file says the identifier is permanent because existing installs have Accessibility grants tied to `is.waiwai.dictation`.\n\nIf you rename:\n- macOS treats it as a new app, so every existing user has to re-grant Accessibility.\n- Preferences and other data keyed to the old ID are lost, unless we migrate them.\n- Sparkle auto-update from the old ID to the new one may not work. I'd test it first and wouldn't assume it does. The EdDSA key stays the same either way.\n\nI recommend keeping `is.waiwai.dictation`. Users never see the identifier, and the name and branding can change without touching it.\n\nIf nobody outside your own machines has installed the app, the rename costs nothing and we should do it now. Are there real installs out there?",
+ "cost_usd": 0.026806000000000003
+}

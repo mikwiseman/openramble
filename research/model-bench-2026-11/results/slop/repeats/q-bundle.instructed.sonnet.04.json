@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 4,
+ "output": "Yes, if you accept the cost. The rules file makes it permanent because macOS ties Accessibility grants to the bundle ID, so the rename resets that permission for anyone who already has the app. Their preferences also move to a new defaults domain.\n\nThe cost depends on who has installed `is.waiwai.dictation`:\n\n- **Only you and a few testers:** the rename is cheap. Everyone re-grants Accessibility once, and doing it before launch is the best time.\n- **Real users on Sparkle updates:** they would lose the permission silently on update. I'm also not certain Sparkle will accept an update with a different bundle ID, so I'd test that before shipping.\n\nThe EdDSA key and the inside-out signing rule don't depend on the bundle ID, so they stay as they are.\n\nIf you go ahead, I'd update the rules file and `docs/release.md` in the same change, since the \"permanent\" line would no longer be true. Who has the current build installed?",
+ "cost_usd": 0.029046000000000002
+}

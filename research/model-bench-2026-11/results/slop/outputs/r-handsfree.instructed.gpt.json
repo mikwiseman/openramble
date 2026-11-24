@@ -1,0 +1,16 @@
+{
+ "item": "r-handsfree",
+ "situation": "review",
+ "condition": "instructed",
+ "model": "gpt",
+ "effort": "high",
+ "output": "**Request changes.** Releasing the first hands-free press during `.inserting` still sets `released`. Replay now treats that flag as a second press and calls `stopHandsFree()`, so a single tap can end the queued take.\n\nUse the queued press’s mode to decide which event sets a shared `stopRequested` flag. `stop()` should record releases only for hold-to-talk, and `stopHandsFree()` should record second presses only for hands-free.\n\nTest both hands-free paths during insertion. A first press and release should replay into listening. Adding a second press before the paste finishes should end the replayed take.",
+ "usage": {
+  "input": 15674,
+  "cached_input": 0,
+  "cache_write": 0,
+  "output": 401
+ },
+ "cost_usd": null,
+ "seconds": 14
+}

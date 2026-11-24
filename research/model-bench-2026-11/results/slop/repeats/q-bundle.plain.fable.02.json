@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "fable",
+ "n": 2,
+ "output": "**Not without breaking one of the repo's release invariants.** The rules file lists `is.waiwai.dictation` as permanent because existing Accessibility permission grants depend on it.\n\nmacOS ties Accessibility grants to the bundle identifier, so a rename has real costs for anyone who already has the app installed:\n\n- **Accessibility permission is lost.** Every existing install looks like a new app and must be re-granted in System Settings. For a dictation app, that means it silently stops working until the user does so.\n- **Other state keyed to the identifier is orphaned.** Preferences and any containers or Application Support paths derived from the bundle ID would need migration code.\n- **The Sparkle update path gets risky.** Updating across an identifier change is not a normal update; I'd want to test it rather than assume it works.\n\nMy recommendation is to keep the identifier and rename only what users see: the app name, display name, and marketing. The bundle ID is essentially invisible to them.\n\nThat said, it's your rule, and before launch is the cheapest time this will ever be. If the only existing installs are you and a few testers who can re-grant permission by hand, the rename is feasible. In that case, update the rules file and `docs/release.md` in the same change, and keep the Sparkle EdDSA key as is.\n\nHow many installs exist outside your own machines?",
+ "cost_usd": 0.086248
+}

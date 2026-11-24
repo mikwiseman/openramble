@@ -1,0 +1,41 @@
+{
+ "run": "f88-rust-follow.astra.xhigh.1",
+ "task": "f88-rust-follow",
+ "model": "gpt-6.2-astra",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 00:24",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 310,
+ "slept_seconds": 0,
+ "load_before": "8.5",
+ "load_after": "83.5",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/f88-rust-follow.astra.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 56,
+ "by_kind": {
+  "Bash": 55,
+  "file_change": 1
+ },
+ "turns": 57,
+ "usage": {
+  "input": 87105,
+  "cached_input": 2032384,
+  "cache_write": 0,
+  "output": 5153
+ },
+ "tokens": 2124642,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 12,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 68
+}

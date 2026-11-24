@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 16,
+ "output": "**No, not under the current rules.** The repo's release invariants say `is.waiwai.dictation` is permanent because existing Accessibility grants depend on it. macOS ties those grants to the bundle identifier, so renaming it would drop the permission for anyone who already installed the app.\n\nA rename would also have effects beyond Accessibility:\n\n- **Sparkle updates:** Sparkle expects updates to come from the same bundle identifier. An app with the new ID would not update from an installed copy with the old one, so existing users would need a manual reinstall.\n- **Other per-bundle state:** Preferences, login items, and Keychain items keyed to the old ID would not carry over.\n\nIf no build has reached users yet, the Accessibility argument may not apply. I can't verify that from here, since I have no file or tool access in this session. If you want the rename before launch, the owner needs to:\n\n1. Confirm no installed builds exist outside the team.\n2. Change the bundle-identifier invariant in the rules file and `docs/release.md` explicitly, with the reason.\n3. Accept that the first public release under the new ID is a fresh install, and that Accessibility must be re-granted.\n\nThe Sparkle EdDSA key is tied to the signing key, not the bundle ID, so the rename doesn't affect it. The \"never generate a replacement\" rule still applies.\n\nIf you give me access to the repo, I can check whether any release has shipped and draft the invariant change for review.",
+ "cost_usd": 0.0012815
+}

@@ -1,0 +1,37 @@
+{
+ "task": "t-telemetry",
+ "load": "6.7",
+ "check": {
+  "ok": false,
+  "code": 1,
+  "seconds": 12
+ },
+ "network_gate": {
+  "ok": false,
+  "code": 1,
+  "seconds": 2
+ },
+ "own_tests": {
+  "files": 0,
+  "fail_on_base": null
+ },
+ "hidden": {
+  "ok": true,
+  "code": 0,
+  "seconds": 0,
+  "failed": [],
+  "tries": 1
+ },
+ "not_built": [],
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [
+  "network boundary"
+ ],
+ "state": "fail",
+ "reason": "changed 21 lines where no change was right"
+}

@@ -1,0 +1,16 @@
+{
+ "title": "Clean Verbatim ate real words",
+ "kind": "replay",
+ "area": "Swift, Rust and conformance",
+ "source": "#88, Clean Verbatim keeps a word said again after a conjunction",
+ "base": "1224e1e19c2f3d14e37742d47fa338a045010e37",
+ "reference": "1ab4af81ab0eaaa27723bbe63fa50c14f03d9354",
+ "hidden": [
+  "Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift",
+  "core/conformance/corpus-text.json",
+  "core/conformance/fixtures/text/pipeline.json"
+ ],
+ "suite": "swift test --package-path Packages/DictationCore --filter 'CleanVerbatim|TextPipeline|Paragraph|SendIt|Dictionary' && cargo test -p ramble-text -p ramble-core --all-features",
+ "check": "swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors && cargo fmt --all --check && cargo clippy -p ramble-core -p ramble-text --all-targets --all-features -- -D warnings && swift build --package-path core/conformance/generator && core/conformance/generator/.build/debug/GenerateFixtures core/conformance/corpus-text.json core/conformance/fixtures/text/pipeline.json && git diff --quiet -- core/conformance/fixtures && cargo test -p ramble-text --test conformance && ./scripts/check-network-surface.sh",
+ "not_built": "^(apps/|Packages/LocalASR/)"
+}

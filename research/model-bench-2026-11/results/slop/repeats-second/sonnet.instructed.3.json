@@ -1,0 +1,6 @@
+{
+ "model": "sonnet",
+ "condition": "instructed",
+ "output": "Yes, it's your call, and before launch is the cheapest time to do it.\n\n**The cost:** macOS ties Accessibility grants to the bundle ID. Anyone with the current build installed (you, testers) has to re-grant permission once after updating. Their preferences and any Keychain items stored under the old ID also won't carry over unless we migrate them.\n\n**What stays the same:** The Sparkle EdDSA key stays as is, and so does the inside-out signing.\n\n**Decision for you:** Has anyone outside your own machines installed the current build? If not, rename now. If so, it's a one-time re-grant for them, which is still much cheaper than after launch.\n\nIf you go ahead, I'll update the bundle ID wherever it's set, plus `docs/release.md`, and edit the \"permanent\" rule in `AGENTS.md` so future agents don't block the change. I can't see the repo in this session, so I can't yet say where else the old ID appears.",
+ "opens": "yes"
+}

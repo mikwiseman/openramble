@@ -1,0 +1,29 @@
+Done. `DictionaryTransfer` is in DictationCore with the names and shapes you gave, committed on `work` as `709ca19`, not pushed. The app is untouched.
+
+**Checked:** the DictationCore suite passes built the way CI builds it (warnings as errors), 338 tests of which 28 are new, and the network gate passes. One new test holds the merge to 3,000 random imports, and it fails when I break the merge on purpose. LocalASR and the app suites were not run: they need dependencies fetched from the network, and nothing in them changed.
+
+**The file** is one phrase per line, Cyrillic and slashes as typed:
+
+```
+{
+  "openRambleDictionary": 1,
+  "replacements": [
+    {"spoken": "сентри", "written": "Sentry"},
+    {"spoken": "commit", "written": "commit", "noAcousticBoost": true}
+  ]
+}
+```
+
+**What I decided:**
+- **The first key is required.** JSON without `openRambleDictionary` is refused as not a dictionary, including a bare list of pairs.
+- **A newer format is named with its version** even when this build cannot read the rest of the file.
+- **One unreadable entry refuses the whole file** as damaged, naming the entry number (or the line and column), never the phrases. Dropping it silently would lose a phrase. Explicitly empty sides are still dropped, as you asked.
+- **Trimming includes line breaks**, not only spaces. `merge` applies the same rule to whatever it is handed.
+- **An updated phrase becomes the file's entry** (its spelling, written side and every setting) and keeps its id and place. A plain pair therefore resets my settings for that phrase to default.
+- **The spoken side in another case alone is not a change** and counts nothing.
+- **A phrase held twice is never folded.** The first mention in the file meets my first entry for it, the second meets my second, and a mention with none left is added. I first assumed the second entry was dead weight; a test showed dictation runs it over the first one's output. The consequence: a file that repeats a phrase I have once adds a second entry.
+- **The errors carry polite text** through `localizedDescription`, with the version for a newer file. This is beyond the interface you listed; it is about 15 lines if you would rather word it at the buttons.
+
+Files:
+- `/Users/mikwiseman/.openramble/model-bench/work/r15-dictionary-file/run-fable/Packages/DictationCore/Sources/DictationCore/DictionaryTransfer.swift`
+- `/Users/mikwiseman/.openramble/model-bench/work/r15-dictionary-file/run-fable/Packages/DictationCore/Tests/DictationCoreTests/DictionaryTransferTests.swift`

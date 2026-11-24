@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 11,
+ "output": "Yes, and before launch is the only cheap moment to do it, but it breaks the invariant in your rules file for every existing install.\n\nmacOS treats the new identifier as a different app, so on each existing install:\n\n- **Permissions:** Accessibility and Microphone grants are lost and must be re-granted, and a stale entry stays in System Settings.\n- **Settings:** UserDefaults reset unless we migrate them.\n- **Other state:** Keychain items and the login item may need redoing; I can't check the repo in this session.\n\nIf existing installs are just you and a few testers, do it now, and I'll update the rule to make `is.waiwai.openramble` the permanent one. If there's a real beta base, keep it, since users never see the bundle ID.\n\nHow many installs exist today?",
+ "cost_usd": 0.125024
+}

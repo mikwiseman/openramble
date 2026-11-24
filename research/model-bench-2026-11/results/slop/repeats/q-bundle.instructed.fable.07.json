@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 7,
+ "output": "Yes, and before launch is the only sensible time to do it. But it breaks the first release invariant in the rules file, so it's a deliberate one-time cost.\n\nEvery existing install would:\n\n- **Lose its permissions:** macOS ties Accessibility (and Microphone) grants to the bundle ID, so each user must re-grant, and a stale old entry stays in System Settings.\n- **Lose its settings:** UserDefaults and any paths or Keychain items keyed by the ID reset unless we migrate them.\n- **Need a tested update path:** I haven't verified that Sparkle updates cleanly from the old ID to the new one.\n\nIf the only installs are you and a few testers, I'd rename now and update the rule. How many installs exist today?",
+ "cost_usd": 0.11186399999999999
+}

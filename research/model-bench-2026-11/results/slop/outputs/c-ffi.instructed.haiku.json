@@ -1,0 +1,16 @@
+{
+ "item": "c-ffi",
+ "situation": "commit message",
+ "condition": "instructed",
+ "model": "haiku",
+ "effort": "high",
+ "output": "```\nbuild-ffi: keep host build tools unstripped on macOS 27\n\nWith MACOSX_DEPLOYMENT_TARGET=14.0 exported, the linker writes chained\nfixups into host proc-macro dylibs and build scripts. rustc's release\nstrip pass (rust-objcopy) then leaves the string table 4-byte aligned,\nand macOS 27.0.1 refuses to load those dylibs (\"mis-aligned LINKEDIT\nstring pool\"). A fresh build fails with \"can't find crate for\nthiserror_impl\".\n\nSet CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_STRIP=false so host tools keep\ntheir symbols and load. rustc reads the deployment target only from the\nenvironment, so the 14.0 floor cannot be limited to the two cross\ntargets.\n\nThe shipped static library is unchanged. Its objects still target\nmacOS 14.0 on both architectures.\n```",
+ "usage": {
+  "input": 2,
+  "cache_write": 6008,
+  "cached_input": 0,
+  "output": 1499
+ },
+ "cost_usd": 0.0019513,
+ "seconds": 8
+}

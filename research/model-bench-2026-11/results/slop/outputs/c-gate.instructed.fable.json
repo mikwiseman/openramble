@@ -1,0 +1,16 @@
+{
+ "item": "c-gate",
+ "situation": "commit message",
+ "condition": "instructed",
+ "model": "fable",
+ "effort": "high",
+ "output": "```\nRestore the clipboard pattern in the network gate\n\nThe release preflight printed `FORBIDDEN_PASTEBOARD: unbound variable`\nin the middle of the network gate, and the gate still exited zero. The\npattern's definition sat next to the retired ASR worker's scan and was\ndeleted along with it, so the clipboard check matched nothing.\n\nDefine the pattern again, directly above the check that uses it. The\ncheck matters because a plain clearContents()/declareTypes() puts\ndictation on Universal Clipboard, where it reaches every device on the\nApple ID.\n\nVerified: the script exits 1 with a planted clearContents() and 0 once\nit is removed.\n```",
+ "usage": {
+  "input": 2,
+  "cache_write": 4989,
+  "cached_input": 0,
+  "output": 321
+ },
+ "cost_usd": 0.09268000000000001,
+ "seconds": 4
+}

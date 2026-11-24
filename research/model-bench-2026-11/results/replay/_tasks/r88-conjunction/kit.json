@@ -1,0 +1,763 @@
+{
+ "date": "2026-11-23 00:16",
+ "kit": "cv-notes: gold, fresh, holdout2, adversarial r9 and r9b, conj/probe.json, and the generator of conj/sweep.py",
+ "sets": {
+  "judged": 720,
+  "traps": 62,
+  "probe": 28,
+  "probe, corrections off": 28,
+  "sweep": 55080
+ },
+ "changes": {
+  "parent": {
+   "sets": {
+    "judged": {
+     "n": 720,
+     "as_judged": 704,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "traps": {
+     "n": 62,
+     "as_judged": 62,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe": {
+     "n": 28,
+     "as_judged": 9,
+     "lost_a_word": 17,
+     "words_lost": 35
+    },
+    "probe, corrections off": {
+     "n": 28,
+     "as_judged": 9,
+     "lost_a_word": 17,
+     "words_lost": 35
+    },
+    "sweep": {
+     "n": 55080,
+     "lost_a_word": 49020
+    }
+   },
+   "differs_from_shipped": {
+    "probe": 17,
+    "probe, corrections off": 17,
+    "sweep": 48780
+   },
+   "differences": [
+    {
+     "set": "probe",
+     "said": "We shipped it and, um, it works.",
+     "shipped": "We shipped it and it works.",
+     "this": "We shipped it works.",
+     "judge": "We shipped it and it works."
+    },
+    {
+     "set": "probe",
+     "said": "So we, uh, shipped it and, um, it works.",
+     "shipped": "So we shipped it and it works.",
+     "this": "So we shipped it works.",
+     "judge": "So we shipped it and it works."
+    },
+    {
+     "set": "probe",
+     "said": "We shipped it but, uh, it crashed on launch.",
+     "shipped": "We shipped it but it crashed on launch.",
+     "this": "We shipped it crashed on launch.",
+     "judge": "We shipped it but it crashed on launch."
+    },
+    {
+     "set": "probe",
+     "said": "I tested it so, um, it should be fine.",
+     "shipped": "I tested it so it should be fine.",
+     "this": "I tested it should be fine.",
+     "judge": "I tested it so it should be fine."
+    },
+    {
+     "set": "probe",
+     "said": "We'll ship it when, uh, it is ready.",
+     "shipped": "We'll ship it when it is ready.",
+     "this": "We'll ship it is ready.",
+     "judge": "We'll ship it when it is ready."
+    },
+    {
+     "set": "probe",
+     "said": "Ship it if, um, it passes review.",
+     "shipped": "Ship it if it passes review.",
+     "this": "Ship it passes review.",
+     "judge": "Ship it if it passes review."
+    },
+    {
+     "set": "probe",
+     "said": "I can do it or, uh, it can wait.",
+     "shipped": "I can do it or it can wait.",
+     "this": "I can do it can wait.",
+     "judge": "I can do it or it can wait."
+    },
+    {
+     "set": "probe",
+     "said": "We test it then, um, it ships.",
+     "shipped": "We test it then it ships.",
+     "this": "We test it ships.",
+     "judge": "We test it then it ships."
+    },
+    {
+     "set": "probe",
+     "said": "I'll ask Sam and, uh, Sam will know.",
+     "shipped": "I'll ask Sam and Sam will know.",
+     "this": "I'll ask Sam will know.",
+     "judge": "I'll ask Sam and Sam will know."
+    },
+    {
+     "set": "probe",
+     "said": "We moved the server and, uh, the server is faster now.",
+     "shipped": "We moved the server and the server is faster now.",
+     "this": "We moved the server is faster now.",
+     "judge": "We moved the server and the server is faster now."
+    },
+    {
+     "set": "probe",
+     "said": "He likes you and, um, you know it.",
+     "shipped": "He likes you and you know it.",
+     "this": "He likes you know it.",
+     "judge": "He likes you and you know it."
+    },
+    {
+     "set": "probe",
+     "said": "I love this and, uh, this is great.",
+     "shipped": "I love this and this is great.",
+     "this": "I love this is great.",
+     "judge": "I love this and this is great."
+    },
+    {
+     "set": "probe",
+     "said": "Do that and, um, that should work.",
+     "shipped": "Do that and that should work.",
+     "this": "Do that should work.",
+     "judge": "Do that and that should work."
+    },
+    {
+     "set": "probe",
+     "said": "Мы сделали это и, э, это работает.",
+     "shipped": "Мы сделали это и это работает.",
+     "this": "Мы сделали это работает.",
+     "judge": "Мы сделали это и это работает."
+    },
+    {
+     "set": "probe",
+     "said": "Мы купили его и, ээ, его уже привезли.",
+     "shipped": "Мы купили его и его уже привезли.",
+     "this": "Мы купили его уже привезли.",
+     "judge": "Мы купили его и его уже привезли."
+    },
+    {
+     "set": "probe",
+     "said": "Позвони ему или, э, ему напишет Лена.",
+     "shipped": "Позвони ему или ему напишет Лена.",
+     "this": "Позвони ему напишет Лена.",
+     "judge": "Позвони ему или ему напишет Лена."
+    },
+    {
+     "set": "probe",
+     "said": "We talked to them about, um, them joining.",
+     "shipped": "We talked to them about them joining.",
+     "this": "We talked to them joining.",
+     "judge": "We talked to them about them joining."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "We shipped it and, um, it works.",
+     "shipped": "We shipped it and it works.",
+     "this": "We shipped it works.",
+     "judge": "We shipped it and it works."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "So we, uh, shipped it and, um, it works.",
+     "shipped": "So we shipped it and it works.",
+     "this": "So we shipped it works.",
+     "judge": "So we shipped it and it works."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "We shipped it but, uh, it crashed on launch.",
+     "shipped": "We shipped it but it crashed on launch.",
+     "this": "We shipped it crashed on launch.",
+     "judge": "We shipped it but it crashed on launch."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "I tested it so, um, it should be fine.",
+     "shipped": "I tested it so it should be fine.",
+     "this": "I tested it should be fine.",
+     "judge": "I tested it so it should be fine."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "We'll ship it when, uh, it is ready.",
+     "shipped": "We'll ship it when it is ready.",
+     "this": "We'll ship it is ready.",
+     "judge": "We'll ship it when it is ready."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "Ship it if, um, it passes review.",
+     "shipped": "Ship it if it passes review.",
+     "this": "Ship it passes review.",
+     "judge": "Ship it if it passes review."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "I can do it or, uh, it can wait.",
+     "shipped": "I can do it or it can wait.",
+     "this": "I can do it can wait.",
+     "judge": "I can do it or it can wait."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "We test it then, um, it ships.",
+     "shipped": "We test it then it ships.",
+     "this": "We test it ships.",
+     "judge": "We test it then it ships."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "I'll ask Sam and, uh, Sam will know.",
+     "shipped": "I'll ask Sam and Sam will know.",
+     "this": "I'll ask Sam will know.",
+     "judge": "I'll ask Sam and Sam will know."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "We moved the server and, uh, the server is faster now.",
+     "shipped": "We moved the server and the server is faster now.",
+     "this": "We moved the server is faster now.",
+     "judge": "We moved the server and the server is faster now."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "He likes you and, um, you know it.",
+     "shipped": "He likes you and you know it.",
+     "this": "He likes you know it.",
+     "judge": "He likes you and you know it."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "I love this and, uh, this is great.",
+     "shipped": "I love this and this is great.",
+     "this": "I love this is great.",
+     "judge": "I love this and this is great."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "Do that and, um, that should work.",
+     "shipped": "Do that and that should work.",
+     "this": "Do that should work.",
+     "judge": "Do that and that should work."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "Мы сделали это и, э, это работает.",
+     "shipped": "Мы сделали это и это работает.",
+     "this": "Мы сделали это работает.",
+     "judge": "Мы сделали это и это работает."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "Мы купили его и, ээ, его уже привезли.",
+     "shipped": "Мы купили его и его уже привезли.",
+     "this": "Мы купили его уже привезли.",
+     "judge": "Мы купили его и его уже привезли."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "Позвони ему или, э, ему напишет Лена.",
+     "shipped": "Позвони ему или ему напишет Лена.",
+     "this": "Позвони ему напишет Лена.",
+     "judge": "Позвони ему или ему напишет Лена."
+    },
+    {
+     "set": "probe, corrections off",
+     "said": "We talked to them about, um, them joining.",
+     "shipped": "We talked to them about them joining.",
+     "this": "We talked to them joining.",
+     "judge": "We talked to them about them joining."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and, um, it works.",
+     "shipped": "We shipped it and it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and, uh, it works.",
+     "shipped": "We shipped it and it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and uh, it works.",
+     "shipped": "We shipped it and it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and, uh it works.",
+     "shipped": "We shipped it and, it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and uh it works.",
+     "shipped": "We shipped it and it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and, er, it works.",
+     "shipped": "We shipped it and it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and, um, it is ready.",
+     "shipped": "We shipped it and it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and, uh, it is ready.",
+     "shipped": "We shipped it and it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and uh, it is ready.",
+     "shipped": "We shipped it and it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and, uh it is ready.",
+     "shipped": "We shipped it and, it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and uh it is ready.",
+     "shipped": "We shipped it and it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it and, er, it is ready.",
+     "shipped": "We shipped it and it is ready.",
+     "this": "We shipped it is ready."
+    }
+   ],
+   "rust_differs_from_swift": 0
+  },
+  "shipped": {
+   "sets": {
+    "judged": {
+     "n": 720,
+     "as_judged": 704,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "traps": {
+     "n": 62,
+     "as_judged": 62,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe, corrections off": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "sweep": {
+     "n": 55080,
+     "lost_a_word": 240
+    }
+   },
+   "differs_from_shipped": {},
+   "differences": [],
+   "rust_differs_from_swift": 0
+  },
+  "fable": {
+   "sets": {
+    "judged": {
+     "n": 720,
+     "as_judged": 704,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "traps": {
+     "n": 62,
+     "as_judged": 62,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe, corrections off": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "sweep": {
+     "n": 55080,
+     "lost_a_word": 240
+    }
+   },
+   "differs_from_shipped": {},
+   "differences": [],
+   "rust_differs_from_swift": 0
+  },
+  "gpt": {
+   "sets": {
+    "judged": {
+     "n": 720,
+     "as_judged": 704,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "traps": {
+     "n": 62,
+     "as_judged": 62,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe, corrections off": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "sweep": {
+     "n": 55080,
+     "lost_a_word": 9360
+    }
+   },
+   "differs_from_shipped": {
+    "sweep": 9120
+   },
+   "differences": [
+    {
+     "set": "sweep",
+     "said": "We shipped the server because, um, the server works.",
+     "shipped": "We shipped the server because the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because um, the server works.",
+     "shipped": "We shipped the server because the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because, um the server works.",
+     "shipped": "We shipped the server because, the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because um the server works.",
+     "shipped": "We shipped the server because the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because, uh, the server works.",
+     "shipped": "We shipped the server because the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because uh, the server works.",
+     "shipped": "We shipped the server because the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because, uh the server works.",
+     "shipped": "We shipped the server because, the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because uh the server works.",
+     "shipped": "We shipped the server because the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because, er, the server works.",
+     "shipped": "We shipped the server because the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because er, the server works.",
+     "shipped": "We shipped the server because the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because, er the server works.",
+     "shipped": "We shipped the server because, the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server because er the server works.",
+     "shipped": "We shipped the server because the server works.",
+     "this": "We shipped the server works."
+    }
+   ],
+   "rust_differs_from_swift": 0
+  },
+  "haiku": {
+   "sets": {
+    "judged": {
+     "n": 720,
+     "as_judged": 704,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "traps": {
+     "n": 62,
+     "as_judged": 62,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe, corrections off": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "sweep": {
+     "n": 55080,
+     "lost_a_word": 9360
+    }
+   },
+   "differs_from_shipped": {
+    "sweep": 9120
+   },
+   "differences": [
+    {
+     "set": "sweep",
+     "said": "We shipped the server so, um, the server works.",
+     "shipped": "We shipped the server so the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so um, the server works.",
+     "shipped": "We shipped the server so the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so, um the server works.",
+     "shipped": "We shipped the server so, the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so um the server works.",
+     "shipped": "We shipped the server so the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so, uh, the server works.",
+     "shipped": "We shipped the server so the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so uh, the server works.",
+     "shipped": "We shipped the server so the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so, uh the server works.",
+     "shipped": "We shipped the server so, the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so uh the server works.",
+     "shipped": "We shipped the server so the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so, er, the server works.",
+     "shipped": "We shipped the server so the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so er, the server works.",
+     "shipped": "We shipped the server so the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so, er the server works.",
+     "shipped": "We shipped the server so, the server works.",
+     "this": "We shipped the server works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped the server so er the server works.",
+     "shipped": "We shipped the server so the server works.",
+     "this": "We shipped the server works."
+    }
+   ],
+   "rust_differs_from_swift": 0
+  },
+  "sonnet": {
+   "sets": {
+    "judged": {
+     "n": 720,
+     "as_judged": 704,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "traps": {
+     "n": 62,
+     "as_judged": 62,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "probe, corrections off": {
+     "n": 28,
+     "as_judged": 26,
+     "lost_a_word": 0,
+     "words_lost": 0
+    },
+    "sweep": {
+     "n": 55080,
+     "lost_a_word": 21228
+    }
+   },
+   "differs_from_shipped": {
+    "sweep": 20988
+   },
+   "differences": [
+    {
+     "set": "sweep",
+     "said": "We shipped it to, um, it works.",
+     "shipped": "We shipped it to it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to, uh, it works.",
+     "shipped": "We shipped it to it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to uh, it works.",
+     "shipped": "We shipped it to it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to, uh it works.",
+     "shipped": "We shipped it to, it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to uh it works.",
+     "shipped": "We shipped it to it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to, er, it works.",
+     "shipped": "We shipped it to it works.",
+     "this": "We shipped it works."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to, um, it is ready.",
+     "shipped": "We shipped it to it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to, uh, it is ready.",
+     "shipped": "We shipped it to it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to uh, it is ready.",
+     "shipped": "We shipped it to it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to, uh it is ready.",
+     "shipped": "We shipped it to, it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to uh it is ready.",
+     "shipped": "We shipped it to it is ready.",
+     "this": "We shipped it is ready."
+    },
+    {
+     "set": "sweep",
+     "said": "We shipped it to, er, it is ready.",
+     "shipped": "We shipped it to it is ready.",
+     "this": "We shipped it is ready."
+    }
+   ],
+   "rust_differs_from_swift": 0
+  }
+ }
+}

@@ -1,0 +1,16 @@
+{
+ "item": "q-audio",
+ "situation": "reply",
+ "condition": "plain",
+ "model": "haiku",
+ "effort": "high",
+ "output": "Based on the rules file, no. The Mac app has two network paths, and neither sends audio:\n\n1. **Model downloads** through `LocalASR/ModelDownloading.swift`. These fetch model files to your machine and only run when you request a download.\n2. **Sparkle update checks** through `SparkleUpdater.swift`. Scheduled checks are on by default and can be turned off in Settings. Downloading and installing an update requires a click.\n\nI can't confirm this from the code, since I have no file access in this session. Three things would settle it:\n\n- **Run `scripts/check-network-surface.sh`** and confirm it passes. The rules say CI enforces the boundary, but I haven't seen that output.\n- **Check what the Sparkle update request contains.** The rules file doesn't say what metadata Sparkle sends with an update check (typically app and OS version, and possibly a system profile if profiling is enabled). Confirm that setting in the Sparkle configuration.\n- **Check the enforcement method.** The rules say the check is by filename, so it only catches network calls if the denied API list covers the APIs the Mac code uses and the allowed files are the only ones touching them.",
+ "usage": {
+  "input": 2,
+  "cache_write": 3660,
+  "cached_input": 0,
+  "output": 1230
+ },
+ "cost_usd": 0.0013472,
+ "seconds": 9
+}

@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "instructed",
+ "output": "**No, keep `is.waiwai.dictation`.** The repo marks it permanent because macOS ties Accessibility permission to the bundle identifier. A rename makes the app look new to macOS, so every installed copy loses its grant and users must re-approve Accessibility. Sparkle updates would also stop matching the installed app.\n\nIf the launch is still pre-release and only your own machine has a grant, the cost is smaller. The rules file still says permanent, though, so changing it is your call to make in the file first.\n\nFor the OpenRamble name, change the user-visible name (product name and `CFBundleDisplayName`) and keep the bundle ID. I can't check the repo from this session, so I haven't verified which files hold those values.",
+ "opens": "no"
+}

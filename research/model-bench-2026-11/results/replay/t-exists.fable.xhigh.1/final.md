@@ -1,0 +1,15 @@
+The switch already exists, so I changed nothing and there is no commit.
+
+**Where it is:** menu bar icon → Settings… → About → Updates → "Check for updates automatically". In Russian: Настройки… → О приложении → Обновления → «Проверять обновления автоматически». It is on by default and has shipped since 0.3.4. "Check Now" sits under it and still works when the switch is off.
+
+**What I checked, by reading the code and running the local network gate:**
+- The switch is bound straight to Sparkle's own setting, with no second copy: `/Users/mikwiseman/.openramble/model-bench/work/t-exists/run-fable/apps/macos/OpenRamble/UI/SettingsView.swift` line 1024 and `/Users/mikwiseman/.openramble/model-bench/work/t-exists/run-fable/apps/macos/OpenRamble/System/SparkleUpdater.swift` line 93.
+- Nothing in the app resets it at launch.
+- Installing needs a click: `SUAllowsAutomaticUpdates: false` in `apps/macos/project.yml` and `Info.plist`. `scripts/check-network-surface.sh` pins it and passes here; CI and the installed-build smoke script check the same key.
+- README and CLAUDE.md already describe the switch. The Windows and Linux app has no update check at all.
+
+**Not verified:** I did not build or run the app, so I have not seen the switch on screen or watched the scheduled check stop. That scheduled checks stop when it is off rests on Sparkle's documented behaviour. No automated test covers the switch itself; the only updater test covers the missing-key failure.
+
+**Decision:** I did not add a second switch, because two controls for one setting would drift apart.
+
+**Your call:** the person probably missed it because it sits under About. Moving it to General, or adding a test that pins it, is a small change if you want either.

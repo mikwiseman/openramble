@@ -1,0 +1,16 @@
+{
+ "item": "p-gate",
+ "situation": "pull request description",
+ "condition": "instructed",
+ "model": "haiku",
+ "effort": "high",
+ "output": "**Title:** Restore the clipboard pattern in the network-surface gate\n\n**Summary**\n`FORBIDDEN_PASTEBOARD` was deleted with the retired ASR worker's scan, so the clipboard check read an unset variable, matched nothing, and the gate exited zero. This restores the pattern.\n\n**Why it matters**\nA plain `clearContents()` or `declareTypes()` puts dictated text on Universal Clipboard, where it reaches every device on the Apple ID.\n\n**Verification**\n- Planted `clearContents()` in a shipping path: script exits 1.\n- Removed it: script exits 0.\n\n**Follow-up (not in this PR)**\nA missing pattern should fail the gate, not pass it. Worth a separate change.\n\nI did not run the script myself. The verification results above are from your run.",
+ "usage": {
+  "input": 2,
+  "cache_write": 5657,
+  "cached_input": 0,
+  "output": 1513
+ },
+ "cost_usd": 0.0018881000000000002,
+ "seconds": 9
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 18,
+ "output": "Yes, if no one outside your own machines has installed a build yet. Otherwise no.\n\n- **Cost:** macOS ties Accessibility grants to the bundle ID, so anyone with an existing install would have to re-grant permission. Their preferences and keychain items stored under the old ID would also be orphaned. I'm not certain Sparkle will update an app across an ID change, so I'd treat that path as broken.\n- **Unaffected:** the Sparkle EdDSA key is independent of the bundle ID, so keep it.\n\nIf only dev and beta copies exist, rename now and re-grant once on each. Change the ID everywhere at once (Info.plist, entitlements, signing, appcast, defaults domain), and update the invariant in the rules file and `docs/release.md`.\n\nHas any build gone to real users?",
+ "cost_usd": 0.027676
+}

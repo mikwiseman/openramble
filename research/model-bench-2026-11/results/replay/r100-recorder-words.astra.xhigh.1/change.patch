@@ -1,0 +1,194 @@
+diff --git a/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift b/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift
+index 305beba..27ba90f 100644
+--- a/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift
++++ b/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift
+@@ -102,10 +102,8 @@ public actor MeetingCapture {
+         }
+     }
+ 
+-    /// Anything above this counts as audio rather than line noise. Well
+-    /// below speech (0.02 is the segmenter's floor) so a quiet voice on the
+-    /// far side still proves the tap alive.
+-    public static let audibleThreshold: Float = 0.0005
++    /// The minimum peak that counts as evidence of audible input.
++    public static let audibleThreshold = MeetingChannel.audibleThreshold
+ 
+     public let directory: URL
+     public private(set) var state: State = .idle
+@@ -127,6 +125,7 @@ public actor MeetingCapture {
+     ///   - directory: where `audio.wav` and `peaks.bin` go; created if needed.
+     ///   - systemAudio: `nil` records the microphone only, deliberately. The
+     ///     file still has two channels so the format never changes.
++    ///   - segmentParameters: overrides the per-channel defaults for all active sources.
+     ///   - onLevels: meter updates, about ten a second, from a background queue.
+     ///   - onFailure: the recording stopped itself, or one side did. Never
+     ///     called for something the caller asked for.
+@@ -137,7 +136,7 @@ public actor MeetingCapture {
+         directory: URL,
+         microphone: (any MeetingAudioSource)?,
+         systemAudio: (any MeetingAudioSource)?,
+-        segmentParameters: MeetingSegmentPolicy.Parameters = .meeting,
++        segmentParameters: MeetingSegmentPolicy.Parameters? = nil,
+         onLevels: @escaping @Sendable (Levels) -> Void = { _ in },
+         onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void = { _ in },
+         onFailure: @escaping @Sendable (Failure) -> Void = { _ in },
+@@ -473,7 +472,6 @@ final class MeetingPipeline: @unchecked Sendable {
+     private let activeChannels: Set<MeetingChannel>
+     private let onLevels: @Sendable (MeetingCapture.Levels) -> Void
+     private let onSegment: @Sendable (MeetingSegmentRef) -> Void
+-    private let segmentParameters: MeetingSegmentPolicy.Parameters
+     private let freeBytesQuery: @Sendable () -> Int64?
+     private let audioSink: (any MeetingAudioBlockSink)?
+     var onDiskOrWriteFailure: (@Sendable (Failure) -> Void)?
+@@ -504,7 +502,7 @@ final class MeetingPipeline: @unchecked Sendable {
+     init(
+         writer: MeetingWriter,
+         activeChannels: Set<MeetingChannel>,
+-        segmentParameters: MeetingSegmentPolicy.Parameters,
++        segmentParameters: MeetingSegmentPolicy.Parameters?,
+         onLevels: @escaping @Sendable (MeetingCapture.Levels) -> Void,
+         onSegment: @escaping @Sendable (MeetingSegmentRef) -> Void,
+         freeBytes: @escaping @Sendable () -> Int64?,
+@@ -512,7 +510,6 @@ final class MeetingPipeline: @unchecked Sendable {
+     ) {
+         self.writer = writer
+         self.activeChannels = activeChannels
+-        self.segmentParameters = segmentParameters
+         self.onLevels = onLevels
+         self.onSegment = onSegment
+         freeBytesQuery = freeBytes
+diff --git a/Packages/DictationCore/Sources/DictationCore/MeetingRecording.swift b/Packages/DictationCore/Sources/DictationCore/MeetingRecording.swift
+index 452f1d1..be56b6c 100644
+--- a/Packages/DictationCore/Sources/DictationCore/MeetingRecording.swift
++++ b/Packages/DictationCore/Sources/DictationCore/MeetingRecording.swift
+@@ -11,6 +11,9 @@ import Foundation
+ public enum MeetingChannel: String, Codable, Sendable, CaseIterable, Hashable {
+     case microphone
+     case system
++
++    /// The lowest peak the recorder counts as audible on a captured channel.
++    public static let audibleThreshold: Float = 0.0005
+ }
+ 
+ /// The media captured by a recording. Audio is the historical OpenRamble
+diff --git a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+index 32d2482..46fee4c 100644
+--- a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
++++ b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+@@ -35,6 +35,16 @@ public struct MeetingSegmentPolicy: Sendable {
+             forcedCutWindow: .seconds(1)
+         )
+ 
++        static func meeting(for channel: MeetingChannel) -> Self {
++            var parameters = meeting
++            if channel == .system {
++                // The digital tap has no microphone room noise. A quiet call
++                // that registers as audible should reach the decoder.
++                parameters.speech.speechPeak = MeetingChannel.audibleThreshold
++            }
++            return parameters
++        }
++
+         public init(
+             speech: SpeechSegmenter.Parameters = SpeechSegmenter.Parameters(),
+             hardCap: Duration = .seconds(20),
+@@ -65,10 +75,11 @@ public struct MeetingSegmentPolicy: Sendable {
+ 
+     public init(
+         channel: MeetingChannel,
+-        parameters: Parameters = .meeting,
++        parameters: Parameters? = nil,
+         sampleRate: Int = 16_000,
+         startFrame: Int = 0
+     ) {
++        let parameters = parameters ?? .meeting(for: channel)
+         self.channel = channel
+         self.parameters = parameters
+         self.sampleRate = sampleRate
+@@ -104,6 +115,9 @@ public struct MeetingSegmentPolicy: Sendable {
+         if !heardSpeech, !parameters.preserveQuietAudio, pendingFrames > frames(Self.leadingSilence) {
+             segmentStart = end - frames(Self.leadingSilence)
+             segmenter.reset()
++            // Cut offsets are relative to segmentStart, including the quiet
++            // frames retained before the first word.
++            _ = segmenter.observe(peak: peak, count: pendingFrames)
+             return nil
+         }
+ 
+diff --git a/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift b/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
+index e84ed9a..753b898 100644
+--- a/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
++++ b/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
+@@ -601,6 +601,36 @@ extension MeetingCaptureTests {
+ }
+ 
+ extension MeetingCaptureTests {
++    func testQuietCallAudioReachesTranscriptionOnlyOnTheSystemChannel() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory, microphone: microphone, systemAudio: system,
++            onSegment: { segments.value.append($0) }, probe: {}
++        )
++        try await capture.start()
++        let remoteVoice = constant(0.002, 1_600)
++        let speakerLeak = constant(0.001, 1_600)
++        for _ in 0..<120 {
++            microphone.deliver(speakerLeak)
++            system.deliver(remoteVoice)
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        let summary = try await capture.stop()
++
++        XCTAssertEqual(segments.value.map(\.channel), [.system])
++        let segment = try XCTUnwrap(segments.value.first)
++        XCTAssertGreaterThan(segment.endFrame, 12 * 16_000)
++        XCTAssertLessThan(segment.endFrame, summary.frameCount, "the pause closed the segment before stop")
++        let reader = MeetingPCMWindowReader(url: await capture.audioURL)
++        let samples = try reader.read(segment)
++        XCTAssertEqual(try XCTUnwrap(samples.first), remoteVoice[0], accuracy: 1 / 32_768)
++    }
++
+     /// The speakers leaking into the microphone are not the person speaking:
+     /// the other side's sentence is one segment on its own channel, not two.
+     func testTheOtherSideLeakingIntoTheMicrophoneIsNotSegmentedAsYou() async throws {
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift
+index b815d78..1fe5569 100644
+--- a/Packages/DictationCore/Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift
++++ b/Packages/DictationCore/Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift
+@@ -98,14 +98,22 @@ final class MeetingSegmentPolicyTests: XCTestCase {
+         XCTAssertNil(policy.flush())
+     }
+ 
+-    func testAnHourOfSilenceBeforeTheFirstWordIsNotDecodedWithIt() {
+-        var policy = MeetingSegmentPolicy(channel: .system)
+-        feed(&policy, quiet, seconds: 3_600)
+-        XCTAssertLessThanOrEqual(policy.pendingFrames, frames(1.1), "the start slides forward under silence")
+-        feed(&policy, speech, seconds: 12)
+-        let cuts = feed(&policy, quiet, seconds: 1)
+-        XCTAssertEqual(cuts.count, 1)
+-        XCTAssertGreaterThanOrEqual(cuts[0].startFrame, frames(3_599), "the segment begins just before the word")
+-        XCTAssertLessThan(cuts[0].frameCount, frames(14))
++    func testPauseCutsStayInsideSilenceAfterTrimmingTheStartAndBetweenTurns() throws {
++        var position = frames(2)
++        var policy = MeetingSegmentPolicy(channel: .system, startFrame: position)
++        for silence in [3_600.0, 5.0] {
++            XCTAssertEqual(feed(&policy, quiet, seconds: silence), [])
++            position += frames(silence)
++            XCTAssertEqual(policy.pendingFrames, frames(1))
++            XCTAssertEqual(feed(&policy, speech, seconds: 12), [])
++            let cuts = feed(&policy, quiet, seconds: 1)
++            XCTAssertEqual(cuts.count, 1)
++            let cut = try XCTUnwrap(cuts.first)
++            XCTAssertEqual(cut.startFrame, position - frames(1))
++            position += frames(12)
++            XCTAssertEqual(cut.endFrame, position + frames(0.35), "halfway into the 700 ms pause")
++            position += frames(1)
++        }
++        XCTAssertNil(policy.flush())
+     }
+ }

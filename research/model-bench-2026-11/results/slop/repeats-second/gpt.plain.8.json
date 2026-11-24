@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "plain",
+ "output": "Under the current release rules, keep `is.waiwai.dictation`. You can launch under the name **OpenRamble** while retaining that bundle identifier.\n\nAs owner, you can change the rule before launch. If you switch to `is.waiwai.openramble`, anyone who already granted Accessibility access to a prelaunch build will need to grant it again. First-time users will go through the usual permission setup.",
+ "opens": "no"
+}

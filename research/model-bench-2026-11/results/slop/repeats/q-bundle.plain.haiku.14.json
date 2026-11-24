@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 14,
+ "output": "No, not as a casual change. The repo's rules call the bundle identifier permanent because existing Accessibility grants are keyed to it. Changing it would:\n\n- **Drop Accessibility permission** for every existing install, so users would have to re-grant it.\n- **Break in-place updates.** Sparkle expects the new build to have the same bundle identifier as the installed app, so existing installs probably couldn't update to a renamed build.\n\nIf no one outside your own machines has installed a build yet, the first concern is smaller, but the rule still says permanent, and your dev and beta builds probably hold grants too. Confirm that no installs exist before deciding.\n\nIf you want the name \"OpenRamble\" to show up before launch, you can change the display name (`CFBundleDisplayName` or the product name) and leave `is.waiwai.dictation` alone. Accessibility permission doesn't depend on the display name.\n\nIf you still want the new identifier, treat it as a deliberate migration. Update the invariant in `AGENTS.md` and `docs/release.md` first, then plan how existing users will re-grant permission and reinstall. I haven't read those files in this session, so check them for any other constraints on the identifier.",
+ "cost_usd": 0.001364
+}

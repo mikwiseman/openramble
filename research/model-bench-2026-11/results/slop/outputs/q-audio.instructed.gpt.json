@@ -1,0 +1,16 @@
+{
+ "item": "q-audio",
+ "situation": "reply",
+ "condition": "instructed",
+ "model": "gpt",
+ "effort": "high",
+ "output": "No. OpenRamble on the Mac transcribes your audio locally and never uploads it. The app only uses the network for model downloads and software update checks and downloads.",
+ "usage": {
+  "input": 15255,
+  "cached_input": 0,
+  "cache_write": 0,
+  "output": 38
+ },
+ "cost_usd": null,
+ "seconds": 6
+}

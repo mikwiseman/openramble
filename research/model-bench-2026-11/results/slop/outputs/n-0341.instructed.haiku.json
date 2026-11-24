@@ -1,0 +1,16 @@
+{
+ "item": "n-0341",
+ "situation": "release notes",
+ "condition": "instructed",
+ "model": "haiku",
+ "effort": "high",
+ "output": "**OpenRamble 0.34.1**\n\n- Fixed a delay where the first dictation after your Mac had freed memory could start late. It now starts right away.\n- Dictation now starts faster in general, even when your Mac is busy: the typical start time drops from about 136 ms to 87 ms, and the slowest starts from 315 ms to 148 ms.\n- The microphone still turns off between dictations. It only runs while you're dictating.",
+ "usage": {
+  "input": 2,
+  "cache_write": 5286,
+  "cached_input": 0,
+  "output": 364
+ },
+ "cost_usd": 0.0012394,
+ "seconds": 4
+}

@@ -1,0 +1,16 @@
+{
+ "item": "c-ffi",
+ "situation": "commit message",
+ "condition": "plain",
+ "model": "haiku",
+ "effort": "high",
+ "output": "```\nbuild-ffi: keep host build-override artifacts unstripped on macOS\n\nBuilding the FFI core in a fresh target directory fails on macOS 27.0.1\nwith \"can't find crate for thiserror_impl\". The underlying error is that\ndyld refuses to load the host proc-macro dylibs with \"mis-aligned\nLINKEDIT string pool\".\n\nThe script exports MACOSX_DEPLOYMENT_TARGET=14.0, and that variable also\napplies to host proc-macros and build scripts. At a 14.0 floor the linker\nwrites chained fixups. rustc then strips the release dylibs with its\nbundled rust-objcopy, which leaves the LINKEDIT string table 4-byte\naligned, and macOS 27.0.1 rejects it. The same dylib loads when it is\nleft unstripped or stripped with /usr/bin/strip.\n\nThe deployment target is read only from the environment, so it cannot be\nscoped to the two cross targets through RUSTFLAGS or link arguments.\nLowering the floor is not an option either, because the shipped library\nmust keep targeting macOS 14.0.\n\nSet CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_STRIP=false so that build-override\nartifacts (host proc-macros and build scripts) are not stripped. The\ntarget profile is unchanged, so the shipped static library is identical\nin effect: every object still targets macOS 14.0 on arm64 and x86_64.\nThe cost is larger host-side build artifacts under target/, which affects\nbuild time only.\n```\n\nI didn't commit anything, since I have no shell access in this session. To commit, save the message to a file and run `git commit -F <file>` with the change staged.",
+ "usage": {
+  "input": 2,
+  "cache_write": 4172,
+  "cached_input": 0,
+  "output": 1956
+ },
+ "cost_usd": 0.0018126,
+ "seconds": 10
+}

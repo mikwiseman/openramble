@@ -1,0 +1,16 @@
+{
+ "item": "q-bundle",
+ "situation": "reply",
+ "condition": "instructed",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "Yes, it's your call, and before launch it's the cheapest it will ever be. The rules file calls the ID permanent only because of existing users.\n\n- **Cost:** macOS ties Accessibility grants to the bundle ID, so anyone running a build with `is.waiwai.dictation` must re-grant permission. Their preferences and Keychain items under the old ID also won't carry over.\n- **If only your own machines have it:** the cost is one re-grant, so rename now.\n- **If beta users have it:** it's still possible, but it's a visible break for them.\n- **Unchanged:** the Sparkle EdDSA key stays, and so does inside-out signing. Only the ID changes.\n\nHas any build with the current ID reached people outside your own machines? If not, I'll make the change and update the rules file and `docs/release.md` to match.",
+ "usage": {
+  "input": 2,
+  "cache_write": 2625,
+  "cached_input": 1869,
+  "output": 896
+ },
+ "cost_usd": 0.0196509,
+ "seconds": 8
+}

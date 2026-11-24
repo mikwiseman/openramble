@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 5,
+ "output": "Yes, but only if no real users have the current build installed.\n\n- **Accessibility:** grants are tied to `is.waiwai.dictation`. After a rename, every existing install has to re-grant permission by hand.\n- **Updates:** Sparkle generally won't update an app into one with a different bundle ID, so existing installs would need a manual reinstall. The EdDSA key stays the same.\n- **Local data:** preferences, keychain items, and the like are keyed by bundle ID and would start fresh.\n\nIf the only installs are yours and a few testers, rename now. After launch it gets costly. If people already use it, I'd keep the old ID.\n\nWho has the current build installed? If it's just testers, I'll make the change and update the \"permanent\" rule in the rules file and `docs/release.md`.",
+ "cost_usd": 0.026326000000000002
+}

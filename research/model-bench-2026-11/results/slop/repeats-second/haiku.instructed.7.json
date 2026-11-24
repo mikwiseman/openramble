@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "instructed",
+ "output": "**No, not under the current rules.** The rules file makes `is.waiwai.dictation` permanent because existing Accessibility grants depend on it. A new bundle ID makes macOS treat OpenRamble as a different app, so anyone who already granted Accessibility would have to re-grant it.\n\nIf no one outside your own machine has installed a build yet, the stated reason may no longer apply. Changing the rule is your call, and I'd want you to confirm that first. I haven't checked for existing installs or read `docs/release.md`. I have no tools in this session, so this answer comes only from the rules file. The Sparkle EdDSA key stays permanent either way.",
+ "opens": "no"
+}

@@ -1,0 +1,50 @@
+{
+ "task": "r100-recorder-words",
+ "load": "31.3",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 39
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 2
+ },
+ "own_tests": {
+  "files": 2,
+  "fail_on_base": true
+ },
+ "hidden": {
+  "ok": true,
+  "code": 0,
+  "seconds": 8,
+  "failed": [],
+  "tries": 1
+ },
+ "suite": {
+  "ok": true,
+  "code": 0,
+  "seconds": 89,
+  "failed": [],
+  "tries": 1
+ },
+ "not_built": [],
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "state": "pass",
+ "reason": "",
+ "claims": {
+  "says_done": true,
+  "says_checks_pass": true
+ },
+ "false_green": false,
+ "unseen_denied": false,
+ "unproven_claim": false,
+ "run": "r100-recorder-words.opus.xhigh.1"
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 3,
+ "output": "**Yes, we can, but I'd keep it.** The rules file marks `is.waiwai.dictation` as permanent because macOS ties Accessibility grants to the bundle ID.\n\nRenaming means every existing install loses its Accessibility grant, and dictation stops working until the user re-approves it in System Settings. Anything else keyed to the ID, such as the preferences domain, resets too.\n\nUsers never see the bundle ID. The app name, display name, and branding can all be OpenRamble without touching it.\n\nIf you still want the rename, before launch is the cheapest time, while the only installs are yours and testers'. Say the word and I'll plan it, including updating the invariant.",
+ "cost_usd": 0.113904
+}

@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "instructed",
+ "output": "Yes, if you’re willing to reset Accessibility permissions for everyone who already uses the app. macOS treats `is.waiwai.openramble` as a new identity, so existing users and testers would need to grant access again.\n\nI’d ship the app as **OpenRamble** and keep `is.waiwai.dictation`. The display name is independent of the bundle identifier. If everyone affected can reauthorize, changing it before launch is technically feasible and would require revising the release invariant.",
+ "opens": "yes"
+}

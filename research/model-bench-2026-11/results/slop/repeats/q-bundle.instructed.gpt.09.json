@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 9,
+ "output": "Yes, if you’re willing to have everyone already using the app grant Accessibility access again. macOS treats `is.waiwai.openramble` as a new app identity, so existing grants for `is.waiwai.dictation` won’t carry over.\n\nI’d launch as **OpenRamble** and keep `is.waiwai.dictation`. Users see the new name and keep their permissions. If you want the new identifier too, change it before launch, explicitly revise the release invariant, and test the upgrade from an existing build. Keep the existing Sparkle EdDSA key.",
+ "cost_usd": null
+}

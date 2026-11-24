@@ -1,0 +1,16 @@
+{
+ "item": "q-bundle",
+ "situation": "reply",
+ "condition": "instructed",
+ "model": "fable",
+ "effort": "high",
+ "output": "**Yes, but it breaks your own release invariant, so it's a decision rather than just a rename.**\n\nmacOS treats a new bundle ID as a different app. Anyone with a current install loses their Accessibility and Microphone grants and must re-grant them. Preferences stored under `is.waiwai.dictation` also reset unless we migrate them.\n\nIf the only installs today are yours and a few testers, do it now, because after launch it is effectively never. If there's a real beta base, keep it, since users never see the bundle ID.\n\nIf you go ahead, I'd keep the Sparkle key, test an old-to-new update, and rewrite the invariant to name the new ID.\n\nHow many installs exist today?",
+ "usage": {
+  "input": 2,
+  "cache_write": 4649,
+  "cached_input": 0,
+  "output": 1271
+ },
+ "cost_usd": 0.12524000000000002,
+ "seconds": 14
+}

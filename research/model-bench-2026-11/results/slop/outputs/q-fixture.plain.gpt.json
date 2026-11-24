@@ -1,0 +1,16 @@
+{
+ "item": "q-fixture",
+ "situation": "reply",
+ "condition": "plain",
+ "model": "gpt",
+ "effort": "high",
+ "output": "No. The fixture is a recording of what the shipping Swift pipeline produces. Regenerate it with the conformance generator so it reflects the actual Swift output.\n\nIf the behavior change was intentional, update the Rust port to match Swift, regenerate the fixtures, and run `cargo test -p ramble-text --test conformance`. Commit the Swift change, Rust change, and regenerated fixtures together. If the change was accidental, fix the Swift regression and rerun the test against the existing fixtures.",
+ "usage": {
+  "input": 21362,
+  "cached_input": 0,
+  "cache_write": 0,
+  "output": 102
+ },
+ "cost_usd": null,
+ "seconds": 8
+}

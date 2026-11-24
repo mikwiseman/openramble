@@ -1,0 +1,16 @@
+{
+ "item": "c-gate",
+ "situation": "commit message",
+ "condition": "instructed",
+ "model": "haiku",
+ "effort": "high",
+ "output": "```\nRestore clipboard pattern in network surface gate\n\nFORBIDDEN_PASTEBOARD was used by the clipboard check but its definition\nwas removed with the retired ASR worker's scan. The unset variable made\nthe check error out and match nothing, and the gate still exited zero.\n\nA plain clearContents() or declareTypes() puts dictation on Universal\nClipboard, where it reaches every device on the Apple ID. The pattern is\ndefined again beside the check.\n\nVerified: a planted clearContents() makes the gate exit 1. After it is\nremoved, the gate exits 0.\n```",
+ "usage": {
+  "input": 2,
+  "cache_write": 5656,
+  "cached_input": 0,
+  "output": 1010
+ },
+ "cost_usd": 0.0016364,
+ "seconds": 6
+}

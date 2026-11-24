@@ -1,0 +1,916 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift b/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
+index a3fc2dc..e9ce0f9 100644
+--- a/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
++++ b/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
+@@ -43,9 +43,11 @@ import Foundation
+ ///    recognizer wrote it, unless it can only be the pause: after a word that
+ ///    cannot end a phrase ("should, um,"), in "Thanks, um, for", or after the
+ ///    sentence's opening subject ("The build, uh,"). A restart around a
+-///    hesitation keeps one copy ("It's a, uh, a leak"). Repeated until nothing
+-///    changes, so a hesitation that was hiding another one goes in the same
+-///    pass.
++///    hesitation keeps one copy ("It's a, uh, a leak"). A word said again
++///    after a conjunction or a preposition is not one ("shipped it and, um,
++///    it works"); only a clause begun again is ("I think that, um, I think
++///    we"). Repeated until nothing changes, so a hesitation that was hiding
++///    another one goes in the same pass.
+ /// 3. **Stutters.** A short function word said twice in a row, from a list of
+ ///    words whose doubles are never grammatical ("the the", "я я", "I, I").
+ /// 4. **"New paragraph"** ("Новый абзац"), set apart by punctuation, becomes a
+@@ -146,6 +148,23 @@ enum CleanVerbatim {
+         "die", "das", "le", "la", "les", "el", "los", "las",
+     ]
+ 
++    /// Words that join what was said to what comes next. The words before one
++    /// are finished, and the next phrase may open with the same word: "shipped
++    /// it and, um, it works", "told you that, um, you should come".
++    ///
++    /// A coordinator joins two whole clauses, so even the same opening twice
++    /// is a sentence: "I called and, uh, I called again".
++    static let coordinators: Set<String> = ["and", "or", "but", "so", "then", "и", "а", "но", "или"]
++    static let subordinators: Set<String> = [
++        "because", "if", "when", "that", "than", "which", "who", "whom", "whose", "что", "чтобы", "если",
++        "когда", "потому", "как", "который", "которая", "которое", "которые",
++    ]
++    static let prepositions: Set<String> = [
++        "to", "of", "in", "on", "at", "for", "with", "from", "by", "into", "about", "в", "во", "на", "с", "со",
++        "к", "ко", "у", "по", "за", "из", "от", "до", "о", "об", "при", "для", "кроме", "через", "между",
++        "без", "перед", "около", "вместо",
++    ]
++
+     /// Russian hesitations that are also letter names ("э", "эм"): they go bare
+     /// too, except next to a letter or after "буква".
+     static let letterHesitations: Set<String> = ["э", "эм"]
+@@ -898,6 +917,14 @@ extension CleanVerbatim {
+         /// How many words before the hesitation at `index` start a phrase that
+         /// stops on a word that cannot end it and is begun again with another
+         /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an".
++        ///
++        /// A conjunction or a preposition is different: it leaves the words
++        /// before it finished, and what it joins on may open with the same
++        /// word ("shipped it and, um, it works"). After a coordinator nothing
++        /// is a restart. After a subordinator or a preposition only two words
++        /// said again from where a clause begins are ("I think that, um, I
++        /// think we"). Short of that the words stay, because a restart kept
++        /// is the smaller loss than a clause deleted.
+         private func revisedLength(around index: Int) -> Int? {
+             for length in stride(from: 3, through: 2, by: -1) {
+                 guard index >= length, index + length < items.count else { continue }
+@@ -905,7 +932,11 @@ extension CleanVerbatim {
+                 let again = items[(index + 1)..<(index + length)]
+                 let last = items[index - 1]
+                 let lastWord = last.word
++                let leavesOpen = CleanVerbatim.subordinators.contains(lastWord)
++                    || CleanVerbatim.prepositions.contains(lastWord)
+                 guard CleanVerbatim.pauseCommaWords.contains(lastWord) || CleanVerbatim.unfinishedWords.contains(lastWord),
++                      !CleanVerbatim.coordinators.contains(lastWord),
++                      !leavesOpen || (length > 2 && opensClause(at: index - length)),
+                       !last.startsUppercase,
+                       last.punctuation.isEmpty || last.punctuation == ",",
+                       !before.dropLast().contains(where: { !$0.punctuation.isEmpty }),
+@@ -917,6 +948,14 @@ extension CleanVerbatim {
+             return nil
+         }
+ 
++        /// A clause can begin at `index`: the sentence does, or a comma or a
++        /// conjunction comes before ("Okay, I think", "So I think").
++        private func opensClause(at index: Int) -> Bool {
++            opensSentence(at: index) || items[index - 1].endsWithComma
++                || CleanVerbatim.coordinators.contains(items[index - 1].word)
++                || CleanVerbatim.subordinators.contains(items[index - 1].word)
++        }
++
+         /// How many words ending at `beforeEnd` are said again starting at
+         /// `afterStart`: a restart when the first copy opens the sentence or
+         /// stops on a word that cannot end a phrase ("It's a, a leak", "Can
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
+index 33e005b..e0da928 100644
+--- a/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
++++ b/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
+@@ -807,6 +807,62 @@ final class CleanVerbatimTests: XCTestCase {
+         }
+     }
+ 
++    /// A conjunction or a preposition leaves the words before it finished, and
++    /// what it joins on may open with the same word. Only the hesitation goes,
++    /// with spoken corrections on or off.
++    func testAWordSaidAgainAfterAJoiningWordIsNotARestart() {
++        let cases = [
++            ("We shipped it and, um, it works.", "We shipped it and it works."),
++            ("I'll ask Sam and, uh, Sam will know.", "I'll ask Sam and Sam will know."),
++            ("Ship it if, um, it passes review.", "Ship it if it passes review."),
++            ("I told you that, um, you should come.", "I told you that you should come."),
++            ("We talked to them about, um, them joining.", "We talked to them about them joining."),
++            ("Мы сделали это и, э, это работает.", "Мы сделали это и это работает."),
++            ("I told you that um you should come.", "I told you that you should come."),
++            ("We shipped it and, um, uh, it works.", "We shipped it and it works."),
++            ("We tested it but, uh, it failed.", "We tested it but it failed."),
++            ("Скажи ему или, э, ему напишут.", "Скажи ему или ему напишут."),
++            ("I want you to, um, you know, wait.", "I want you to you know, wait."),
++            ("You and, um, you know, Sam should talk.", "You and you know, Sam should talk."),
++            ("He logged in and, um, in the console it failed.", "He logged in and in the console it failed."),
++            // Two words said again after a coordinator are still a sentence.
++            ("I called and, uh, I called again.", "I called and I called again."),
++            ("It works and, um, it works well.", "It works and it works well."),
++            ("Мы звонили и, э, мы звонили дважды.", "Мы звонили и мы звонили дважды."),
++            // Two words said again, but not from where a clause begins.
++            ("We agreed on the plan for, um, the plan is simple.", "We agreed on the plan for the plan is simple."),
++            ("I know what he said and, um, he said nothing new.", "I know what he said and he said nothing new."),
++        ]
++        for (input, expected) in cases {
++            XCTAssertEqual(CleanVerbatim.clean(input), expected, input)
++            XCTAssertEqual(CleanVerbatim.clean(input, spokenCorrections: false), expected, "meeting: " + input)
++            XCTAssertEqual(TextPipeline().process(input).text, expected, "pipeline: " + input)
++            XCTAssertEqual(CleanVerbatim.clean(expected), expected, "idempotent: " + input)
++        }
++    }
++
++    /// After a subordinator or a preposition, two words said again from where
++    /// a clause begins are a restart: at the start of the sentence, after a
++    /// comma, after a conjunction.
++    func testARestartFromTheStartOfAClauseStillCollapses() {
++        let cases = [
++            ("I think that, um, I think we should wait.", "I think we should wait."),
++            ("Okay, I think that, um, I think we should wait.", "Okay, I think we should wait."),
++            ("Let's meet at, uh, let's meet on Monday.", "Let's meet on Monday."),
++            ("So I think that, um, I think we should wait.", "So I think we should wait."),
++            ("We paused because I think that, um, I think we should wait.", "We paused because I think we should wait."),
++            ("Давай встретимся в, э, давай встретимся на вокзале.", "Давай встретимся на вокзале."),
++            // No joining word left hanging: as before.
++            ("We're meeting with the, um, with Kowalski's team.", "We're meeting with Kowalski's team."),
++            ("I think we should, um, we could wait.", "I think we could wait."),
++        ]
++        for (input, expected) in cases {
++            XCTAssertEqual(CleanVerbatim.clean(input), expected, input)
++            XCTAssertEqual(CleanVerbatim.clean(input, spokenCorrections: false), expected, "meeting: " + input)
++            XCTAssertEqual(TextPipeline().process(input).text, expected, "pipeline: " + input)
++        }
++    }
++
+     func testRoundSixKeepsWhatWasMeant() {
+         for text in [
+             "Is it safe to merge? Uh uh.",
+diff --git a/core/conformance/corpus-text.json b/core/conformance/corpus-text.json
+index 2389d37..61be067 100644
+--- a/core/conformance/corpus-text.json
++++ b/core/conformance/corpus-text.json
+@@ -4294,6 +4294,162 @@
+     "phoneticMatching": true,
+     "input": "Use the format dd, mmm."
+   },
++  {
++    "name": "clean joining word: We shipped it and, um, it works.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We shipped it and, um, it works."
++  },
++  {
++    "name": "clean joining word: I'll ask Sam and, uh, Sam will know.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I'll ask Sam and, uh, Sam will know."
++  },
++  {
++    "name": "clean joining word: Ship it if, um, it passes review.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Ship it if, um, it passes review."
++  },
++  {
++    "name": "clean joining word: I told you that, um, you should come.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I told you that, um, you should come."
++  },
++  {
++    "name": "clean joining word: We talked to them about, um, them joining.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We talked to them about, um, them joining."
++  },
++  {
++    "name": "clean joining word: Мы сделали это и, э, это работает.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Мы сделали это и, э, это работает."
++  },
++  {
++    "name": "clean joining word: I called and, uh, I called again.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I called and, uh, I called again."
++  },
++  {
++    "name": "clean joining word: We agreed on the plan for, um, the plan is simple.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We agreed on the plan for, um, the plan is simple."
++  },
++  {
++    "name": "clean clause restart: I think that, um, I think we should wait.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I think that, um, I think we should wait."
++  },
++  {
++    "name": "clean clause restart: Okay, I think that, um, I think we should wait.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Okay, I think that, um, I think we should wait."
++  },
++  {
++    "name": "clean clause restart: Let's meet at, uh, let's meet on Monday.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Let's meet at, uh, let's meet on Monday."
++  },
++  {
++    "name": "clean clause restart: So I think that, um, I think we should wait.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "So I think that, um, I think we should wait."
++  },
++  {
++    "name": "clean meeting joining word: We shipped it and, um, it works.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "We shipped it and, um, it works."
++  },
++  {
++    "name": "clean meeting joining word: I'll ask Sam and, uh, Sam will know.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I'll ask Sam and, uh, Sam will know."
++  },
++  {
++    "name": "clean meeting joining word: Ship it if, um, it passes review.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Ship it if, um, it passes review."
++  },
++  {
++    "name": "clean meeting joining word: I told you that, um, you should come.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I told you that, um, you should come."
++  },
++  {
++    "name": "clean meeting joining word: We talked to them about, um, them joining.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "We talked to them about, um, them joining."
++  },
++  {
++    "name": "clean meeting joining word: Мы сделали это и, э, это работает.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Мы сделали это и, э, это работает."
++  },
++  {
++    "name": "clean meeting clause restart: I think that, um, I think we should wait.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I think that, um, I think we should wait."
++  },
++  {
++    "name": "clean meeting clause restart: Okay, I think that, um, I think we should wait.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Okay, I think that, um, I think we should wait."
++  },
++  {
++    "name": "clean meeting clause restart: Let's meet at, uh, let's meet on Monday.",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Let's meet at, uh, let's meet on Monday."
++  },
+   {
+     "name": "prose new paragraph as its own sentence",
+     "dictionary": [],
+diff --git a/core/conformance/fixtures/text/pipeline.json b/core/conformance/fixtures/text/pipeline.json
+index 01cc324..f193b1c 100644
+--- a/core/conformance/fixtures/text/pipeline.json
++++ b/core/conformance/fixtures/text/pipeline.json
+@@ -7267,6 +7267,309 @@
+     ],
+     "text" : "Use the format dd, mmm."
+   },
++  {
++    "afterDictionary" : "We shipped it and, um, it works.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We shipped it and, um, it works.",
++    "name" : "clean joining word: We shipped it and, um, it works.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We shipped it and it works."
++  },
++  {
++    "afterDictionary" : "I'll ask Sam and, uh, Sam will know.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I'll ask Sam and, uh, Sam will know.",
++    "name" : "clean joining word: I'll ask Sam and, uh, Sam will know.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I'll ask Sam and Sam will know."
++  },
++  {
++    "afterDictionary" : "Ship it if, um, it passes review.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Ship it if, um, it passes review.",
++    "name" : "clean joining word: Ship it if, um, it passes review.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Ship it if it passes review."
++  },
++  {
++    "afterDictionary" : "I told you that, um, you should come.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I told you that, um, you should come.",
++    "name" : "clean joining word: I told you that, um, you should come.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I told you that you should come."
++  },
++  {
++    "afterDictionary" : "We talked to them about, um, them joining.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We talked to them about, um, them joining.",
++    "name" : "clean joining word: We talked to them about, um, them joining.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We talked to them about them joining."
++  },
++  {
++    "afterDictionary" : "Мы сделали это и, э, это работает.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Мы сделали это и, э, это работает.",
++    "name" : "clean joining word: Мы сделали это и, э, это работает.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Мы сделали это и это работает."
++  },
++  {
++    "afterDictionary" : "I called and, uh, I called again.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I called and, uh, I called again.",
++    "name" : "clean joining word: I called and, uh, I called again.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I called and I called again."
++  },
++  {
++    "afterDictionary" : "We agreed on the plan for, um, the plan is simple.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We agreed on the plan for, um, the plan is simple.",
++    "name" : "clean joining word: We agreed on the plan for, um, the plan is simple.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We agreed on the plan for the plan is simple."
++  },
++  {
++    "afterDictionary" : "I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I think that, um, I think we should wait.",
++    "name" : "clean clause restart: I think that, um, I think we should wait.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I think we should wait."
++  },
++  {
++    "afterDictionary" : "Okay, I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Okay, I think that, um, I think we should wait.",
++    "name" : "clean clause restart: Okay, I think that, um, I think we should wait.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Okay, I think we should wait."
++  },
++  {
++    "afterDictionary" : "Let's meet at, uh, let's meet on Monday.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Let's meet at, uh, let's meet on Monday.",
++    "name" : "clean clause restart: Let's meet at, uh, let's meet on Monday.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Let's meet on Monday."
++  },
++  {
++    "afterDictionary" : "So I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "So I think that, um, I think we should wait.",
++    "name" : "clean clause restart: So I think that, um, I think we should wait.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "So I think we should wait."
++  },
++  {
++    "afterDictionary" : "We shipped it and, um, it works.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We shipped it and, um, it works.",
++    "name" : "clean meeting joining word: We shipped it and, um, it works.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "We shipped it and it works."
++  },
++  {
++    "afterDictionary" : "I'll ask Sam and, uh, Sam will know.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I'll ask Sam and, uh, Sam will know.",
++    "name" : "clean meeting joining word: I'll ask Sam and, uh, Sam will know.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I'll ask Sam and Sam will know."
++  },
++  {
++    "afterDictionary" : "Ship it if, um, it passes review.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Ship it if, um, it passes review.",
++    "name" : "clean meeting joining word: Ship it if, um, it passes review.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Ship it if it passes review."
++  },
++  {
++    "afterDictionary" : "I told you that, um, you should come.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I told you that, um, you should come.",
++    "name" : "clean meeting joining word: I told you that, um, you should come.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I told you that you should come."
++  },
++  {
++    "afterDictionary" : "We talked to them about, um, them joining.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We talked to them about, um, them joining.",
++    "name" : "clean meeting joining word: We talked to them about, um, them joining.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "We talked to them about them joining."
++  },
++  {
++    "afterDictionary" : "Мы сделали это и, э, это работает.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Мы сделали это и, э, это работает.",
++    "name" : "clean meeting joining word: Мы сделали это и, э, это работает.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Мы сделали это и это работает."
++  },
++  {
++    "afterDictionary" : "I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I think that, um, I think we should wait.",
++    "name" : "clean meeting clause restart: I think that, um, I think we should wait.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I think we should wait."
++  },
++  {
++    "afterDictionary" : "Okay, I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Okay, I think that, um, I think we should wait.",
++    "name" : "clean meeting clause restart: Okay, I think that, um, I think we should wait.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Okay, I think we should wait."
++  },
++  {
++    "afterDictionary" : "Let's meet at, uh, let's meet on Monday.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Let's meet at, uh, let's meet on Monday.",
++    "name" : "clean meeting clause restart: Let's meet at, uh, let's meet on Monday.",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Let's meet on Monday."
++  },
+   {
+     "afterDictionary" : "First point. New paragraph. Second point.",
+     "allowPressReturnCommand" : false,
+diff --git a/core/ramble-text/src/clean.rs b/core/ramble-text/src/clean.rs
+index 6e0bf3c..4b4d3d5 100644
+--- a/core/ramble-text/src/clean.rs
++++ b/core/ramble-text/src/clean.rs
+@@ -33,7 +33,10 @@
+ //!    it can only be the pause: after a word that cannot end a phrase
+ //!    ("should, um,"), in "Thanks, um, for", or after the sentence's opening
+ //!    subject ("The build, uh,"). A restart around a hesitation keeps one copy
+-//!    ("It's a, uh, a leak"). Repeated until nothing changes.
++//!    ("It's a, uh, a leak"). A word said again after a conjunction or a
++//!    preposition is not one ("shipped it and, um, it works"); only a clause
++//!    begun again is ("I think that, um, I think we"). Repeated until nothing
++//!    changes.
+ //! 3. **Stutters.** A short function word said twice in a row, from a list of
+ //!    words whose doubles are never grammatical ("the the", "я я", "I, I").
+ //! 4. **"New paragraph"** ("Новый абзац"), set apart by punctuation, becomes a
+@@ -115,6 +118,72 @@ const UNFINISHED_WORDS: &[&str] = &[
+     "las",
+ ];
+ 
++/// Words that join what was said to what comes next. The words before one
++/// are finished, and the next phrase may open with the same word: "shipped
++/// it and, um, it works", "told you that, um, you should come".
++///
++/// A coordinator joins two whole clauses, so even the same opening twice
++/// is a sentence: "I called and, uh, I called again".
++const COORDINATORS: &[&str] = &["and", "or", "but", "so", "then", "и", "а", "но", "или"];
++const SUBORDINATORS: &[&str] = &[
++    "because",
++    "if",
++    "when",
++    "that",
++    "than",
++    "which",
++    "who",
++    "whom",
++    "whose",
++    "что",
++    "чтобы",
++    "если",
++    "когда",
++    "потому",
++    "как",
++    "который",
++    "которая",
++    "которое",
++    "которые",
++];
++const PREPOSITIONS: &[&str] = &[
++    "to",
++    "of",
++    "in",
++    "on",
++    "at",
++    "for",
++    "with",
++    "from",
++    "by",
++    "into",
++    "about",
++    "в",
++    "во",
++    "на",
++    "с",
++    "со",
++    "к",
++    "ко",
++    "у",
++    "по",
++    "за",
++    "из",
++    "от",
++    "до",
++    "о",
++    "об",
++    "при",
++    "для",
++    "кроме",
++    "через",
++    "между",
++    "без",
++    "перед",
++    "около",
++    "вместо",
++];
++
+ /// Russian hesitations that are also letter names ("э", "эм"): they go bare
+ /// too, except next to a letter or after "буква".
+ const LETTER_HESITATIONS: &[&str] = &["э", "эм"];
+@@ -1443,6 +1512,14 @@ impl<'a> Tokens<'a> {
+     /// How many words before the hesitation at `index` start a phrase that
+     /// stops on a word that cannot end it and is begun again with another
+     /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an".
++    ///
++    /// A conjunction or a preposition is different: it leaves the words
++    /// before it finished, and what it joins on may open with the same
++    /// word ("shipped it and, um, it works"). After a coordinator nothing
++    /// is a restart. After a subordinator or a preposition only two words
++    /// said again from where a clause begins are ("I think that, um, I
++    /// think we"). Short of that the words stay, because a restart kept
++    /// is the smaller loss than a clause deleted.
+     fn revised_length(&self, index: usize) -> Option<usize> {
+         (2..=3).rev().find(|&length| {
+             if index < length || index + length >= self.items.len() {
+@@ -1452,8 +1529,12 @@ impl<'a> Tokens<'a> {
+             let again = &self.items[index + 1..index + length];
+             let last = &before[length - 1];
+             let last_word = last.word();
++            let leaves_open = SUBORDINATORS.contains(&last_word.as_str())
++                || PREPOSITIONS.contains(&last_word.as_str());
+             (PAUSE_COMMA_WORDS.contains(&last_word.as_str())
+                 || UNFINISHED_WORDS.contains(&last_word.as_str()))
++                && !COORDINATORS.contains(&last_word.as_str())
++                && (!leaves_open || (length > 2 && self.opens_clause(index - length)))
+                 && !last.starts_uppercase()
+                 && (last.punctuation().is_empty() || last.punctuation() == ",")
+                 && before[..length - 1]
+@@ -1467,6 +1548,16 @@ impl<'a> Tokens<'a> {
+         })
+     }
+ 
++    /// A clause can begin at `index`: the sentence does, or a comma or a
++    /// conjunction comes before ("Okay, I think", "So I think").
++    fn opens_clause(&self, index: usize) -> bool {
++        if self.opens_sentence(index) || self.items[index - 1].ends_with_comma() {
++            return true;
++        }
++        let previous = self.items[index - 1].word();
++        COORDINATORS.contains(&previous.as_str()) || SUBORDINATORS.contains(&previous.as_str())
++    }
++
+     /// How many words ending at `before_end` are said again starting at
+     /// `after_start`: a restart when the first copy opens the sentence or
+     /// stops on a word that cannot end a phrase ("It's a, a leak", "Can you,
+@@ -2795,6 +2886,148 @@ mod tests {
+         assert_eq!(plain(text), text);
+     }
+ 
++    /// A conjunction or a preposition leaves the words before it finished, and
++    /// what it joins on may open with the same word. Only the hesitation goes,
++    /// with spoken corrections on or off.
++    #[test]
++    fn a_word_said_again_after_a_joining_word_is_not_a_restart() {
++        let cases = [
++            (
++                "We shipped it and, um, it works.",
++                "We shipped it and it works.",
++            ),
++            (
++                "I'll ask Sam and, uh, Sam will know.",
++                "I'll ask Sam and Sam will know.",
++            ),
++            (
++                "Ship it if, um, it passes review.",
++                "Ship it if it passes review.",
++            ),
++            (
++                "I told you that, um, you should come.",
++                "I told you that you should come.",
++            ),
++            (
++                "We talked to them about, um, them joining.",
++                "We talked to them about them joining.",
++            ),
++            (
++                "Мы сделали это и, э, это работает.",
++                "Мы сделали это и это работает.",
++            ),
++            (
++                "I told you that um you should come.",
++                "I told you that you should come.",
++            ),
++            (
++                "We shipped it and, um, uh, it works.",
++                "We shipped it and it works.",
++            ),
++            (
++                "We tested it but, uh, it failed.",
++                "We tested it but it failed.",
++            ),
++            (
++                "Скажи ему или, э, ему напишут.",
++                "Скажи ему или ему напишут.",
++            ),
++            (
++                "I want you to, um, you know, wait.",
++                "I want you to you know, wait.",
++            ),
++            (
++                "You and, um, you know, Sam should talk.",
++                "You and you know, Sam should talk.",
++            ),
++            (
++                "He logged in and, um, in the console it failed.",
++                "He logged in and in the console it failed.",
++            ),
++            // Two words said again after a coordinator are still a sentence.
++            (
++                "I called and, uh, I called again.",
++                "I called and I called again.",
++            ),
++            (
++                "It works and, um, it works well.",
++                "It works and it works well.",
++            ),
++            (
++                "Мы звонили и, э, мы звонили дважды.",
++                "Мы звонили и мы звонили дважды.",
++            ),
++            // Two words said again, but not from where a clause begins.
++            (
++                "We agreed on the plan for, um, the plan is simple.",
++                "We agreed on the plan for the plan is simple.",
++            ),
++            (
++                "I know what he said and, um, he said nothing new.",
++                "I know what he said and he said nothing new.",
++            ),
++        ];
++        for (input, expected) in cases {
++            assert_eq!(plain(input), expected, "input: {input:?}");
++            assert_eq!(
++                clean(input, false, &HashSet::new(), PromptMode::Verbatim),
++                expected,
++                "meeting: {input:?}"
++            );
++            assert_eq!(plain(expected), expected, "idempotent: {input:?}");
++        }
++    }
++
++    /// After a subordinator or a preposition, two words said again from where
++    /// a clause begins are a restart: at the start of the sentence, after a
++    /// comma, after a conjunction.
++    #[test]
++    fn a_restart_from_the_start_of_a_clause_still_collapses() {
++        let cases = [
++            (
++                "I think that, um, I think we should wait.",
++                "I think we should wait.",
++            ),
++            (
++                "Okay, I think that, um, I think we should wait.",
++                "Okay, I think we should wait.",
++            ),
++            (
++                "Let's meet at, uh, let's meet on Monday.",
++                "Let's meet on Monday.",
++            ),
++            (
++                "So I think that, um, I think we should wait.",
++                "So I think we should wait.",
++            ),
++            (
++                "We paused because I think that, um, I think we should wait.",
++                "We paused because I think we should wait.",
++            ),
++            (
++                "Давай встретимся в, э, давай встретимся на вокзале.",
++                "Давай встретимся на вокзале.",
++            ),
++            // No joining word left hanging: as before.
++            (
++                "We're meeting with the, um, with Kowalski's team.",
++                "We're meeting with Kowalski's team.",
++            ),
++            (
++                "I think we should, um, we could wait.",
++                "I think we could wait.",
++            ),
++        ];
++        for (input, expected) in cases {
++            assert_eq!(plain(input), expected, "input: {input:?}");
++            assert_eq!(
++                clean(input, false, &HashSet::new(), PromptMode::Verbatim),
++                expected,
++                "meeting: {input:?}"
++            );
++        }
++    }
++
+     #[test]
+     fn is_idempotent() {
+         for text in [

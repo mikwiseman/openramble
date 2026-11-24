@@ -1,0 +1,190 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index d453560..c4bc975 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -106,6 +106,7 @@ jobs:
+       - name: Check release policy, bootstrap and notary credentials
+         run: |
+           ./scripts/tests/test-release-policy.sh
++          ./scripts/tests/test-network-gate.sh
+           ./scripts/tests/test-notary-credentials.sh
+           ./scripts/tests/test-bootstrap-release-secrets.sh
+           ./scripts/tests/test-release-keychain.sh
+diff --git a/scripts/check-network-surface.sh b/scripts/check-network-surface.sh
+index f578dac..dacf503 100755
+--- a/scripts/check-network-surface.sh
++++ b/scripts/check-network-surface.sh
+@@ -36,10 +36,32 @@ FORBIDDEN+='|NSUbiquitousKeyValueStore|CKContainer|CKDatabase'
+ # Loading models past our manifest.
+ FORBIDDEN+='|MLModelCollection'
+ 
++# Clipboard writes that skip prepareForNewContents(with: .currentHostOnly).
++# clearContents() and declareTypes() both reset the board for every device.
++FORBIDDEN_PASTEBOARD='clearContents\(|declareTypes\('
++
+ status=0
+ 
++# Prints the non-comment source lines that match $1. Exit 0 with no output means
++# "clean". A grep that cannot run (bad pattern, unreadable path) exits non-zero,
++# and callers use `hits=$(scan ...)`, so set -e stops the gate. Never read these
++# results through `< <(...)`: a failure inside a process substitution is
++# discarded, the loop sees no lines, and the gate reports a clean pass.
++scan() {
++  local out rc=0
++  out=$(grep -rnE "$1" "${SHIPPING_PATHS[@]}") || rc=$?
++  if [[ $rc -gt 1 ]]; then
++    echo "gate error: grep exited $rc" >&2
++    exit 2
++  fi
++  printf '%s\n' "$out" | grep -v '^Binary' | grep -vE ':[0-9]+: *//' || true
++}
++
+ echo "Checking network symbols..."
++hits=$(scan "$FORBIDDEN")
++hits=$(grep -vE 'URLSessionModelDownloader\(\)|: ModelDownloading' <<<"$hits" || true)
+ while IFS= read -r hit; do
++  [[ -n "$hit" ]] || continue
+   file="${hit%%:*}"
+   if [[ "$file" =~ $ALLOWED ]]; then
+     continue
+@@ -50,14 +72,16 @@ while IFS= read -r hit; do
+     status=1
+   fi
+   echo "  $hit"
+-done < <(grep -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" 2>/dev/null \
+-  | grep -v '^Binary' \
+-  | grep -vE ':[0-9]+: *//' \
+-  | grep -vE 'URLSessionModelDownloader\(\)|: ModelDownloading' \
+-  || true)
++done <<<"$hits"
+ 
++# Comments are excluded in the same way as in network symbol checking. Without this
++# the gate crashed on a line that itself explains why you can’t write it like that -
++# and a false positive here is more expensive than a pass: they start to bypass it, and
++# one day they will bypass the present.
+ echo "Checking the clipboard entry..."
++hits=$(scan "$FORBIDDEN_PASTEBOARD")
+ while IFS= read -r hit; do
++  [[ -n "$hit" ]] || continue
+   if [[ $status -eq 0 ]]; then
+     echo ""
+     echo "VIOLATION: flushing buffer past .currentHostOnly takes away dictation"
+@@ -66,14 +90,7 @@ while IFS= read -r hit; do
+     status=1
+   fi
+   echo "  $hit"
+-  # Comments are excluded in the same way as in network symbol checking. Without this
+-  # the gate crashed on a line that itself explains why you can’t write it like that -
+-  # and a false positive here is more expensive than a pass: they start to bypass it, and
+-  # one day they will bypass the present.
+-done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" 2>/dev/null \
+-  | grep -v '^Binary' \
+-  | grep -vE ':[0-9]+: *//' \
+-  || true)
++done <<<"$hits"
+ 
+ # Updates must remain silent until enabled. This is not cosmetics:
+ # without SUEnableAutomaticChecks=false Sparkle will ask itself on the second launch
+@@ -110,15 +127,17 @@ done
+ 
+ # Logging the dictation text itself is something that the user definitely does not expect.
+ echo "Checking text logging..."
++hits=$(grep -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|dictatedText|recognizedText)' \
++  "${SHIPPING_PATHS[@]}" || [[ $? -eq 1 ]])
+ while IFS= read -r hit; do
++  [[ -n "$hit" ]] || continue
+   if [[ $status -eq 0 ]]; then
+     echo ""
+     echo "VIOLATION: recognized text is included in the log."
+     status=1
+   fi
+   echo "  $hit"
+-done < <(grep -rnE 'log(ger)?\.(info|debug|error|warning|notice)\(.*(transcript|dictatedText|recognizedText)' \
+-  "${SHIPPING_PATHS[@]}" 2>/dev/null || true)
++done <<<"$hits"
+ 
+ # The inference runtime is a prebuilt third-party binary, so reading its source
+ # proves nothing about what ships. Audit the Mach-O we actually link: a library
+diff --git a/scripts/tests/test-network-gate.sh b/scripts/tests/test-network-gate.sh
+new file mode 100755
+index 0000000..4db81e0
+--- /dev/null
++++ b/scripts/tests/test-network-gate.sh
+@@ -0,0 +1,77 @@
++#!/bin/bash
++# Proves scripts/check-network-surface.sh fails when it should, and cannot pass
++# by accident. Runs the real gate against a throwaway tree seeded with violations.
++
++set -euo pipefail
++
++ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
++WORK="$(mktemp -d)"
++trap 'rm -rf "$WORK"' EXIT
++
++fail_test() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
++
++new_tree() {  # new_tree NAME -> prints the tree path
++  local t="$WORK/$1"
++  mkdir -p "$t/scripts" "$t/apps/macos/OpenRamble/System" \
++    "$t/Packages/DictationCore/Sources" "$t/Packages/LocalASR/Sources/LocalASR"
++  cp "$ROOT/scripts/check-network-surface.sh" "$t/scripts/"
++  cp "$ROOT/apps/macos/project.yml" "$t/apps/macos/"
++  echo "$t"
++}
++
++expect_pass() {  # expect_pass TREE LABEL
++  "$1/scripts/check-network-surface.sh" >"$WORK/out" 2>&1 \
++    || { cat "$WORK/out" >&2; fail_test "$2: gate rejected a clean tree"; }
++}
++
++expect_fail() {  # expect_fail TREE LABEL
++  if "$1/scripts/check-network-surface.sh" >"$WORK/out" 2>&1; then
++    cat "$WORK/out" >&2; fail_test "$2: gate passed but must fail"
++  fi
++}
++
++APP=apps/macos/OpenRamble/System
++
++# Clean tree, plus things that must NOT trip it: comments, and the allowed files.
++t=$(new_tree clean)
++printf '/// never call clearContents() here\n// URLSession is banned\n' >"$t/$APP/Doc.swift"
++echo 'let s = URLSession.shared' >"$t/$APP/SparkleUpdater.swift"
++echo 'let s = URLSession.shared' >"$t/Packages/LocalASR/Sources/LocalASR/ModelDownloading.swift"
++expect_pass "$t" "clean tree"
++
++# Each seeded violation must fail the gate.
++seed() {  # seed LABEL FILE LINE
++  local t; t=$(new_tree "$1")
++  printf '%s\n' "$3" >"$t/$2"
++  expect_fail "$t" "$1"
++  echo "ok: $1 is caught"
++}
++seed "plain clearContents"      "$APP/Bad.swift" 'NSPasteboard.general.clearContents()'
++seed "declareTypes"             "$APP/Bad.swift" 'pb.declareTypes([.string], owner: nil)'
++seed "URLSession outside allow" "$APP/Bad.swift" 'let s = URLSession.shared'
++seed "Data(contentsOf:)"        "$APP/Bad.swift" 'let d = try Data(contentsOf: url)'
++seed "logged transcript"        "$APP/Bad.swift" 'logger.info("heard \(transcript)")'
++
++# Missing update setting.
++t=$(new_tree no-update-key)
++grep -vF 'SUSendProfileInfo: false' "$ROOT/apps/macos/project.yml" >"$t/apps/macos/project.yml"
++expect_fail "$t" "missing update key"
++echo "ok: missing update key is caught"
++
++# The regression that started this: a broken gate must fail, never pass.
++t=$(new_tree undefined-pattern)
++grep -v '^FORBIDDEN_PASTEBOARD=' "$ROOT/scripts/check-network-surface.sh" >"$t/scripts/check-network-surface.sh"
++chmod +x "$t/scripts/check-network-surface.sh"
++expect_fail "$t" "undefined clipboard pattern"
++echo "ok: an undefined pattern fails the gate"
++
++t=$(new_tree bad-regex)
++sed "s/^FORBIDDEN_PASTEBOARD=.*/FORBIDDEN_PASTEBOARD='clearContents\\\\(|('/" \
++  "$ROOT/scripts/check-network-surface.sh" >"$t/scripts/check-network-surface.sh"
++chmod +x "$t/scripts/check-network-surface.sh"
++expect_fail "$t" "invalid clipboard regex"
++echo "ok: an invalid regex fails the gate"
++
++# The real repository passes.
++"$ROOT/scripts/check-network-surface.sh" >/dev/null || fail_test "real repository fails the gate"
++echo "PASS"

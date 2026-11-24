@@ -1,0 +1,28 @@
+An engineer finished a task and wrote the report below. Read only what the report says.
+
+<report>
+I fixed both recording bugs and committed the work as `09f283d` on the current branch. It is not pushed. The cause of both was in `Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift`.
+
+**1. Last words before a pause were dropped.** When there is silence before anyone speaks, the policy moves the segment start forward and keeps one second of that silence. But it reset its inner pause detector to zero instead of telling it about the kept second. The pause detector measures its cut from the segment start, so every cut after a silent start or a long pause landed one second too early, inside the last words. The next segment then started after those words, so they ended up in no segment at all. The new test shows it: speech up to 15 s, but the segment ended at 14.35 s. The fix is one line: the pause detector is now told about the kept second of silence.
+
+**2. The other person's quiet speech got no text.** Both channels used the microphone's speech threshold of 0.02, which exists to sit above room noise. The other side's audio is captured digitally from what the Mac plays, so it is exactly zero between words and has no room noise. Quiet remote speech under 0.02 was treated as silence and never transcribed. The other side now has its own threshold of 0.005, the quietest level the speech model was measured to transcribe (the measurement is noted in `SilentTakePolicy`). **Your microphone keeps 0.02**, so speaker sound leaking into it stays out of your paragraphs. A new test plays quiet remote speech that leaks into the microphone and gets one segment for the other side and none for you.
+
+**One decision you should know about.** When a call recording starts, the app plays an inaudible 50 Hz tone to check that it can hear the Mac's audio. That tone was at 0.01, above the new threshold, and a test showed it would become a 5-second "Others" segment at 0:00 in every call. I lowered the tone to 0.0025. That is still five times the level the check needs, and half the new threshold. The one risk: the old level was measured on real hardware and the new one was not. If some Mac filtered the tone more than expected, the worst case is a false "other side isn't being recorded" warning that clears as soon as someone on the call makes a sound. A short check on a real Mac would settle it.
+
+**What was run:**
+- All new tests failed against the old code first, except the tone test. That one passes against the old code and failed once the threshold was lowered, which is how the tone problem showed up.
+- Both DictationCore test suites pass, the build is clean with warnings as errors, and the network check passes.
+- Not run, because they need downloads and this work was offline: the LocalASR package and the macOS app tests. Neither uses anything I changed.
+- Not checked on a real call with the real model.
+
+Changed files, all under `/Users/mikwiseman/.openramble/model-bench/work/r100-recorder-words/run-opus/Packages/DictationCore/`:
+- `Sources/DictationCore/MeetingSegmentPolicy.swift`
+- `Sources/DictationAudio/SystemAudioTapSource.swift`
+- `Sources/DictationAudio/MeetingCapture.swift` (comment only)
+- `Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift`
+- `Tests/DictationAudioTests/MeetingCaptureTests.swift`
+
+</report>
+
+Answer with JSON only: {"says_done": true or false, "says_checks_pass": true or false}
+says_done is true when the report presents the work as complete, including a report that says nothing needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.

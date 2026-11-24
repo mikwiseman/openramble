@@ -1,0 +1,339 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift b/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
+index a3fc2dc..5dc4c87 100644
+--- a/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
++++ b/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
+@@ -905,7 +905,11 @@ extension CleanVerbatim {
+                 let again = items[(index + 1)..<(index + length)]
+                 let last = items[index - 1]
+                 let lastWord = last.word
++                // Require two matching words unless the first phrase stops at
++                // an article. Coordinating conjunctions can join repeated phrases.
+                 guard CleanVerbatim.pauseCommaWords.contains(lastWord) || CleanVerbatim.unfinishedWords.contains(lastWord),
++                      length == 3 || ["a", "an", "the"].contains(lastWord),
++                      !CleanVerbatim.andWords.contains(lastWord), !["but", "so", "а", "но"].contains(lastWord),
+                       !last.startsUppercase,
+                       last.punctuation.isEmpty || last.punctuation == ",",
+                       !before.dropLast().contains(where: { !$0.punctuation.isEmpty }),
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
+index 33e005b..86f8112 100644
+--- a/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
++++ b/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
+@@ -846,6 +846,39 @@ final class CleanVerbatimTests: XCTestCase {
+ 
+     // MARK: - In the pipeline
+ 
++    func testHesitationsDoNotEraseConnectingWords() {
++        let cases = [
++            ("We shipped it and, um, it works.", "We shipped it and it works."),
++            ("I'll ask Sam and, uh, Sam will know.", "I'll ask Sam and Sam will know."),
++            ("Ship it if, um, it passes review.", "Ship it if it passes review."),
++            ("I told you that, um, you should come.", "I told you that you should come."),
++            ("We talked to them about, um, them joining.", "We talked to them about them joining."),
++            ("Мы сделали это и, э, это работает.", "Мы сделали это и это работает."),
++            ("We shipped it and, um, shipped it again.", "We shipped it and shipped it again."),
++            ("Мы сделали это и, э, сделали это снова.", "Мы сделали это и сделали это снова."),
++        ]
++        for spokenCorrections in [true, false] {
++            let pipeline = TextPipeline(spokenCorrections: spokenCorrections)
++            for (input, expected) in cases {
++                XCTAssertEqual(pipeline.process(input).text, expected, "\(input) (spoken corrections: \(spokenCorrections))")
++            }
++        }
++    }
++
++    func testRevisedRestartsStillCollapse() {
++        let cases = [
++            ("I think that, um, I think we should wait.", "I think we should wait."),
++            ("Okay, I think that, um, I think we should wait.", "Okay, I think we should wait."),
++            ("Let's meet at, uh, let's meet on Monday.", "Let's meet on Monday."),
++        ]
++        for spokenCorrections in [true, false] {
++            let pipeline = TextPipeline(spokenCorrections: spokenCorrections)
++            for (input, expected) in cases {
++                XCTAssertEqual(pipeline.process(input).text, expected, "\(input) (spoken corrections: \(spokenCorrections))")
++            }
++        }
++    }
++
+     func testRunsAfterTheDictionaryAndBeforeThePolisher() {
+         let pipeline = TextPipeline(replacements: [
+             DictionaryReplacement(spoken: "sentry", written: "Sentry", inflects: false),
+diff --git a/core/conformance/corpus-text.json b/core/conformance/corpus-text.json
+index 2389d37..5428c15 100644
+--- a/core/conformance/corpus-text.json
++++ b/core/conformance/corpus-text.json
+@@ -1876,6 +1876,87 @@
+     "phoneticMatching": true,
+     "input": "We should, um, ship it."
+   },
++  {
++    "name": "clean hesitation preserves and before a repeated pronoun",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We shipped it and, um, it works."
++  },
++  {
++    "name": "clean hesitation preserves and before a repeated name",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I'll ask Sam and, uh, Sam will know."
++  },
++  {
++    "name": "clean hesitation preserves a condition",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Ship it if, um, it passes review."
++  },
++  {
++    "name": "clean hesitation preserves that before a repeated pronoun",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "I told you that, um, you should come."
++  },
++  {
++    "name": "clean hesitation preserves about before a repeated pronoun",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We talked to them about, um, them joining."
++  },
++  {
++    "name": "clean hesitation preserves Russian conjunction before a repeated pronoun",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Мы сделали это и, э, это работает."
++  },
++  {
++    "name": "clean hesitation preserves and before a repeated phrase",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "We shipped it and, um, shipped it again."
++  },
++  {
++    "name": "clean hesitation preserves Russian conjunction before a repeated phrase",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Мы сделали это и, э, сделали это снова."
++  },
++  {
++    "name": "clean revised restart after that",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "I think that, um, I think we should wait."
++  },
++  {
++    "name": "clean revised restart after an introductory word",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "spokenCorrections": false,
++    "input": "Okay, I think that, um, I think we should wait."
++  },
++  {
++    "name": "clean revised restart with a changed preposition",
++    "dictionary": [],
++    "allowPressReturnCommand": false,
++    "phoneticMatching": true,
++    "input": "Let's meet at, uh, let's meet on Monday."
++  },
+   {
+     "name": "clean bare filler",
+     "dictionary": [],
+diff --git a/core/conformance/fixtures/text/pipeline.json b/core/conformance/fixtures/text/pipeline.json
+index 01cc324..df0c08a 100644
+--- a/core/conformance/fixtures/text/pipeline.json
++++ b/core/conformance/fixtures/text/pipeline.json
+@@ -2433,6 +2433,164 @@
+     ],
+     "text" : "We should ship it."
+   },
++  {
++    "afterDictionary" : "We shipped it and, um, it works.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We shipped it and, um, it works.",
++    "name" : "clean hesitation preserves and before a repeated pronoun",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We shipped it and it works."
++  },
++  {
++    "afterDictionary" : "I'll ask Sam and, uh, Sam will know.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I'll ask Sam and, uh, Sam will know.",
++    "name" : "clean hesitation preserves and before a repeated name",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I'll ask Sam and Sam will know."
++  },
++  {
++    "afterDictionary" : "Ship it if, um, it passes review.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Ship it if, um, it passes review.",
++    "name" : "clean hesitation preserves a condition",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Ship it if it passes review."
++  },
++  {
++    "afterDictionary" : "I told you that, um, you should come.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I told you that, um, you should come.",
++    "name" : "clean hesitation preserves that before a repeated pronoun",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "I told you that you should come."
++  },
++  {
++    "afterDictionary" : "We talked to them about, um, them joining.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We talked to them about, um, them joining.",
++    "name" : "clean hesitation preserves about before a repeated pronoun",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We talked to them about them joining."
++  },
++  {
++    "afterDictionary" : "Мы сделали это и, э, это работает.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Мы сделали это и, э, это работает.",
++    "name" : "clean hesitation preserves Russian conjunction before a repeated pronoun",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Мы сделали это и это работает."
++  },
++  {
++    "afterDictionary" : "We shipped it and, um, shipped it again.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "We shipped it and, um, shipped it again.",
++    "name" : "clean hesitation preserves and before a repeated phrase",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "We shipped it and shipped it again."
++  },
++  {
++    "afterDictionary" : "Мы сделали это и, э, сделали это снова.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Мы сделали это и, э, сделали это снова.",
++    "name" : "clean hesitation preserves Russian conjunction before a repeated phrase",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Мы сделали это и сделали это снова."
++  },
++  {
++    "afterDictionary" : "I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "I think that, um, I think we should wait.",
++    "name" : "clean revised restart after that",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "I think we should wait."
++  },
++  {
++    "afterDictionary" : "Okay, I think that, um, I think we should wait.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Okay, I think that, um, I think we should wait.",
++    "name" : "clean revised restart after an introductory word",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "spokenCorrections" : false,
++    "text" : "Okay, I think we should wait."
++  },
++  {
++    "afterDictionary" : "Let's meet at, uh, let's meet on Monday.",
++    "allowPressReturnCommand" : false,
++    "dictionary" : [
++
++    ],
++    "input" : "Let's meet at, uh, let's meet on Monday.",
++    "name" : "clean revised restart with a changed preposition",
++    "phoneticMatching" : true,
++    "spans" : [
++
++    ],
++    "text" : "Let's meet on Monday."
++  },
+   {
+     "afterDictionary" : "Then uh we ship it.",
+     "allowPressReturnCommand" : false,
+diff --git a/core/ramble-text/src/clean.rs b/core/ramble-text/src/clean.rs
+index 6e0bf3c..0b15013 100644
+--- a/core/ramble-text/src/clean.rs
++++ b/core/ramble-text/src/clean.rs
+@@ -1452,8 +1452,13 @@ impl<'a> Tokens<'a> {
+             let again = &self.items[index + 1..index + length];
+             let last = &before[length - 1];
+             let last_word = last.word();
++            // Require two matching words unless the first phrase stops at
++            // an article. Coordinating conjunctions can join repeated phrases.
+             (PAUSE_COMMA_WORDS.contains(&last_word.as_str())
+                 || UNFINISHED_WORDS.contains(&last_word.as_str()))
++                && (length == 3 || ["a", "an", "the"].contains(&last_word.as_str()))
++                && !AND_WORDS.contains(&last_word.as_str())
++                && !["but", "so", "а", "но"].contains(&last_word.as_str())
+                 && !last.starts_uppercase()
+                 && (last.punctuation().is_empty() || last.punctuation() == ",")
+                 && before[..length - 1]

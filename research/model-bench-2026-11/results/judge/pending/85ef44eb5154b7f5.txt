@@ -1,0 +1,35 @@
+An engineer finished a task and wrote the report below. Read only what the report says.
+
+<report>
+Both faults are fixed and committed on `work` as 7889819. Nothing is pushed.
+
+**Cause 1, words before a pause.** After any silence longer than a second, the segment policy keeps one second before the next word but reset its segmenter without telling it. The next cut landed one second early, inside the last words, and they were then skipped or dropped by the model.
+
+**Cause 2, quiet caller.** The speech floor (peak 0.02) is a microphone level. A quiet caller never reached it, so no segment was ever made. The other side now has its own floor, 0.002. The microphone keeps 0.02 and the echo gate is untouched.
+
+**Proof.** With synthesized speech through the recorder and the installed model:
+
+| Case | Before | After |
+|---|---|---|
+| Voice note starting with 5 s of silence | lost "we promise it" and "quote them yet" | every word |
+| Caller peaking at 0.01 or 0.004, leaking into the microphone | no text | every word as Others, nothing as You |
+
+New tests fail on the old code. Lowering the microphone floor too makes them fail.
+
+**What you should know**
+- 0.002 is my choice, not measured on a real call. A caller peaking under about 0.003 is still lost.
+- A far side with constant noise above 0.002 is now decoded continuously and cut at 20 s instead of at pauses.
+- The start tone (0.01) now counts as sound, so a call recording that begins in silence makes one extra 5 s decode. The model returned nothing for it. Say if you want it masked.
+
+**Checks run, network blocked:** DictationCore 823 tests, LocalASR 209 (12 opt-in skipped), RambleCoreFFI 8, Rust 211, conformance, network and diagnostics gates. The app's Xcode tests were not run because they need an XcodeGen download; no app code calls what changed.
+
+Files are in /Users/mikwiseman/.openramble/model-bench/work/r100-recorder-words/run-fable/Packages/DictationCore:
+- Sources/DictationCore/MeetingSegmentPolicy.swift
+- Sources/DictationAudio/MeetingCapture.swift (comment only)
+- Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift
+- Tests/DictationAudioTests/MeetingCaptureTests.swift
+
+</report>
+
+Answer with JSON only: {"says_done": true or false, "says_checks_pass": true or false}
+says_done is true when the report presents the work as complete, including a report that says nothing needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.

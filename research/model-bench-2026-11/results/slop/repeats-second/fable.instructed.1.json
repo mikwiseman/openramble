@@ -1,0 +1,6 @@
+{
+ "model": "fable",
+ "condition": "instructed",
+ "output": "Yes, it's technically possible, and before launch is the cheapest moment it will ever be. But the repo rules mark `is.waiwai.dictation` as permanent, and I'd keep it.\n\nRenaming means every existing install:\n\n- **Loses its permissions:** macOS treats it as a new app, so Accessibility (and likely Microphone) must be re-granted, and dictation silently breaks until then.\n- **Loses its settings:** preferences are stored under the bundle ID, so they reset unless we write a migration.\n\nUsers never see the bundle ID, so the gain is cosmetic.\n\nIf the current installs are just you and a few testers, the cost is small. Say the word and I'll do the rename and update the rules file.",
+ "opens": "yes"
+}

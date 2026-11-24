@@ -1,0 +1,37 @@
+{
+ "task": "r39-clipboard-gate",
+ "load": "17.4",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 5
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 0
+ },
+ "own_tests": {
+  "files": 0,
+  "fail_on_base": null
+ },
+ "hidden": {
+  "ok": false,
+  "code": 1,
+  "seconds": 1,
+  "failed": [
+   "FAIL: a plain clearContents() passes the gate"
+  ],
+  "tries": 2
+ },
+ "not_built": [],
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "state": "fail",
+ "reason": "hidden tests"
+}

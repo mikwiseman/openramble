@@ -1,0 +1,16 @@
+{
+ "item": "i-paste-failed",
+ "situation": "interface copy",
+ "condition": "plain",
+ "model": "gpt",
+ "effort": "high",
+ "output": "Couldn’t paste your dictation. Your text is saved and ready to paste later.",
+ "usage": {
+  "input": 9156,
+  "cached_input": 11648,
+  "cache_write": 0,
+  "output": 22
+ },
+ "cost_usd": null,
+ "seconds": 6
+}

@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "gpt",
+ "n": 14,
+ "output": "Under the current release rules, keep `is.waiwai.dictation`. A public launch doesn’t reset macOS Accessibility permissions. Anyone who already granted access to a prelaunch build would need to grant it again after a bundle ID change.\n\nIf no one has granted Accessibility access yet, you can adopt `is.waiwai.openramble` before launch by explicitly revising the repository’s permanence rule.",
+ "cost_usd": null
+}

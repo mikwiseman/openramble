@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "gpt",
+ "n": 15,
+ "output": "Yes, technically, but I’d launch as **OpenRamble** and keep `is.waiwai.dictation`. The display name can change independently, and keeping the bundle ID preserves existing macOS Accessibility grants.\n\nIf you want `is.waiwai.openramble`, treat it as an explicit change to the release rules and plan for existing users, including beta testers, to grant Accessibility access again.",
+ "cost_usd": null
+}

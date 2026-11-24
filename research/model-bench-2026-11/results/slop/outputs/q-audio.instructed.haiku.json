@@ -1,0 +1,16 @@
+{
+ "item": "q-audio",
+ "situation": "reply",
+ "condition": "instructed",
+ "model": "haiku",
+ "effort": "high",
+ "output": "No. The repo's network boundary allows the Mac app only two network paths, and neither carries audio:\n\n- **Model downloads** (`LocalASR/ModelDownloading.swift`): fetches model files when you request them. Nothing is uploaded.\n- **Sparkle updates** (`SparkleUpdater.swift`): scheduled checks are on by default and can be turned off in Settings. Installing an update always requires a click.\n\nCI enforces this with `scripts/check-network-surface.sh`. I haven't read the code or run that script in this session, so this answer comes from the rules file. To verify it yourself, run the script.",
+ "usage": {
+  "input": 2,
+  "cache_write": 5496,
+  "cached_input": 0,
+  "output": 1098
+ },
+ "cost_usd": 0.0016484,
+ "seconds": 9
+}

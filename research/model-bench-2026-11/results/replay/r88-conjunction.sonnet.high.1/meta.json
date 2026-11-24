@@ -1,0 +1,45 @@
+{
+ "run": "r88-conjunction.sonnet.high.1",
+ "task": "r88-conjunction",
+ "model": "claude-sonnet-5-5",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 21:13",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 713,
+ "slept_seconds": 0,
+ "load_before": "117.2",
+ "load_after": "150.1",
+ "left_in_profile": [
+  "921f4aec-1836-4798-8317-990969b9558e/tool-results/b294pi0vs.txt"
+ ],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r88-conjunction.sonnet.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 24,
+ "by_kind": {
+  "Bash": 22,
+  "Read": 2
+ },
+ "turns": 25,
+ "usage": {
+  "input": 48,
+  "cache_write": 83190,
+  "cached_input": 1662402,
+  "output": 18477
+ },
+ "tokens": 1764117,
+ "cost_usd": 0.6838662,
+ "models_used": [
+  "claude-sonnet-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 8,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 299
+}

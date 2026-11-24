@@ -1,0 +1,16 @@
+{
+ "item": "n-0341",
+ "situation": "release notes",
+ "condition": "instructed",
+ "model": "gpt",
+ "effort": "high",
+ "output": "**Faster microphone startup**\n\nThe first press of the dictation key starts the microphone faster after macOS moves OpenRamble out of memory. OpenRamble now keeps the microphone ready to start while it stays off between dictations.\n\nIn tests with memory full and every CPU core busy, median startup time fell from 136 ms to 87 ms. The slowest measured start fell from 315 ms to 148 ms.",
+ "usage": {
+  "input": 2193,
+  "cached_input": 19840,
+  "cache_write": 0,
+  "output": 447
+ },
+ "cost_usd": null,
+ "seconds": 15
+}

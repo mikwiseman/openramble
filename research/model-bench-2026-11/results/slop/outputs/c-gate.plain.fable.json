@@ -1,0 +1,16 @@
+{
+ "item": "c-gate",
+ "situation": "commit message",
+ "condition": "plain",
+ "model": "fable",
+ "effort": "high",
+ "output": "```\nRestore FORBIDDEN_PASTEBOARD in the network surface gate\n\nThe clipboard check in check-network-surface.sh read a variable that\nwas no longer defined. Its definition sat beside the ASR worker's\ncontrol-plane scan and was deleted along with that scan when the\nworker was retired.\n\nAs a result, the release preflight printed\n`FORBIDDEN_PASTEBOARD: unbound variable` in the middle of the gate,\nthe check matched nothing, and the gate exited zero. A plain\nclearContents()/declareTypes() call could have shipped unnoticed. Such\na call puts dictation on Universal Clipboard, where it reaches every\ndevice on the Apple ID.\n\nDefine the pattern directly above the check that uses it, so it can't\nbe removed again as part of unrelated code.\n\nVerified: the script exits 1 with a planted clearContents() and 0\nonce it is removed.\n\nThis only restores the pattern. An error inside a scan still does not\nfail the gate.\n```\n\nThe last paragraph is my inference from the diff, which only adds the definition and leaves the error handling as it was. Drop it if the script is hardened elsewhere.",
+ "usage": {
+  "input": 2,
+  "cache_write": 3153,
+  "cached_input": 0,
+  "output": 1050
+ },
+ "cost_usd": 0.09246399999999999,
+ "seconds": 12
+}

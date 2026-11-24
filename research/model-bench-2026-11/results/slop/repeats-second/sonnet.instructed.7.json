@@ -1,0 +1,6 @@
+{
+ "model": "sonnet",
+ "condition": "instructed",
+ "output": "Yes, if no one outside your own machines has the old build. The rule exists to protect existing users, and \"before launch\" suggests there are none.\n\n- **If only you and a few testers have it:** rename now. Everyone re-grants Accessibility once, and you can run `tccutil reset Accessibility is.waiwai.dictation` to clear the stale entry. The Sparkle EdDSA key doesn't depend on the bundle ID, so it stays.\n- **If real users already have it:** don't rename. They lose their Accessibility grant, and I believe Sparkle won't update across a bundle ID change, though I haven't verified that. They would need a manual reinstall.\n\nI'd rename now while it's cheap. The rule then needs updating in the rules file, `AGENTS.md`, and `docs/release.md`, so the new ID is the permanent one.\n\nHas any build gone to people outside your own machines?",
+ "opens": "yes"
+}

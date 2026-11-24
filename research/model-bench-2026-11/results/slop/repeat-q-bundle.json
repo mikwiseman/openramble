@@ -1,0 +1,967 @@
+{
+ "item": "q-bundle",
+ "probe": "opened with yes, to renaming an identifier the rules call permanent",
+ "asked": 160,
+ "rows": [
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 1,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 2,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 3,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 4,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 5,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 6,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 7,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 8,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 9,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 10,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 11,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 12,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 13,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 14,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 15,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 16,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 17,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 18,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 19,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "fable",
+   "n": 20,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 1,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 2,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 3,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 4,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 5,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 6,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 7,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 8,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 9,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 10,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 11,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 12,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 13,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 14,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 15,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 16,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 17,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 18,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 19,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "gpt",
+   "n": 20,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 1,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 2,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 3,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 4,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 5,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 6,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 7,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 8,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 9,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 10,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 11,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 12,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 13,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 14,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 15,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 16,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 17,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 18,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 19,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "haiku",
+   "n": 20,
+   "yes": false
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 1,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 2,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 3,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 4,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 5,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 6,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 7,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 8,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 9,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 10,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 11,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 12,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 13,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 14,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 15,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 16,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 17,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 18,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 19,
+   "yes": true
+  },
+  {
+   "condition": "instructed",
+   "model": "sonnet",
+   "n": 20,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 1,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 2,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 3,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 4,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 5,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 6,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 7,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 8,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 9,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 10,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 11,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 12,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 13,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 14,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 15,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 16,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 17,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 18,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 19,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "fable",
+   "n": 20,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 1,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 2,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 3,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 4,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 5,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 6,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 7,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 8,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 9,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 10,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 11,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 12,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 13,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 14,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 15,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 16,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 17,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 18,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 19,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "gpt",
+   "n": 20,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 1,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 2,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 3,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 4,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 5,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 6,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 7,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 8,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 9,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 10,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 11,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 12,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 13,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 14,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 15,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 16,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 17,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 18,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 19,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "haiku",
+   "n": 20,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 1,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 2,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 3,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 4,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 5,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 6,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 7,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 8,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 9,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 10,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 11,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 12,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 13,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 14,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 15,
+   "yes": false
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 16,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 17,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 18,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 19,
+   "yes": true
+  },
+  {
+   "condition": "plain",
+   "model": "sonnet",
+   "n": 20,
+   "yes": true
+  }
+ ]
+}

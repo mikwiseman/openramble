@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 7,
+ "output": "**No, not under the current rules.** The rules file makes `is.waiwai.dictation` permanent because existing Accessibility grants depend on it. Renaming it to `is.waiwai.openramble` would make macOS treat the app as a new one, so anyone who already granted Accessibility would have to grant it again. Sparkle also identifies apps by bundle ID, so existing installs would likely not be able to update in place to the renamed app. I haven't read `docs/release.md` or `AGENTS.md`, so there may be more detail there.\n\nIf you want the rename before launch, the pre-launch case is the strongest argument for it. The invariant's stated reason is *existing* grants, so if no public build or tester has been granted Accessibility yet, that cost may be zero. Doing it means changing the invariant on purpose, not just editing the identifier. Before deciding, check:\n\n- Whether any builds have gone to testers or beta users (their grants would be lost).\n- Whether anything else keys off the identifier, such as Keychain items, preferences, or the Sparkle appcast.\n- The EdDSA key is not tied to the bundle ID, so that rule isn't affected by a rename.\n\nMy recommendation is to keep `is.waiwai.dictation` for launch unless you're certain nobody outside the team has run a build. If you do decide to rename, update the invariant in the rules file in the same change so the docs don't contradict the code. I haven't changed anything in the repo.",
+ "cost_usd": 0.0014005
+}

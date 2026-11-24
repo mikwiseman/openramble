@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 2,
+ "output": "Yes, if `is.waiwai.dictation` has never reached anyone outside your own machines. The rule exists to protect existing users, and that protection only matters if they exist.\n\n**If it has not shipped:** rename now. You re-grant Accessibility once on your own devices. The Sparkle EdDSA key is unaffected, and the signing order stays the same.\n\n**If it has shipped:** I'd keep the old ID. A renamed app is a new app to macOS, so every user loses their Accessibility grant. Sparkle also won't update an installed app into a bundle with a different identifier, so those users would need a manual reinstall. Preferences and Application Support data would also be orphaned.\n\nHas any build with the old ID gone to real users? If not, I'll make the change and update the rules file and `docs/release.md` to match.",
+ "cost_usd": 0.026376000000000004
+}

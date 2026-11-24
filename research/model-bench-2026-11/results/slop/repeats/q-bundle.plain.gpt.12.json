@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "gpt",
+ "n": 12,
+ "output": "Keep `is.waiwai.dictation` as the bundle identifier for launch. You can ship the app under the name **OpenRamble** by changing its display name.\n\nChanging the identifier to `is.waiwai.openramble` would break the release invariant and require existing users to grant Accessibility access again. That includes anyone who granted access while testing a prelaunch build.",
+ "cost_usd": null
+}

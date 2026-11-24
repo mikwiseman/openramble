@@ -1,0 +1,14 @@
+The switch already exists, so I changed nothing and there is nothing to commit.
+
+**Where it is:** Settings → About → Updates → "Check for updates automatically". Turning it off stops all scheduled update checks. "Check Now" next to it still runs a check, but only when clicked. The Russian text is there too: "Проверять обновления автоматически".
+
+**How it works:**
+- The switch is in `apps/macos/OpenRamble/UI/SettingsView.swift` (about line 1020).
+- It is tied to Sparkle's own setting in `apps/macos/OpenRamble/System/SparkleUpdater.swift` (`automaticChecksEnabled`). Sparkle saves the person's choice, and the saved choice wins over the default of "on" in `project.yml`.
+- Turning it off cancels the next scheduled check straight away.
+- Installing still needs a click: `SUAllowsAutomaticUpdates: false` turns off background download and install. `scripts/check-network-surface.sh` fails CI if that line ever changes. I ran the script and it passed.
+- `README.md` line 146 already tells users about the switch.
+
+**Not verified:** I did not build or launch the app. The work had to stay offline, and a dev build shares the bundle ID `is.waiwai.dictation`, so turning the switch off in it would also turn off update checks in your own installed copy. Step 12 of `docs/manual-check.md` already covers checking this by hand.
+
+**What you can tell him:** open Settings → About and turn off "Check for updates automatically". OpenRamble then goes online only when he asks it to: to download a model, or when he clicks Check Now. Nothing ever installs without his click.

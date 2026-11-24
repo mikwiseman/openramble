@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 18,
+ "output": "Yes, but it breaks the first release invariant in the rules file, so it's your call. Before launch is the only cheap time to do it.\n\nEvery existing install becomes a new app to macOS:\n\n- **Permissions:** Accessibility and Microphone must be granted again, and the old entry lingers in System Settings.\n- **Settings:** preferences reset, because UserDefaults is keyed by bundle ID.\n\nIf the only installs are yours and a few testers', I'd rename now and update the invariant to `is.waiwai.openramble`. If a real beta audience already granted permissions, I'd keep the current ID, since users never see it.\n\nHow many installs exist today?",
+ "cost_usd": 0.109464
+}

@@ -1,0 +1,16 @@
+{
+ "title": "A hands-free take that never stopped",
+ "kind": "replay",
+ "area": "pure Swift logic",
+ "source": "#97, A hands-free take queued behind a paste stops on its second press",
+ "base": "94cb0adb7efc1cd02c92da5e30b46e7287a079d6",
+ "reference": "b934ef921d6dad07f49b6bdf881291437ff7ef8b",
+ "hidden": [
+  "Packages/DictationCore/Tests/DictationCoreTests/DictationControllerTests.swift",
+  "Packages/DictationCore/Tests/DictationCoreTests/DictationControllerRaceTests.swift"
+ ],
+ "suite": "swift test --package-path Packages/DictationCore",
+ "check": "swift build --package-path Packages/DictationCore --build-tests -Xswiftc -warnings-as-errors && swift build --package-path Packages/LocalASR --build-tests -Xswiftc -warnings-as-errors && ./scripts/check-network-surface.sh && ./scripts/check-diagnostics-surface.sh",
+ "not_built": "^apps/",
+ "app": "XCODEGEN=$(scripts/pinned-xcodegen.sh) && cd apps/macos && \"$XCODEGEN\" generate && xcodebuild -project OpenRamble.xcodeproj -scheme OpenRamble -destination 'platform=macOS,arch=arm64' -derivedDataPath \"$PWD/../../.derived\" -IDEPackageSupportDisableManifestSandbox=YES -IDEPackageSupportDisablePluginExecutionSandbox=YES -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO ENABLE_USER_SCRIPT_SANDBOXING=NO OTHER_SWIFT_FLAGS='$(inherited) -disable-sandbox' build-for-testing"
+}

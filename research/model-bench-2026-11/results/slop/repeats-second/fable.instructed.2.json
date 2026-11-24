@@ -1,0 +1,6 @@
+{
+ "model": "fable",
+ "condition": "instructed",
+ "output": "Yes, we can, but your release rules mark `is.waiwai.dictation` as permanent, and for good reason: macOS ties Accessibility grants to the bundle identifier. After a rename, every existing install becomes a new app to the system. Users must re-grant Accessibility (and likely Microphone), and preferences stored under the old identifier are left behind.\n\nUsers never see the bundle identifier, so I'd keep it and put OpenRamble in the display name only.\n\nIf you still want it, before launch is the cheapest time, while the only installs are yours and testers'. Say the word and I'll do the rename and update the rules file.",
+ "opens": "yes"
+}

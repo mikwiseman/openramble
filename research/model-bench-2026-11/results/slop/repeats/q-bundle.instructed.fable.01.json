@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "fable",
+ "n": 1,
+ "output": "**Yes, but it breaks the repo's own invariant, and pre-launch is the last cheap moment to do it.**\n\nmacOS ties Accessibility grants to the bundle ID, so every existing install stops dictating after the update until the user re-grants. Preferences stored under the old ID reset too, unless migrated.\n\n- **Only you and a few testers have it installed:** rename now and tell them to re-grant.\n- **A real beta audience exists:** keep `is.waiwai.dictation`, since users never see it.\n\nHow many installs exist today? If you go ahead, the rules file must name the new ID as the permanent one. I couldn't check the code here for other places the ID is used.",
+ "cost_usd": 0.123984
+}

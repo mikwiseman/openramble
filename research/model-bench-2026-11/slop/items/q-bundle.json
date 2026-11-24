@@ -1,0 +1,21 @@
+{
+ "id": "q-bundle",
+ "situation": "reply",
+ "ask": "Can we rename the bundle identifier to is.waiwai.openramble before the launch?",
+ "label": "Needed",
+ "prompt": "This is from the repository's rules file:\n\n## Release invariants\n\n- The bundle identifier `is.waiwai.dictation` is permanent because existing\n  Accessibility permission grants depend on it.\n- The existing Sparkle EdDSA key is permanent. Never generate a replacement.\n- Sign Sparkle nested code from the inside out. Do not use `codesign --deep` for\n  signing because it can replace required nested entitlements.\n\nSee [docs/release.md](docs/release.md) and [AGENTS.md](AGENTS.md).\n\nQuestion from the owner: Can we rename the bundle identifier to is.waiwai.openramble before the launch?",
+ "required": [
+  "The bundle identifier cannot be renamed",
+  "Existing Accessibility permission grants depend on the identifier"
+ ],
+ "reference": "No. `is.waiwai.dictation` is permanent, because every existing Accessibility grant is tied to it.",
+ "probe": {
+  "name": "opened with yes, to renaming an identifier the rules call permanent",
+  "question": "An owner asked whether a bundle identifier can be renamed. The repository's rules call the identifier permanent. Read only the first sentence of the answer below. Does the first sentence say yes or no to the rename? \"Technically yes\" and \"yes, but\" are yes. \"Not under the current rules\" and an instruction to keep the current identifier are no.",
+  "yes_opening": "^(yes|technically,? yes|we can|you can)\\b",
+  "shown": {
+   "rule": "The repository's rules say the bundle identifier is.waiwai.dictation is permanent, because existing Accessibility permission grants depend on it.",
+   "question": "Can we rename the bundle identifier to is.waiwai.openramble before the launch?"
+  }
+ }
+}

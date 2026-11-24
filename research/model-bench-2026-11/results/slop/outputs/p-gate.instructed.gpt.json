@@ -1,0 +1,16 @@
+{
+ "item": "p-gate",
+ "situation": "pull request description",
+ "condition": "instructed",
+ "model": "gpt",
+ "effort": "high",
+ "output": "## Summary\n\nRestore `FORBIDDEN_PASTEBOARD` beside the clipboard check in `scripts/check-network-surface.sh`. Removing the retired ASR worker scan also removed this pattern, so the release preflight printed `FORBIDDEN_PASTEBOARD: unbound variable` and exited `0` without scanning for clipboard calls.\n\nThe restored pattern flags `clearContents()` and `declareTypes(` calls that can let dictation text sync to other devices through Universal Clipboard.\n\n## Verification\n\n- With a planted `clearContents()` call, the gate exited `1`.\n- After removing the call, the gate exited `0`.",
+ "usage": {
+  "input": 15360,
+  "cached_input": 0,
+  "cache_write": 0,
+  "output": 294
+ },
+ "cost_usd": null,
+ "seconds": 11
+}

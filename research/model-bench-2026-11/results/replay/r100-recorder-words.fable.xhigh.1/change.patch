@@ -1,0 +1,321 @@
+diff --git a/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift b/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift
+index 305beba..29008c2 100644
+--- a/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift
++++ b/Packages/DictationCore/Sources/DictationAudio/MeetingCapture.swift
+@@ -103,8 +103,9 @@ public actor MeetingCapture {
+     }
+ 
+     /// Anything above this counts as audio rather than line noise. Well
+-    /// below speech (0.02 is the segmenter's floor) so a quiet voice on the
+-    /// far side still proves the tap alive.
++    /// below speech (the segmenter's floors are 0.02 for the microphone and
++    /// 0.002 for the other side) so a quiet voice on the far side still
++    /// proves the tap alive.
+     public static let audibleThreshold: Float = 0.0005
+ 
+     public let directory: URL
+diff --git a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+index 32d2482..ea358f3 100644
+--- a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
++++ b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+@@ -25,6 +25,34 @@ public struct MeetingSegmentPolicy: Sendable {
+         /// Imported files can be much quieter than a live microphone. Use the
+         /// same pause/cut policy without dropping sub-threshold audio.
+         public var preserveQuietAudio: Bool
++        /// A frame at or above this peak is speech on the other side, in
++        /// place of `speech.speechPeak`.
++        ///
++        /// The microphone's floor is a room's: 0.02 clears the noise a room
++        /// makes. The other side has no room. It is the signal the Mac plays,
++        /// digital silence when nobody speaks, at whatever level the caller's
++        /// app sent it: the tap sits before the volume control, so turning
++        /// the Mac up does not raise it. A caller who is quiet there peaked
++        /// under 0.02 for whole sentences, was never once heard as speech,
++        /// and got no text while the file played them back.
++        ///
++        /// Ten times lower, then. Not lower still, because a call's comfort
++        /// noise has to stay silence: a far side that never drops under the
++        /// floor is decoded for as long as the call lasts, and cut at the cap
++        /// instead of at pauses. Checked with synthesized speech through the
++        /// recorder and the model: a caller peaking at 0.003 or more is
++        /// segmented whole, at 0.004 every word comes back, and noise peaking
++        /// at 0.0012 stays silence. Not yet measured on a real call.
++        ///
++        /// The tone the recorder plays when a tap starts peaks at 0.01 and so
++        /// clears this floor. A recording that begins in silence decodes its
++        /// first five seconds once; the model returns nothing for them.
++        ///
++        /// It never applies to the microphone, where sound this quiet is the
++        /// room, or the speakers leaking in too quietly for the echo gate to
++        /// act on.
++        public var systemSpeechPeak: Float
++        public static let defaultSystemSpeechPeak: Float = 0.002
+ 
+         /// Shorter segments than dictation's, deliberately. Text appears
+         /// sooner, and the worst wait a dictation can inherit from a decode
+@@ -39,12 +67,14 @@ public struct MeetingSegmentPolicy: Sendable {
+             speech: SpeechSegmenter.Parameters = SpeechSegmenter.Parameters(),
+             hardCap: Duration = .seconds(20),
+             forcedCutWindow: Duration = .seconds(1),
+-            preserveQuietAudio: Bool = false
++            preserveQuietAudio: Bool = false,
++            systemSpeechPeak: Float = Parameters.defaultSystemSpeechPeak
+         ) {
+             self.speech = speech
+             self.hardCap = hardCap
+             self.forcedCutWindow = forcedCutWindow
+             self.preserveQuietAudio = preserveQuietAudio
++            self.systemSpeechPeak = systemSpeechPeak
+         }
+     }
+ 
+@@ -55,6 +85,9 @@ public struct MeetingSegmentPolicy: Sendable {
+ 
+     public let channel: MeetingChannel
+     public let parameters: Parameters
++    /// This channel's speech floor: the room's for the microphone, the other
++    /// side's own for the other side.
++    private let speechPeak: Float
+     private let sampleRate: Int
+     private var segmenter: SpeechSegmenter
+     private var segmentStart: Int
+@@ -72,7 +105,10 @@ public struct MeetingSegmentPolicy: Sendable {
+         self.channel = channel
+         self.parameters = parameters
+         self.sampleRate = sampleRate
+-        segmenter = SpeechSegmenter(parameters: parameters.speech, sampleRate: sampleRate)
++        var speech = parameters.speech
++        if channel == .system { speech.speechPeak = parameters.systemSpeechPeak }
++        speechPeak = speech.speechPeak
++        segmenter = SpeechSegmenter(parameters: speech, sampleRate: sampleRate)
+         segmentStart = startFrame
+         end = startFrame
+     }
+@@ -96,14 +132,19 @@ public struct MeetingSegmentPolicy: Sendable {
+     /// this frame completed one.
+     public mutating func observe(peak: Float, count: Int) -> MeetingSegmentRef? {
+         end += count
+-        if peak >= parameters.speech.speechPeak { heardSpeech = true }
++        if peak >= speechPeak { heardSpeech = true }
+         remember(Frame(peak: peak, count: count))
+ 
+         // Silence before the first word is not part of any segment. Let the
+         // start slide forward so a quiet channel never accumulates.
+         if !heardSpeech, !parameters.preserveQuietAudio, pendingFrames > frames(Self.leadingSilence) {
+             segmentStart = end - frames(Self.leadingSilence)
++            // The segmenter counts its cut from the start of the segment, so
++            // it has to be told about the silence that was kept. Reset alone,
++            // it placed the next cut that much too early: inside the last
++            // words before the pause, which the start then slid past.
+             segmenter.reset()
++            _ = segmenter.observe(peak: 0, count: pendingFrames)
+             return nil
+         }
+ 
+@@ -167,7 +208,7 @@ public struct MeetingSegmentPolicy: Sendable {
+         recentFrames = 0
+         for frame in after {
+             _ = segmenter.observe(peak: frame.peak, count: frame.count)
+-            if frame.peak >= parameters.speech.speechPeak { heardSpeech = true }
++            if frame.peak >= speechPeak { heardSpeech = true }
+             remember(frame)
+         }
+         return segment
+diff --git a/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift b/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
+index e84ed9a..9ce7f88 100644
+--- a/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
++++ b/Packages/DictationCore/Tests/DictationAudioTests/MeetingCaptureTests.swift
+@@ -685,3 +685,81 @@ extension MeetingCaptureTests {
+         XCTAssertEqual(segments.value.map(\.channel), [.system], "the leak did not become a You paragraph")
+     }
+ }
++
++extension MeetingCaptureTests {
++    /// A caller who is quiet in the tap — far under the microphone's speech
++    /// floor, audible in the file — is still the other side speaking. What
++    /// the speakers leak of them into the microphone is still not You: this
++    /// quiet, the other side does not wake the echo gate, and only the
++    /// microphone's own floor keeps the leak out.
++    func testAQuietVoiceOnTheOtherSideIsSegmentedAndItsLeakIsNotYou() async throws {
++        let microphone = ScriptedAudioSource()
++        let system = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: system,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2))),
++            onSegment: { segments.value.append($0) },
++            probe: {}
++        )
++        try await capture.start()
++        // A second of nothing, three seconds of the other side peaking at
++        // 0.008 (an RMS of 0.0046, under the gate's 0.005), leaking into the
++        // microphone at half that and 30 ms late.
++        var state: UInt64 = 7
++        let speech: [Float] = (0..<48_000).map { _ in
++            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
++            return (Float(state >> 40) / Float(1 << 24) * 2 - 1) * 0.008
++        }
++        let echo: [Float] = (0..<48_000).map { $0 < 480 ? 0 : speech[$0 - 480] * 0.5 }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        for block in 0..<30 {
++            let range = (block * 1_600)..<((block + 1) * 1_600)
++            microphone.deliver(Array(echo[range]))
++            system.deliver(Array(speech[range]))
++        }
++        for _ in 0..<10 {
++            microphone.deliver(constant(0, 1_600))
++            system.deliver(constant(0, 1_600))
++        }
++        _ = try await capture.stop()
++
++        let all = segments.value
++        XCTAssertEqual(all.map(\.channel), [.system], "the quiet side has a segment, and only on its own channel")
++        guard let segment = all.first else { return }
++        XCTAssertLessThanOrEqual(segment.startFrame, 16_000, "it begins before their first word")
++        XCTAssertGreaterThanOrEqual(segment.endFrame, 64_000, "and ends after their last")
++    }
++
++    /// Silence first, then speech, then a pause. The cut belongs inside the
++    /// pause, so the words before it are in the segment and not left behind
++    /// it, where the start of the next segment would slide past them.
++    func testTheWordsBeforeAPauseReachASegmentWhenTheRecordingBeganWithSilence() async throws {
++        let microphone = ScriptedAudioSource()
++        let segments = UncheckedBox<[MeetingSegmentRef]>([])
++        let capture = MeetingCapture(
++            directory: directory,
++            microphone: microphone,
++            systemAudio: nil,
++            segmentParameters: .init(speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(2))),
++            onSegment: { segments.value.append($0) }
++        )
++        try await capture.start()
++        for _ in 0..<30 { microphone.deliver(constant(0, 1_600)) }
++        for _ in 0..<30 { microphone.deliver(constant(0.5, 1_600)) }
++        for _ in 0..<30 { microphone.deliver(constant(0, 1_600)) }
++        _ = try await capture.stop()
++
++        let all = segments.value
++        XCTAssertEqual(all.count, 1)
++        guard let segment = all.first else { return }
++        XCTAssertLessThanOrEqual(segment.startFrame, 48_000, "it begins before the first word")
++        XCTAssertGreaterThanOrEqual(segment.endFrame, 96_000, "and ends after the last")
++        XCTAssertLessThan(segment.endFrame, 112_000, "inside the pause")
++    }
++}
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift
+index b815d78..ec053b5 100644
+--- a/Packages/DictationCore/Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift
++++ b/Packages/DictationCore/Tests/DictationCoreTests/MeetingSegmentPolicyTests.swift
+@@ -108,4 +108,107 @@ final class MeetingSegmentPolicyTests: XCTestCase {
+         XCTAssertGreaterThanOrEqual(cuts[0].startFrame, frames(3_599), "the segment begins just before the word")
+         XCTAssertLessThan(cuts[0].frameCount, frames(14))
+     }
++
++    // MARK: - The words before a pause
++
++    /// Feed a script of levels, then flush: everything the policy would ever
++    /// hand to the engine for it.
++    private func segments(
++        _ script: [(level: Float, seconds: Double)],
++        channel: MeetingChannel = .microphone,
++        block: Int = 1_600
++    ) -> [MeetingSegmentRef] {
++        var policy = MeetingSegmentPolicy(channel: channel)
++        var out: [MeetingSegmentRef] = []
++        for step in script {
++            var remaining = frames(step.seconds)
++            while remaining > 0 {
++                let count = min(block, remaining)
++                if let segment = policy.observe(peak: step.level, count: count) { out.append(segment) }
++                remaining -= count
++            }
++        }
++        if let tail = policy.flush() { out.append(tail) }
++        return out
++    }
++
++    func testTheWordsBeforeAPauseAreInTheSegmentWhenTheRecordingBeganWithSilence() {
++        // Five seconds before anyone speaks, twelve of speech, then a pause.
++        let all = segments([(quiet, 5), (speech, 12), (quiet, 3)])
++        guard all.count == 1 else { return XCTFail("expected one segment, got \(all.count)") }
++        XCTAssertLessThanOrEqual(all[0].startFrame, frames(5), "the segment begins before the first word")
++        XCTAssertGreaterThanOrEqual(all[0].endFrame, frames(17), "and ends after the last one")
++        XCTAssertLessThan(all[0].endFrame, frames(18), "inside the pause, not after it")
++    }
++
++    func testTheWordsBeforeAPauseAreInTheSegmentAfterALongPauseToo() {
++        let all = segments([(speech, 12), (quiet, 8), (speech, 12), (quiet, 3)])
++        guard all.count == 2 else { return XCTFail("expected two segments, got \(all.count)") }
++        XCTAssertGreaterThanOrEqual(all[0].endFrame, frames(12))
++        XCTAssertLessThanOrEqual(all[1].startFrame, frames(20), "the second begins before its first word")
++        XCTAssertGreaterThanOrEqual(all[1].endFrame, frames(32), "and ends after its last")
++        XCTAssertLessThan(all[1].endFrame, frames(33))
++    }
++
++    /// The property behind both: whatever the silences around it, every frame
++    /// of speech is inside a segment, and segments never overlap. Text is a
++    /// projection of the segments, so a spoken frame outside all of them is a
++    /// word in the file and missing from the transcript.
++    func testEverySpokenFrameIsInsideASegmentWhateverTheSilencesAroundIt() {
++        for block in [1_600, 512] {
++            for lead in [0, 0.5, 1, 1.5, 4, 90] {
++                for first in [3.0, 12, 27] {
++                    for pause in [0.5, 0.8, 1.5, 6, 40] {
++                        for tail in [0, 2.5] {
++                            let script: [(level: Float, seconds: Double)] = [
++                                (quiet, lead), (speech, first), (quiet, pause), (speech, 12), (quiet, tail),
++                            ]
++                            let all = segments(script, block: block)
++                            let label = "lead \(lead) s, speech \(first) s, pause \(pause) s, tail \(tail) s, block \(block)"
++                            for (earlier, later) in zip(all, all.dropFirst()) {
++                                XCTAssertLessThanOrEqual(earlier.endFrame, later.startFrame, "segments overlap: \(label)")
++                            }
++                            var cursor = 0
++                            for step in script {
++                                let range = cursor..<(cursor + frames(step.seconds))
++                                cursor = range.upperBound
++                                guard step.level == speech else { continue }
++                                var covered = range.lowerBound
++                                for segment in all where segment.startFrame <= covered {
++                                    covered = max(covered, segment.endFrame)
++                                }
++                                XCTAssertGreaterThanOrEqual(
++                                    covered, range.upperBound,
++                                    "speech at \(range.lowerBound)..<\(range.upperBound) is not all in a segment: \(label)"
++                                )
++                            }
++                        }
++                    }
++                }
++            }
++        }
++    }
++
++    // MARK: - A quiet voice on the other side
++
++    func testAQuietVoiceOnTheOtherSideIsSpeech() {
++        // A quarter of the microphone's floor: audible in the file, and until
++        // now silence to the segmenter for as long as the person spoke.
++        let all = segments([(quiet, 3), (0.005, 12), (quiet, 3)], channel: .system)
++        XCTAssertEqual(all.count, 1)
++        XCTAssertLessThanOrEqual(all.first?.startFrame ?? .max, frames(3))
++        XCTAssertGreaterThanOrEqual(all.first?.endFrame ?? 0, frames(15))
++    }
++
++    func testTheSameLevelOnTheMicrophoneIsStillTheRoom() {
++        // What the speakers leak into the microphone at that level must stay
++        // silence there, or the other side comes back as You.
++        XCTAssertEqual(segments([(quiet, 3), (0.005, 12), (quiet, 3)], channel: .microphone), [])
++    }
++
++    func testLineNoiseOnTheOtherSideIsNotSpeech() {
++        var policy = MeetingSegmentPolicy(channel: .system)
++        XCTAssertEqual(feed(&policy, 0.0005, seconds: 120), [])
++        XCTAssertNil(policy.flush())
++    }
+ }

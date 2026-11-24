@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 14,
+ "output": "**No, keep `is.waiwai.dictation`.** Changing it resets every user's Accessibility grant, so they'd have to re-approve the app. Sparkle updates also depend on the bundle ID matching the installed app.\n\nFor the OpenRamble name, change only the display name (`CFBundleDisplayName` and `CFBundleName`). Users see \"OpenRamble\" and nothing breaks.\n\nIf you still want the identifier changed, that overrides a permanent invariant. Tell me and I'll update the rules and release docs first. I haven't checked whether any builds are already installed with grants, which would decide how much this costs.",
+ "cost_usd": 0.0015547
+}

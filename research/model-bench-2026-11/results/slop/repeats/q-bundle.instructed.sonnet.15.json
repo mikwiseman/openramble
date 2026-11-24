@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 15,
+ "output": "Yes, if nobody outside your own machines has installed the current build. That's the only real question.\n\n**What the rename costs:**\n- macOS treats the new ID as a different app, so everyone re-grants Accessibility once. On your own Macs, that's a few clicks.\n- Sparkle will likely refuse to update an old-ID install to a new-ID app, so anyone with the old build has to download the new one by hand.\n\nPre-launch, that cost is close to zero. After launch, it hits every user, which is why the rules file calls the ID permanent.\n\n**What stays the same:** the EdDSA key and the inside-out signing rule.\n\nIf you confirm no external users have the old build, I'd do it now. Afterward, update the \"permanent\" line in the rules file to the new ID so it stays true.",
+ "cost_usd": 0.027156
+}

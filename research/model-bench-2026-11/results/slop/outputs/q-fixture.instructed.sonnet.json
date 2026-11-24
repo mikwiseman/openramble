@@ -1,0 +1,16 @@
+{
+ "item": "q-fixture",
+ "situation": "reply",
+ "condition": "instructed",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "No. A fixture is a recording of what the shipping Swift pipeline produces, so editing it by hand claims the Mac behaves in a way it doesn't.\n\nThe red test is doing its job: Swift is the source of truth, and Rust now lags behind it. The fix:\n\n1. Port your Swift change to `ramble-text`.\n2. Re-run the conformance generator over `corpus-text.json` to re-record the fixtures from Swift. I don't have its exact command here, so check `core/conformance/`.\n3. Read the fixture diff. It should show only the behavior you meant to change. Anything else is an unintended Swift regression.\n4. Run `cargo test -p ramble-text --test conformance`. It should be green now.\n5. Commit the Swift change, the Rust port, and the regenerated fixtures together.",
+ "usage": {
+  "input": 2,
+  "cache_write": 3354,
+  "cached_input": 1869,
+  "output": 449
+ },
+ "cost_usd": 0.0180969,
+ "seconds": 4
+}

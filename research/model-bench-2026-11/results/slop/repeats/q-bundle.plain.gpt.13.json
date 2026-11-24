@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "gpt",
+ "n": 13,
+ "output": "Keep `is.waiwai.dictation` as the bundle identifier for launch. The repository treats it as permanent because existing macOS Accessibility grants depend on it. Changing it to `is.waiwai.openramble` before launch would still require users who already granted access to authorize the app again.\n\nYou can launch under the name **OpenRamble** by changing the app’s display name while keeping the bundle identifier.",
+ "cost_usd": null
+}

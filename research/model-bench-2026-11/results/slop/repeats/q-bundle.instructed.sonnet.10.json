@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 10,
+ "output": "Yes, and before launch is the right time. The rule exists because macOS ties Accessibility grants to the bundle ID.\n\n**What a rename costs:**\n- Everyone with an existing install has to re-grant Accessibility.\n- Sparkle will probably refuse to update across a bundle ID change, so existing installs need a manual reinstall. I haven't verified this without the repo.\n- Preferences, the app support folder, and any Keychain items are keyed by the old ID and won't carry over.\n\nIf the only existing installs are yours and a few testers, that's a one-time annoyance, so I'd do it. If there are real users on `is.waiwai.dictation`, the cost is larger, and after launch it only grows.\n\nThe EdDSA key stays the same, and the signing order doesn't change.\n\nIf you want it, I'll rename it everywhere (Info.plist, entitlements, appcast, docs), update the invariant in the rules file and `docs/release.md`, and test a fresh build and the permission prompt. That needs the repo, which this session doesn't have.",
+ "cost_usd": 0.027076000000000003
+}

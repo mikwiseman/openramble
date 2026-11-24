@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 16,
+ "output": "Yes, and now is the cheapest time to do it, but the rules file calls the ID permanent for a reason, so it's your call.\n\n**What changes for existing installs (dev builds and beta testers):**\n- Accessibility grants are tied to the bundle ID, so everyone must re-grant permission.\n- Sparkle refuses updates whose bundle ID differs from the installed app's. Old installs can't auto-update, so testers must reinstall manually.\n- Preferences move to a new domain, so existing settings are lost unless you migrate them.\n\n**What stays the same:** the Sparkle EdDSA key, and the inside-out signing rule.\n\nIf the only installs are yours and a few testers, I'd rename now. After launch, the same change would strand real users.\n\nIf you confirm, I'll update the ID everywhere (Info.plist, entitlements, signing scripts, `docs/release.md`, `AGENTS.md`, and this rule) and reset the old Accessibility entry with `tccutil`.",
+ "cost_usd": 0.026896000000000003
+}

@@ -1,0 +1,40 @@
+{
+ "run": "t-exists.astra.xhigh.1",
+ "task": "t-exists",
+ "model": "gpt-6.2-astra",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 02:14",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 61,
+ "slept_seconds": 0,
+ "load_before": "14.3",
+ "load_after": "9.2",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/t-exists.astra.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 16,
+ "by_kind": {
+  "Bash": 16
+ },
+ "turns": 17,
+ "usage": {
+  "input": 43035,
+  "cached_input": 182016,
+  "cache_write": 0,
+  "output": 1202
+ },
+ "tokens": 226253,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 4,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 63
+}

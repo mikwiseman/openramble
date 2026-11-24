@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "plain",
+ "output": "**No, not without breaking the release invariants.** The rules file makes `is.waiwai.dictation` permanent because existing Accessibility grants depend on it. macOS ties those grants to the bundle identifier, so a renamed app would lose Accessibility permission and users would have to re-grant it. Sparkle also matches the bundle identifier when it applies updates, so existing installs probably wouldn't update into a renamed app.\n\nEven before launch, the rename would break Accessibility for any build you or testers already have installed.\n\nIf the goal is the OpenRamble name, you can change the user-facing name without touching the identifier:\n\n- Change `CFBundleDisplayName` and `CFBundleName` (and the product name, if you want) to \"OpenRamble\".\n- Keep `CFBundleIdentifier` as `is.waiwai.dictation`.\n\nIf you still want the identifier changed, that overrides a documented invariant. I'd update the rules file and `docs/release.md` first, and plan for re-granting permissions and a break in update continuity. I also haven't read `docs/release.md` or `AGENTS.md` in this session, so check them for anything that changes this answer.",
+ "opens": "no"
+}

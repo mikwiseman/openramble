@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 4,
+ "output": "**Not under the current rules.** The rules file marks `is.waiwai.dictation` as permanent because Accessibility permission grants are tied to the bundle identifier. macOS treats a renamed app as a different app, so users would have to re-grant Accessibility. Installed copies would also have trouble updating through Sparkle, since the new bundle would have a different identifier.\n\nPre-launch, the impact is smaller. If no public build has shipped with the old ID, there are no public grants or installs to break. Internal test machines would still need to re-grant permissions once.\n\nIf you want the rename, decide it before the first public build. Changing a permanent invariant is your call as the owner, so the change should be deliberate:\n\n1. Update the bundle ID invariant in the rules file, `docs/release.md`, and `AGENTS.md` together.\n2. Confirm nothing has shipped with `is.waiwai.dictation`, including test builds that others use.\n3. Re-check signing, entitlements, notarization, and the Sparkle appcast and feed URL for the new ID.\n\nI haven't read the repo. This answer is based only on the rules excerpt you pasted. If you confirm the rename, I can make those edits in the repo and check the release docs for other references to the old ID.",
+ "cost_usd": 0.0013905
+}

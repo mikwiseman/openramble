@@ -1,0 +1,6 @@
+{
+ "model": "gpt",
+ "condition": "plain",
+ "output": "No. The release rules make `is.waiwai.dictation` permanent because existing macOS Accessibility grants depend on that identity. That applies before launch, including to testers who already granted access.\n\nYou can launch under the name **OpenRamble** by changing the app’s display name and keeping `is.waiwai.dictation` as its bundle identifier. If you decide to change the identifier, revise the release rule explicitly and plan for existing users to grant Accessibility access again.",
+ "opens": "no"
+}

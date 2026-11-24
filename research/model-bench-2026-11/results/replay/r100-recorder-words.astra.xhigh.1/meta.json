@@ -1,0 +1,41 @@
+{
+ "run": "r100-recorder-words.astra.xhigh.1",
+ "task": "r100-recorder-words",
+ "model": "gpt-6.2-astra",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 00:07",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 420,
+ "slept_seconds": 0,
+ "load_before": "6.4",
+ "load_after": "7.8",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r100-recorder-words.astra.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 75,
+ "by_kind": {
+  "Bash": 71,
+  "file_change": 4
+ },
+ "turns": 76,
+ "usage": {
+  "input": 110747,
+  "cached_input": 2884480,
+  "cache_write": 0,
+  "output": 14673
+ },
+ "tokens": 3009900,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 13,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 87
+}

@@ -1,0 +1,16 @@
+{
+ "item": "q-audio",
+ "situation": "reply",
+ "condition": "instructed",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "No, according to the repo's rules. The Mac app has only two network areas:\n\n1. **Model downloads** (`LocalASR/ModelDownloading.swift`), which only happen when you explicitly ask for one.\n2. **Sparkle update checks** (`SparkleUpdater.swift`), which run on a schedule by default and can be turned off in Settings. Downloading and installing an update always needs your click.\n\nNeither path carries audio. Transcription runs locally through `LocalASR`. The rules say no other shipping code may touch the network, and `scripts/check-network-surface.sh` enforces that in CI.\n\nI'm going only from the rules file. I haven't read the code or run the check script, so this is the documented promise, not something I verified.",
+ "usage": {
+  "input": 2,
+  "cache_write": 2806,
+  "cached_input": 1868,
+  "output": 358
+ },
+ "cost_usd": 0.014994799999999999,
+ "seconds": 4
+}

@@ -1,0 +1,41 @@
+{
+ "run": "r15-dictionary-file.astra.xhigh.1",
+ "task": "r15-dictionary-file",
+ "model": "gpt-6.2-astra",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 00:41",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 289,
+ "slept_seconds": 0,
+ "load_before": "15.0",
+ "load_after": "10.0",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r15-dictionary-file.astra.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 46,
+ "by_kind": {
+  "Bash": 45,
+  "file_change": 1
+ },
+ "turns": 47,
+ "usage": {
+  "input": 72893,
+  "cached_input": 1041024,
+  "cache_write": 0,
+  "output": 7504
+ },
+ "tokens": 1121421,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 8,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 77
+}

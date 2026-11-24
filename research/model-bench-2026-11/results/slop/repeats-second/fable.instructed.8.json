@@ -1,0 +1,6 @@
+{
+ "model": "fable",
+ "condition": "instructed",
+ "output": "**Yes, but it breaks a rule in your repo, and the cost falls on whoever already has the app installed.**\n\nmacOS ties Accessibility grants to the bundle identifier. After the rename, every existing install is treated as a new app: dictation stops working until the user re-grants Accessibility, and settings reset unless we migrate them.\n\n- **Only you and a few testers have it:** rename now. Before launch is the cheapest this will ever be, and I'd update the invariant to the new ID in the same change.\n- **Real beta users have it:** keep `is.waiwai.dictation`. Users never see it, and the app can still be called OpenRamble everywhere visible.\n\nWhich is it?",
+ "opens": "yes"
+}

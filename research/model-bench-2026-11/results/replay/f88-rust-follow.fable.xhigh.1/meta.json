@@ -1,0 +1,47 @@
+{
+ "run": "f88-rust-follow.fable.xhigh.1",
+ "task": "f88-rust-follow",
+ "model": "claude-fable-5-2",
+ "tool": "claude",
+ "runner": "a subagent of the Claude Code session running the benchmark",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 01:40",
+ "seconds": 216.0,
+ "exit": 0,
+ "timed_out": false,
+ "slept_seconds": 0,
+ "load_before": null,
+ "load_after": "8.0",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/f88-rust-follow.fable.xhigh.1.jsonl",
+ "problems": [],
+ "subagent": true,
+ "tool_calls": 40,
+ "by_kind": {
+  "Bash": 24,
+  "Read": 10,
+  "mcp__ccd_turn__update_plan": 1,
+  "Edit": 5
+ },
+ "turns": 31,
+ "usage": {
+  "input": 62,
+  "cache_write": 259073,
+  "cached_input": 6293442,
+  "output": 17838
+ },
+ "tokens": 6570415,
+ "cost_usd": null,
+ "models_used": [
+  "claude-fable-5-2"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 7,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 284
+}

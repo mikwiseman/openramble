@@ -1,0 +1,16 @@
+{
+ "item": "p-gate",
+ "situation": "pull request description",
+ "condition": "plain",
+ "model": "fable",
+ "effort": "high",
+ "output": "**Title:** Restore the pasteboard pattern so the clipboard gate checks again\n\n## Problem\n\nDuring release preflight, `scripts/check-network-surface.sh` printed `FORBIDDEN_PASTEBOARD: unbound variable` in the middle of the network gate and still exited zero.\n\nThe clipboard check reads its pattern from `FORBIDDEN_PASTEBOARD`. That definition sat beside the retired ASR worker's control-plane scan and was deleted along with it. Since then the check has matched nothing and reported success, so a plain `clearContents()` or `declareTypes(` in shipping code would have passed the gate.\n\nThis matters because a plain pasteboard write puts dictation on Universal Clipboard, where it reaches every device on the Apple ID.\n\n## Fix\n\nDefine `FORBIDDEN_PASTEBOARD` directly above the clipboard check that uses it:\n\n```sh\nFORBIDDEN_PASTEBOARD='clearContents\\(\\)|declareTypes\\('\n```\n\nA comment records why the pattern exists and how it went missing, so the definition is not removed again as apparent leftover from the ASR scan.\n\n## Verification\n\n- With a `clearContents()` call planted, the script exits 1.\n- With the planted call removed, the script exits 0.\n\n## Not in this change\n\nThis restores the missing definition only. It does not change the fact that the script can print an error mid-gate and still exit zero, so a similar deletion elsewhere could fail open in the same way. That is worth a follow-up.",
+ "usage": {
+  "input": 2,
+  "cache_write": 3154,
+  "cached_input": 0,
+  "output": 1272
+ },
+ "cost_usd": 0.10136,
+ "seconds": 14
+}

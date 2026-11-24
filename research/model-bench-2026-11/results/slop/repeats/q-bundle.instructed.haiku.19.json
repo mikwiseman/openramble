@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "haiku",
+ "n": 19,
+ "output": "No. The release invariants make `is.waiwai.dictation` permanent because existing Accessibility grants depend on it. Changing it would drop those grants for every installed copy, and Sparkle won't apply updates across a bundle ID change.\n\nYou can rename the app to OpenRamble without touching the ID. Change the display name (`CFBundleName` / `CFBundleDisplayName`) and product name. Users would see the new name and keep their permissions.\n\nIf you still want a new identifier, the invariant in the rules file has to change first. That's your call. I'd keep the ID and rename the display name.\n\nI haven't checked the current Info.plist or release docs in this session because I have no file access here. This answer relies on the rules file and how Sparkle works.",
+ "cost_usd": 0.0017317
+}

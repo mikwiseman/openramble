@@ -1,0 +1,99 @@
+diff --git a/scripts/check-network-surface.sh b/scripts/check-network-surface.sh
+index f578dac..e72b1ba 100755
+--- a/scripts/check-network-surface.sh
++++ b/scripts/check-network-surface.sh
+@@ -36,6 +36,9 @@ FORBIDDEN+='|NSUbiquitousKeyValueStore|CKContainer|CKDatabase'
+ # Loading models past our manifest.
+ FORBIDDEN+='|MLModelCollection'
+ 
++# Clearing the pasteboard without .currentHostOnly can sync dictation.
++FORBIDDEN_PASTEBOARD='(^|[^[:alnum:]_])clearContents[[:blank:]]*\('
++
+ status=0
+ 
+ echo "Checking network symbols..."
+@@ -57,23 +60,19 @@ done < <(grep -rnE "$FORBIDDEN" "${SHIPPING_PATHS[@]}" 2>/dev/null \
+   || true)
+ 
+ echo "Checking the clipboard entry..."
+-while IFS= read -r hit; do
+-  if [[ $status -eq 0 ]]; then
+-    echo ""
+-    echo "VIOLATION: flushing buffer past .currentHostOnly takes away dictation"
+-    echo "to Universal Clipboard - to all Apple ID devices."
+-    echo "Use prepareForNewContents(with: .currentHostOnly)."
+-    status=1
+-  fi
+-  echo "  $hit"
+-  # Comments are excluded in the same way as in network symbol checking. Without this
+-  # the gate crashed on a line that itself explains why you can’t write it like that -
+-  # and a false positive here is more expensive than a pass: they start to bypass it, and
+-  # one day they will bypass the present.
+-done < <(grep -rnE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" 2>/dev/null \
+-  | grep -v '^Binary' \
+-  | grep -vE ':[0-9]+: *//' \
+-  || true)
++# Keep the scan status in the main shell. Grep exits 1 when there are no matches.
++if ! pasteboard_hits=$(
++  { grep -rnIE "$FORBIDDEN_PASTEBOARD" "${SHIPPING_PATHS[@]}" || [[ $? -eq 1 ]]; } \
++    | sed -E '/^[^:]+:[0-9]+:[[:blank:]]*\/\//d'
++); then
++  echo "ERROR: Clipboard scan failed." >&2
++  exit 1
++fi
++if [[ -n "$pasteboard_hits" ]]; then
++  printf '\nVIOLATION: clearContents() can send dictation through Universal Clipboard.\n' >&2
++  printf 'Use prepareForNewContents(with: .currentHostOnly).\n%s\n' "$pasteboard_hits" >&2
++  status=1
++fi
+ 
+ # Updates must remain silent until enabled. This is not cosmetics:
+ # without SUEnableAutomaticChecks=false Sparkle will ask itself on the second launch
+diff --git a/scripts/tests/test-release-policy.sh b/scripts/tests/test-release-policy.sh
+index 8cdeff5..5f4ff24 100755
+--- a/scripts/tests/test-release-policy.sh
++++ b/scripts/tests/test-release-policy.sh
+@@ -140,4 +140,43 @@ if grep -Fq 'codesign --force "${CODESIGN_KEYCHAIN_ARGS[@]}"' "$BUILD_SCRIPT"; t
+   fail_test "legacy Developer ID codesign still expands an empty keychain array under nounset"
+ fi
+ 
++# Exercise the gate as preflight runs it, with isolated shipping sources.
++mkdir -p "$REPOSITORY_ROOT/.build"
++fixture=$(mktemp -d "$REPOSITORY_ROOT/.build/network-gate.XXXXXX")
++trap 'rm -rf "$fixture"' EXIT
++mkdir -p "$fixture/scripts" "$fixture/Packages/DictationCore/Sources" \
++  "$fixture/Packages/LocalASR/Sources" "$fixture/apps/macos/OpenRamble"
++cp "$NETWORK_SCRIPT" "$fixture/scripts/"
++cp "$PROJECT_YML" "$fixture/apps/macos/"
++
++gate="$fixture/scripts/check-network-surface.sh"
++source_path=apps/macos/OpenRamble/GateFixture.swift
++expect_gate_failure() {
++  local output expected
++  if output=$("$gate" 2>&1); then
++    printf '%s\n' "$output" >&2
++    fail_test "network gate exited 0 while expecting '$1'"
++  fi
++  for expected; do
++    [[ "$output" == *"$expected"* ]] || fail_test "expected '$expected' in gate output: $output"
++  done
++}
++
++printf '%s\n' 'pasteboard.clearContents()' 'pasteboard.clearContents ()' > "$fixture/$source_path"
++expect_gate_failure 'VIOLATION: clearContents()' \
++  "$source_path:1:pasteboard.clearContents()" "$source_path:2:pasteboard.clearContents ()"
++
++printf '\t/// Avoid pasteboard.clearContents().\n%s\n' \
++  'pasteboard.prepareForNewContents(with: .currentHostOnly)' > "$fixture/$source_path"
++"$gate" >/dev/null 2>"$fixture/stderr" || fail_test "network gate rejected host-only clipboard code"
++[[ ! -s "$fixture/stderr" ]] || fail_test "clean network gate wrote to stderr: $(cat "$fixture/stderr")"
++
++printf '%s\n' 'let session = URLSession.shared' > "$fixture/$source_path"
++expect_gate_failure 'VIOLATION: network outside permitted locations.' "$source_path:1:let session = URLSession.shared"
++
++rm "$fixture/$source_path"
++rmdir "$fixture/Packages/DictationCore/Sources"
++expect_gate_failure 'ERROR: Clipboard scan failed.'
++
++printf 'PASS: network gate rejects unsafe clipboard calls, network calls and scan failures\n'
+ printf 'PASS: autonomous release keeps machine-verifiable artifact gates\n'

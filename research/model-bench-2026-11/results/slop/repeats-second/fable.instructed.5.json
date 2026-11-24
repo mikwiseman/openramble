@@ -1,0 +1,6 @@
+{
+ "model": "fable",
+ "condition": "instructed",
+ "output": "Yes, it's possible, but it breaks a release invariant in your rules file: `is.waiwai.dictation` is marked permanent because existing Accessibility grants depend on it.\n\nA rename costs every existing install:\n\n- **Permissions:** macOS ties Accessibility, Microphone and other privacy grants to the bundle ID, so everyone re-grants and a stale entry stays in System Settings.\n- **Settings:** the preferences domain changes, so saved settings reset unless we migrate them.\n- **Updates:** I'd test a Sparkle update from an old build across the ID change before trusting it.\n\nIf the installs are just you and a few testers, rename now, because after launch it is truly permanent. If a real user base exists, keep it; users rarely see the bundle ID.\n\nHow many installs are out there?",
+ "opens": "yes"
+}

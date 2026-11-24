@@ -1,0 +1,6 @@
+{
+ "model": "haiku",
+ "condition": "instructed",
+ "output": "**No, not as a rename of the bundle identifier.** The repo's release rules mark `is.waiwai.dictation` as permanent because existing Accessibility grants depend on it. Changing it would make macOS treat the app as new, so users would have to re-grant permission. Sparkle updates also expect the bundle identifier to stay the same.\n\nThe simpler path is to keep `is.waiwai.dictation` and change only the user-facing name to OpenRamble (display name and product name). If you do want the new identifier, the permanence rule in the repo needs to change first.",
+ "opens": "no"
+}

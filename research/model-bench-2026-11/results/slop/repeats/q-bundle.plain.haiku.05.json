@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 5,
+ "output": "**No, not under the current release rules.** The repo treats `is.waiwai.dictation` as permanent because existing Accessibility permission grants are keyed to it. Renaming it to `is.waiwai.openramble` would make macOS treat the app as a new application, so anyone who already granted Accessibility would have to grant it again. Sparkle updates for installed copies are also tied to the bundle identifier, so the rename could strand existing installs on the old app.\n\nPre-launch doesn't fully remove the problem. Anyone running a dev or beta build has already granted permission under the current ID.\n\nIf you want the OpenRamble name in the launch, you can change it without touching the identifier:\n\n- **Display name:** set `CFBundleDisplayName` or `CFBundleName` to \"OpenRamble\".\n- **Product name:** rename the Xcode product or the `.app` bundle filename.\n- **Installer and website copy:** update the marketing text and the download file name.\n\nIf you still want to change the identifier, that is a change to the owner's invariant, not something to do in a release step. It would need an explicit decision and updates to [docs/release.md](docs/release.md) and [AGENTS.md](AGENTS.md). It would also need a plan for users who already have permissions or installs.\n\nI haven't checked the actual Info.plist, the Sparkle configuration, or whether any builds are already in users' hands. I'm relying on the rules file here. If you can tell me whether any external testers have installed a build, I can help work out the migration cost.",
+ "cost_usd": 0.001312
+}

@@ -1,0 +1,16 @@
+{
+ "item": "q-audio",
+ "situation": "reply",
+ "condition": "instructed",
+ "model": "fable",
+ "effort": "high",
+ "output": "**No.** Per the repo's network boundary, the Mac app only touches the network in two places:\n\n1. **Model downloads** (`LocalASR/ModelDownloading.swift`), which are explicit and fetch models to your Mac.\n2. **Sparkle update checks** (`SparkleUpdater.swift`), which are scheduled by default and can be turned off in Settings. Installing an update always needs a click.\n\nNeither path uploads audio, and no other shipping code may access the network. CI enforces this through `scripts/check-network-surface.sh`.\n\nThis is from the rules file alone. I have no tools in this session, so I haven't read the code or run the check myself.",
+ "usage": {
+  "input": 2,
+  "cache_write": 4829,
+  "cached_input": 0,
+  "output": 419
+ },
+ "cost_usd": 0.09404,
+ "seconds": 5
+}

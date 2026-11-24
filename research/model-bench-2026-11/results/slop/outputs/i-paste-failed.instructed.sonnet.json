@@ -1,0 +1,16 @@
+{
+ "item": "i-paste-failed",
+ "situation": "interface copy",
+ "condition": "instructed",
+ "model": "sonnet",
+ "effort": "high",
+ "output": "Couldn't paste into that app. Your words are saved, so paste them whenever you're ready.",
+ "usage": {
+  "input": 2,
+  "cache_write": 2488,
+  "cached_input": 1871,
+  "output": 32
+ },
+ "cost_usd": 0.010463100000000001,
+ "seconds": 1
+}

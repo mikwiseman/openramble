@@ -1,0 +1,14 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+--- a/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
++++ b/Packages/DictationCore/Sources/DictationCore/MeetingSegmentPolicy.swift
+@@ -30,7 +30,9 @@
+         /// sooner, and the worst wait a dictation can inherit from a decode
+         /// already running — 20 s at RTF 0.11 — stays near two seconds.
+         public static let meeting = Parameters(
+-            speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(10)),
++            // A call's playback can be far quieter than a microphone, so a
++            // recording takes quieter speech than dictation does.
++            speech: SpeechSegmenter.Parameters(minimumSegment: .seconds(10), speechPeak: 0.005),
+             hardCap: .seconds(20),
+             forcedCutWindow: .seconds(1)
+         )

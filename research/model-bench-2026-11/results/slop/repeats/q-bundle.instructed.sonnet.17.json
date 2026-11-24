@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "instructed",
+ "model": "sonnet",
+ "n": 17,
+ "output": "Yes, and now is the cheapest time. The rule exists to protect existing users, so if nobody outside your own machine and testers has the old ID installed, the cost is small.\n\n- **Accessibility:** macOS ties the grant to the bundle ID, so everyone on `is.waiwai.dictation` must re-grant it.\n- **Settings:** UserDefaults and any Keychain items under the old ID won't carry over.\n- **Sparkle:** I believe Sparkle rejects an update whose bundle ID differs from the installed app's, so old installs would need a manual reinstall. Test this before relying on it.\n- **Unchanged:** the EdDSA key and the inside-out signing order stay as they are.\n\nIf you confirm, I'll change the ID, then update this rule and the matching text in `docs/release.md` and `AGENTS.md`. Do you have installs outside your own Mac?",
+ "cost_usd": 0.028596000000000003
+}

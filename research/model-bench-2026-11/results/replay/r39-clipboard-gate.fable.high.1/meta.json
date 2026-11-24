@@ -1,0 +1,44 @@
+{
+ "run": "r39-clipboard-gate.fable.high.1",
+ "task": "r39-clipboard-gate",
+ "model": "claude-fable-5-2",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 17:07",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 300,
+ "load_before": "9.1",
+ "load_after": "9.4",
+ "memories_written": 1,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r39-clipboard-gate.fable.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 25,
+ "by_kind": {
+  "Bash": 19,
+  "Write": 1,
+  "Read": 3,
+  "Edit": 2
+ },
+ "turns": 26,
+ "usage": {
+  "input": 38,
+  "cache_write": 78466,
+  "cached_input": 1165263,
+  "output": 25035
+ },
+ "tokens": 1268802,
+ "cost_usd": 2.4902126000000004,
+ "models_used": [
+  "claude-fable-5-2"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 15,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 342
+}

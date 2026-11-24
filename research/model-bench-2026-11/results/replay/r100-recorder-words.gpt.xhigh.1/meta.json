@@ -1,0 +1,41 @@
+{
+ "run": "r100-recorder-words.gpt.xhigh.1",
+ "task": "r100-recorder-words",
+ "model": "gpt-6.2-sol",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-23 23:53",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 433,
+ "slept_seconds": 0,
+ "load_before": "7.1",
+ "load_after": "6.5",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r100-recorder-words.gpt.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 59,
+ "by_kind": {
+  "Bash": 54,
+  "file_change": 5
+ },
+ "turns": 60,
+ "usage": {
+  "input": 123747,
+  "cached_input": 3031296,
+  "cache_write": 0,
+  "output": 15994
+ },
+ "tokens": 3171037,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 14,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 81
+}

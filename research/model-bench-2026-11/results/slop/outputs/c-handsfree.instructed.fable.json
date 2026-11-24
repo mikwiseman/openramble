@@ -1,0 +1,16 @@
+{
+ "item": "c-handsfree",
+ "situation": "commit message",
+ "condition": "instructed",
+ "model": "fable",
+ "effort": "high",
+ "output": "```\nReplay the stop of a hands-free press queued during a paste\n\nA press that arrives while a landed paste finishes is queued and\nreplayed once the paste is done, together with its release, so a tap\nstays a tap. A hands-free press is ended by a second press, not by a\nrelease, and stopHandsFree() was ignored during .inserting. The replay\nthen started a hands-free take that nothing stopped: the session\nstayed listening, the microphone stayed on, and the next dictation\ninserted nothing.\n\nThe queued press now records its stop in either form: the release for\na hold, the second press for hands-free. The replay ends the take with\nthe matching call. The release of a hands-free press is not recorded,\nbecause it does not end the take.\n\nThis failed once in CI, in the gesture storm test with seed 45. The\ntest's inserter now holds 20 ms after the text lands, which widens the\nwindow: without the fix 14 of 200 seeds fail, with it none.\n\nThe shipping app does not reach this path: AppState begins hands-free\nonly from a double tap while idle.\n```",
+ "usage": {
+  "input": 2,
+  "cache_write": 5820,
+  "cached_input": 0,
+  "output": 1223
+ },
+ "cost_usd": 0.142056,
+ "seconds": 12
+}

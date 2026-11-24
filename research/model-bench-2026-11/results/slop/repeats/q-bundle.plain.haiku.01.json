@@ -1,0 +1,8 @@
+{
+ "item": "q-bundle",
+ "condition": "plain",
+ "model": "haiku",
+ "n": 1,
+ "output": "**No, I wouldn't rename it.** The rules file lists `is.waiwai.dictation` as permanent because Accessibility grants depend on it. Changing it would make macOS treat the app as a new one, so every user would have to re-grant Accessibility. Sparkle updates would likely break too, since an update with a different bundle identifier usually won't install over the existing app. I'm going only from the excerpt you pasted, since I can't open `docs/release.md` or `AGENTS.md` here, so check those for anything more specific.\n\nIf the goal is the \"OpenRamble\" name, you can get it without touching the identifier:\n\n- **Display name / product name:** change `CFBundleName` and `CFBundleDisplayName`. The identifier stays the same.\n- **Marketing copy, the website, and the DMG/installer name:** these can say OpenRamble freely.\n\nIf you're set on the new identifier, that's a decision to make deliberately. It means editing the invariant in the rules file, not just the bundle ID. Before launch, the cost is lower if no public users have granted permission yet, but the team's own dev machines would still lose their grants. Any such change should also come with a migration plan for Sparkle.",
+ "cost_usd": 0.0012864999999999999
+}

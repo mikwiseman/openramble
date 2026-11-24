@@ -1,0 +1,6 @@
+{
+ "model": "fable",
+ "condition": "instructed",
+ "output": "Yes, but it breaks a release invariant in the rules file, and before launch is the only cheap moment to do it.\n\n**What it costs:** macOS ties permission grants and preferences to the bundle ID. Every existing install would lose its Accessibility and Microphone grants, and its saved settings unless we migrate them. Those users would also end up with a stale entry in System Settings.\n\n**My recommendation:** keep `is.waiwai.dictation` if any testers are already using the app. Users never see the bundle ID, so the app name can be OpenRamble everywhere that matters.\n\nIf the installs are just you and a few people who can re-grant, say so and I'll rename it and update the invariant to the new ID.",
+ "opens": "yes"
+}

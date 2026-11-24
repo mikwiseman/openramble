@@ -1,0 +1,16 @@
+{
+ "item": "i-paste-failed",
+ "situation": "interface copy",
+ "condition": "instructed",
+ "model": "fable",
+ "effort": "high",
+ "output": "Couldn't paste here — your words are saved. Press ⌘V to paste them anywhere.",
+ "usage": {
+  "input": 2,
+  "cache_write": 4514,
+  "cached_input": 0,
+  "output": 33
+ },
+ "cost_usd": 0.07356,
+ "seconds": 1
+}

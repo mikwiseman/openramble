@@ -1,0 +1,45 @@
+{
+ "run": "t-exists.haiku.high.1",
+ "task": "t-exists",
+ "model": "claude-haiku-5-5",
+ "tool": "claude",
+ "effort": "high",
+ "rep": 1,
+ "finished": "2026-11-22 18:51",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 65,
+ "slept_seconds": 0,
+ "load_before": "8.7",
+ "load_after": "11.1",
+ "memories_written": 0,
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/t-exists.haiku.high.1.jsonl",
+ "problems": [],
+ "tool_calls": 11,
+ "by_kind": {
+  "Bash": 11
+ },
+ "turns": 12,
+ "usage": {
+  "input": 24,
+  "cache_write": 41991,
+  "cached_input": 418979,
+  "output": 10281
+ },
+ "tokens": 471275,
+ "cost_usd": 0.01773089,
+ "models_used": [
+  "claude-haiku-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [
+  "{\"command\": \"cd /Users/mikwiseman/.openramble/model-bench/work/t-exists/run; which swift xcodebuild xcodegen 2>&1; xcodebuild -version 2>&1 | head -2; ls apps/macos/.build apps/macos/*.xcodeproj 2>&1 ",
+  "{\"command\": \"cd /Users/mikwiseman/.openramble/model-bench/work/t-exists/run; ls -la ~/Library/Developer/Xcode/DerivedData 2>&1 | head -5; find ~/Library/Caches/org.swift.swiftpm ~/Library/Developer/Xc"
+ ],
+ "test_runs": 2,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 192
+}

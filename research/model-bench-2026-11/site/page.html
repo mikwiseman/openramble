@@ -1,0 +1,304 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>OpenRamble Model Bench</title>
+<style>
+/* Layout: a scoreboard. One ranked board at a time, and every figure is drawn
+   in blocks. The first block is what was needed, and pink is what a model made
+   on top of it. A model's own words are set in the serif, as in the app. */
+:root {
+  --paper: #f5f5f7;
+  --panel: #ffffff;
+  --ink: #111113;
+  --soft: #6e6e73;
+  --faint: #d2d2d7;
+  --tile: rgba(17, 17, 19, 0.05);
+  --extra: #ff2d78;
+  --pass: #1faa4b;
+  --unsure: #f59f00;
+  --fail: #ff3b30;
+  --round: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --app: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --words: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #000000; --panel: #141416; --ink: #f5f5f7; --soft: #98989f; --faint: #3a3a3e; --tile: rgba(245, 245, 247, 0.08);
+    --extra: #ff3f86; --pass: #30d158; --unsure: #ffb020; --fail: #ff453a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #000000; --panel: #141416; --ink: #f5f5f7; --soft: #98989f; --faint: #3a3a3e; --tile: rgba(245, 245, 247, 0.08);
+  --extra: #ff3f86; --pass: #30d158; --unsure: #ffb020; --fail: #ff453a; color-scheme: dark;
+}
+
+body { background: var(--paper); color: var(--ink); font: 400 1rem/1.4 var(--app); -webkit-font-smoothing: antialiased; }
+.page {
+  max-width: 62rem; margin: 0 auto; padding-block: 2rem 4rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 1.25rem;
+}
+button { font: inherit; color: inherit; }
+h1, h2, p, ol, blockquote { margin: 0; padding: 0; }
+.mono { font: 500 0.6875rem/1.5 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; color: var(--soft); }
+
+/* The two benches are the two wordmarks. */
+.marks { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.75rem; }
+.mark { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 0.55rem; font: 800 clamp(1.5rem, 5.4vw, 2.25rem)/1 var(--round); letter-spacing: -0.02em; color: var(--faint); transition: color 150ms; }
+.mark b { font-weight: 800; }
+.mark svg { width: 1.15em; height: 1.15em; flex: none; }
+.mark:hover { color: var(--soft); }
+.mark[aria-pressed="true"] { color: var(--ink); }
+.mark[aria-pressed="true"] b, .mark[aria-pressed="true"] svg { color: var(--extra); }
+.mark.replay[aria-pressed="true"] b, .mark.replay[aria-pressed="true"] svg { color: var(--pass); }
+.top { display: flex; flex-direction: column; gap: 0.6rem; padding-bottom: 0.5rem; }
+button:focus-visible, .row:focus-visible, .block:focus-visible, .switch input:focus-visible + i { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+/* A board */
+.panel { background: var(--panel); border-radius: 24px; padding: clamp(1.1rem, 3.6vw, 2rem); display: flex; flex-direction: column; gap: 1.4rem; min-width: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; justify-content: space-between; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.tabs button { all: unset; cursor: pointer; font: 600 0.875rem/1 var(--round); padding: 0.55rem 0.85rem; border-radius: 999px; color: var(--soft); }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.switch { display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer; font: 600 0.875rem/1 var(--round); user-select: none; }
+.switch input { position: absolute; opacity: 0; pointer-events: none; }
+.switch i { width: 42px; height: 26px; border-radius: 13px; background: var(--faint); position: relative; transition: background-color 150ms; flex: none; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 150ms; }
+.switch input:checked + i { background: var(--ink); }
+.switch input:checked + i::after { transform: translateX(16px); background: var(--panel); }
+.title { display: flex; flex-direction: column; gap: 0.35rem; }
+h1 { font: 800 clamp(1.35rem, 4.4vw, 2rem)/1.08 var(--round); letter-spacing: -0.015em; text-wrap: balance; }
+
+.board { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+.row { display: grid; grid-template-columns: 1.6rem minmax(7.5rem, 11rem) minmax(0, 1fr) minmax(4.4rem, auto); align-items: center; gap: 0.3rem 1rem; padding: 0.7rem 0.75rem; margin: 0 -0.75rem; border-radius: 14px; }
+.row.pick { cursor: pointer; }
+.row.pick:hover, .row.on { background: var(--tile); }
+.rank { font: 700 0.9375rem/1 var(--round); color: var(--soft); font-variant-numeric: tabular-nums; }
+.row.best .rank { color: var(--ink); }
+.who { display: flex; flex-direction: column; min-width: 0; }
+.who b { font: 700 1.0625rem/1.2 var(--round); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.who small { font: 400 0.75rem/1.3 var(--app); color: var(--soft); }
+.row.ref .who b { font-weight: 600; color: var(--soft); }
+.num { font: 800 clamp(1.5rem, 5vw, 2.25rem)/1 var(--round); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.num small { display: block; font: 500 0.6875rem/1.4 var(--app); letter-spacing: 0; color: var(--soft); white-space: normal; }
+.row.ref .num { color: var(--soft); font-weight: 700; }
+
+/* Blocks: one block is one unit, named under the board's title. */
+.strip { display: flex; gap: 4px; min-width: 0; height: 30px; --n: 3; }
+.block { all: unset; box-sizing: border-box; flex: 0 0 calc((100% - (var(--n) - 1) * 4px) / var(--n) * var(--w, 1)); height: 100%; border-radius: 7px; background: var(--extra); transform-origin: left center; animation: pop 340ms cubic-bezier(.2, .9, .25, 1) both; animation-delay: calc(var(--i, 0) * 26ms); }
+.block.first { background: var(--ink); }
+.block.plain { background: var(--ink); }
+.block.pass { background: var(--pass); }
+.block.partial { background: var(--unsure); }
+.block.fail { background: var(--fail); }
+.block.none { background: transparent; box-shadow: inset 0 0 0 2px var(--faint); }
+.block.task { cursor: pointer; }
+.block.task.on { box-shadow: 0 0 0 3px var(--panel), 0 0 0 5px var(--ink); }
+.block.task.none.on { box-shadow: inset 0 0 0 2px var(--faint), 0 0 0 3px var(--panel), 0 0 0 5px var(--ink); }
+@keyframes pop { from { opacity: 0; transform: scaleX(0.2); } to { opacity: 1; transform: none; } }
+
+/* Read one */
+.read { display: flex; flex-direction: column; gap: 1.25rem; }
+.picker { display: flex; align-items: center; gap: 0.6rem; }
+.picker button { all: unset; cursor: pointer; width: 2rem; height: 2rem; border-radius: 50%; background: var(--tile); display: grid; place-items: center; font: 700 1rem/1 var(--round); }
+.picker button:hover { background: var(--faint); }
+.ask { font: 400 clamp(1.25rem, 3.4vw, 1.75rem)/1.28 var(--words); text-wrap: pretty; max-width: 34em; }
+.ask p + p { margin-top: 0.5em; }
+.ask ul { margin: 0.45em 0; padding-left: 1.1em; font-size: 0.82em; }
+.ask code { font: 0.74em var(--mono); overflow-wrap: anywhere; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 1.5rem 2.5rem; align-items: start; }
+.side { display: flex; flex-direction: column; gap: 0.7rem; min-width: 0; }
+.side .said { font: 400 1.0625rem/1.5 var(--words); white-space: pre-wrap; overflow-wrap: anywhere; }
+.side.got .said { color: var(--ink); }
+.map { display: flex; flex-direction: column; gap: 4px; max-width: 16rem; }
+.map i { display: block; height: 2px; margin-bottom: 1px; background: var(--ink); border-radius: 1px; }
+.map .tests i { background: var(--faint); }
+.state.pass { color: var(--pass); } .state.partial { color: var(--unsure); } .state.fail { color: var(--fail); }
+
+@media (max-width: 42rem) {
+  .row { grid-template-columns: 1.3rem minmax(0, 1fr) auto; }
+  .row .strip { grid-column: 1 / -1; grid-row: 2; height: 22px; }
+  .pair { grid-template-columns: minmax(0, 1fr); }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -1.1rem; padding: 0 1.1rem; max-width: calc(100% + 2.2rem); }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { white-space: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) { .block { animation: none; } .switch i, .switch i::after, .mark { transition: none; } }
+</style>
+
+<div class="page">
+  <header class="top">
+    <nav class="marks" aria-label="Benchmark">
+      <button class="mark slop" type="button" data-mode="slop"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="7" width="28" height="18" rx="9" fill="currentColor"/><ellipse cx="11.5" cy="16" rx="2.6" ry="3.6" fill="var(--paper)"/><ellipse cx="20.5" cy="16" rx="2.6" ry="3.6" fill="var(--paper)"/></svg><span>slop<b>bench</b></span></button>
+      <button class="mark replay" type="button" data-mode="replay"><svg viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16a9 9 0 1 0 3-6.7"/><path d="M6 5v6h6"/></svg><span>replay<b>bench</b></span></button>
+    </nav>
+    <p class="mono" id="meta"></p>
+  </header>
+  <main class="panel" id="board"></main>
+  <section class="panel read" id="read"></section>
+</div>
+
+<script>
+// In a function, so that its names cannot collide with the window's own (top, name).
+(() => {
+const DATA = /*DATA*/null;
+
+const h = (tag, attrs, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") el.className = v; else if (k === "text") el.textContent = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat(Infinity)) if (kid !== null && kid !== undefined && kid !== false) el.append(kid);
+  return el;
+};
+const mean = (xs) => (xs.length ? Math.exp(xs.reduce((a, x) => a + Math.log(x), 0) / xs.length) : null);
+const sum = (xs) => xs.reduce((a, b) => a + b, 0);
+const times = (x) => (x >= 9.95 ? Math.round(x) : x.toFixed(1)) + "×";
+const plain = (text) => text.replace(/^```\w*\n?|```\s*$/gm, "").replace(/\*\*|`/g, "").replace(/^#+ /gm, "").trim();
+const said = (text) => text.split(/\n\s*\n/).map((block) => {
+  const lines = block.split("\n");
+  const inline = (line, el) => { line.split(/(`[^`]+`)/).forEach((part) => el.append(part.startsWith("`") ? h("code", { text: part.slice(1, -1) }) : part)); return el; };
+  return lines.every((l) => l.startsWith("- ")) ? h("ul", {}, lines.map((l) => inline(l.slice(2), h("li")))) : inline(lines.join(" "), h("p"));
+});
+const tabs = (names, current, pick) => h("div", { class: "tabs" }, names.map(([key, label]) =>
+  h("button", { type: "button", "aria-pressed": String(key === current), text: label, onclick: () => pick(key) })));
+
+// A value as blocks. The first block is the unit that was needed.
+const strip = (value, most, kinds) => {
+  const blocks = [];
+  for (let i = 0; i < Math.ceil(value - 1e-9); i++) {
+    const w = Math.min(1, value - i);
+    blocks.push(h("span", { class: "block " + kinds(i), style: `--i:${i};--w:${Math.max(w, 0.06).toFixed(3)}` }));
+  }
+  return h("div", { class: "strip", style: `--n:${Math.max(3, Math.ceil(most))}` }, blocks);
+};
+const row = (rank, m, body, figure, note, opts = {}) => h("li", {
+  class: "row" + (opts.best ? " best" : "") + (opts.on ? " on" : "") + (opts.pick ? " pick" : "") + (opts.ref ? " ref" : ""),
+  tabindex: opts.pick ? "0" : null, role: opts.pick ? "button" : null, onclick: opts.pick,
+  onkeydown: opts.pick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.pick(); } } : null },
+  h("span", { class: "rank", text: rank }),
+  h("span", { class: "who" }, h("b", { text: m.name }), m.tool ? h("small", { text: m.tool }) : null),
+  body, h("span", { class: "num" }, figure, note ? h("small", { text: note }) : null));
+
+const board = document.getElementById("board"), read = document.getElementById("read");
+const S = { mode: location.hash === "#replay" ? "replay" : "slop", kind: "all", told: true, model: null, job: 0, tab: "passed", task: 0 };
+const KINDS = [["all", "All"], ["reply", "Reply"], ["review", "Review"], ["commit message", "Commit"], ["pull request description", "Pull request"], ["release notes", "Release notes"], ["interface copy", "Interface copy"]];
+
+// --- slopbench
+const slopJobs = () => DATA.slop.filter((j) => S.kind === "all" || j.situation === S.kind);
+const slop = () => {
+  const cond = S.told ? "instructed" : "plain", jobs = slopJobs();
+  const rows = DATA.models.map((m) => {
+    const mine = jobs.map((j) => j.answers[m.key] && j.answers[m.key][cond] && { a: j.answers[m.key][cond], j }).filter(Boolean);
+    return { m, value: mean(mine.map((x) => x.a.words / x.j.needed.words)), holes: mine.filter((x) => x.a.missing).length, n: mine.length };
+  }).filter((r) => r.value !== null).sort((a, b) => a.value - b.value);
+  const most = Math.max(...rows.map((r) => r.value), 1);
+  if (!rows.some((r) => r.m.key === S.model)) S.model = rows[rows.length - 1].m.key;
+  board.replaceChildren(
+    h("div", { class: "controls" },
+      tabs(KINDS.filter(([k]) => k === "all" || DATA.slop.some((j) => j.situation === k)), S.kind, (k) => { S.kind = k; S.job = 0; show(); }),
+      h("label", { class: "switch" }, h("input", { type: "checkbox", id: "told", checked: S.told ? "" : null, onchange: (e) => { S.told = e.target.checked; show(); } }), h("i"), "Mik's instructions")),
+    h("div", { class: "title" }, h("h1", { text: "Words written for every word needed" }),
+      h("p", { class: "mono", text: `${jobs.length} writing ${jobs.length === 1 ? "job" : "jobs"} from OpenRamble's history / less is better` })),
+    h("ol", { class: "board" },
+      row("", { name: "Needed" }, strip(1, most, () => "first"), "1×", null, { ref: true }),
+      rows.map((r, i) => row(String(i + 1), r.m, strip(r.value, most, (b) => (b ? "extra" : "first")), times(r.value),
+        r.holes ? `${r.holes} incomplete` : null,
+        { best: i === 0, on: r.m.key === S.model, pick: () => { S.model = r.m.key; show(); } }))));
+
+  const job = jobs[Math.min(S.job, jobs.length - 1)], m = DATA.models.find((x) => x.key === S.model);
+  const a = job.answers[m.key] && job.answers[m.key][cond];
+  const step = (d) => { S.job = (Math.min(S.job, jobs.length - 1) + d + jobs.length) % jobs.length; show(); };
+  read.replaceChildren(
+    h("div", { class: "picker" }, jobs.length > 1 ? h("button", { type: "button", "aria-label": "Previous job", text: "‹", onclick: () => step(-1) }) : null,
+      jobs.length > 1 ? h("button", { type: "button", "aria-label": "Next job", text: "›", onclick: () => step(1) }) : null,
+      h("span", { class: "mono", text: `${job.situation} / ${Math.min(S.job, jobs.length - 1) + 1} of ${jobs.length}` })),
+    h("blockquote", { class: "ask", text: job.ask }),
+    h("div", { class: "pair" },
+      h("div", { class: "side" }, h("span", { class: "mono", text: `${job.label} / ${job.needed.words} words` }), h("div", { class: "said", text: plain(job.needed.text) })),
+      h("div", { class: "side got" }, a ? [h("span", { class: "mono", text: `${m.name} / ${a.words} words / ${times(a.words / job.needed.words)}` + (a.missing ? " / left a fact out" : "") }),
+        h("div", { class: "said", text: plain(a.text) })] : h("span", { class: "mono", text: `${m.name} / no answer` }))));
+};
+
+// --- replaybench
+const TABS = [["passed", "Passed"], ["code", "Overbuilt"], ["tokens", "Tokens"], ["cost", "Cost"]];
+const drawMap = (files) => h("div", { class: "map" }, files.map((f) => h("div", { class: f.kind },
+  f.lines.map(([indent, length]) => h("i", { style: `margin-left:${indent}%;width:${Math.max(length, 2)}%` })))));
+const replay = () => {
+  const tasks = DATA.replay, done = (m, t) => t.runs[m.key] && t.runs[m.key].state !== "void" ? t.runs[m.key] : null;
+  const models = DATA.models.filter((m) => tasks.some((t) => t.runs[m.key]));
+  const shared = tasks.filter((t) => models.every((m) => done(m, t)));
+  let rows, title, caption, body, figure, note = () => null, order;
+  if (S.tab === "passed") {
+    title = "Real changes each model got right";
+    caption = `${tasks.length} real changes / green passed / amber passed the tests but not every check / red failed`;
+    rows = models.map((m) => ({ m, value: tasks.filter((t) => done(m, t) && done(m, t).state === "pass").length, of: tasks.filter((t) => done(m, t)).length }));
+    order = (a, b) => b.value - a.value || (a.of - a.value) - (b.of - b.value);
+    body = (r) => h("div", { class: "strip", style: `--n:${Math.max(3, tasks.length)}` }, tasks.map((t, i) => { const x = done(r.m, t);
+      return h("button", { class: `block task ${x ? x.state : "none"}` + (r.m.key === S.model && i === S.task ? " on" : ""), type: "button", style: `--i:${i}`,
+        title: t.title, "aria-label": `${t.title}: ${x ? x.state : "no result"}`, onclick: (e) => { e.stopPropagation(); S.model = r.m.key; S.task = i; show(); } }); }));
+    figure = (r) => r.value + "/" + r.of;
+  } else if (S.tab === "code") {
+    title = "Lines of code written for every line that shipped";
+    // A small change that is not right is not a tidy one, so size is counted only on the changes a model got right.
+    caption = "counted on the changes a model got right / tests are not counted";
+    rows = models.map((m) => { const mine = tasks.filter((t) => t.shipped.source && done(m, t) && done(m, t).state === "pass");
+      return { m, value: mean(mine.map((t) => t.runs[m.key].source / t.shipped.source)), n: mine.length }; });
+    order = (a, b) => (a.value === null) - (b.value === null) || a.value - b.value;
+    figure = (r) => (r.value === null ? "–" : times(r.value));
+    note = (r) => (r.n ? `${r.n} ${r.n === 1 ? "change" : "changes"}` : "none right");
+  } else if (S.tab === "tokens") {
+    title = "Tokens spent on the same tasks";
+    caption = `${shared.length} tasks every model finished / one block is a million tokens`;
+    rows = models.map((m) => ({ m, value: sum(shared.map((t) => t.runs[m.key].tokens)) / 1e6 }));
+    order = (a, b) => a.value - b.value;
+    figure = (r) => r.value.toFixed(1) + "M";
+  } else {
+    title = "List price of the same tasks";
+    caption = `${shared.length} tasks every model finished / one block is a dollar / Codex reports no price`;
+    rows = models.map((m) => ({ m, value: shared.every((t) => t.runs[m.key].cost !== null) ? sum(shared.map((t) => t.runs[m.key].cost)) : null }));
+    order = (a, b) => (a.value === null) - (b.value === null) || a.value - b.value;
+    figure = (r) => (r.value === null ? "–" : "$" + r.value.toFixed(2));
+  }
+  rows = rows.filter((r) => r.value !== null || S.tab === "cost" || S.tab === "code").sort(order);
+  const most = Math.max(...rows.map((r) => r.value || 0), 1);
+  if (!rows.some((r) => r.m.key === S.model)) S.model = (rows[0] ? rows[0].m : models[0]).key;
+  if (!body) body = (r) => (r.value === null ? h("div", { class: "strip" }) : strip(r.value, most, (b) => (S.tab === "code" ? (b ? "extra" : "first") : "plain")));
+  board.replaceChildren(
+    h("div", { class: "controls" }, tabs(TABS, S.tab, (k) => { S.tab = k; show(); })),
+    h("div", { class: "title" }, h("h1", { text: title }), h("p", { class: "mono", text: caption })),
+    h("ol", { class: "board" },
+      S.tab === "code" ? row("", { name: "Shipped" }, strip(1, most, () => "first"), "1×", null, { ref: true }) : null,
+      rows.map((r, i) => row(String(i + 1), r.m, body(r), figure(r), note(r), { best: i === 0, on: r.m.key === S.model, pick: () => { S.model = r.m.key; show(); } }))));
+
+  const t = tasks[S.task], m = DATA.models.find((x) => x.key === S.model), r = t.runs[m.key];
+  const step = (d) => { S.task = (S.task + d + tasks.length) % tasks.length; show(); };
+  const words = { pass: "passed", partial: r && r.reason, fail: "failed the real tests", void: "no result" };
+  read.replaceChildren(
+    h("div", { class: "picker" }, h("button", { type: "button", "aria-label": "Previous task", text: "‹", onclick: () => step(-1) }),
+      h("button", { type: "button", "aria-label": "Next task", text: "›", onclick: () => step(1) }),
+      h("span", { class: "mono", text: `${t.title} / ${S.task + 1} of ${tasks.length}` })),
+    h("blockquote", { class: "ask" }, said(t.request)),
+    h("div", { class: "pair" },
+      h("div", { class: "side" }, h("span", { class: "mono", text: t.shipped.source ? `Shipped / ${t.shipped.source} lines of code` : "Shipped / nothing" }),
+        t.shipped.source ? drawMap(t.shipped.files) : h("div", { class: "said", text: t.note || "" })),
+      h("div", { class: "side got" }, !r ? h("span", { class: "mono", text: `${m.name} / not run yet` }) : [
+        h("span", { class: "mono" }, `${m.name} / `, h("span", { class: "state " + r.state, text: words[r.state] }),
+          r.state === "void" ? "" : ` / ${r.source} lines of code / ${(r.tokens / 1e6).toFixed(1)}M tokens` + (r.cost === null ? "" : ` / $${r.cost.toFixed(2)}`)),
+        r.state === "void" ? null : (r.files.length ? drawMap(r.files) : null),
+        r.state === "void" ? null : h("div", { class: "said", text: plain(r.report) })])));
+};
+
+const show = () => {
+  document.querySelectorAll(".mark").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)));
+  (S.mode === "slop" ? slop : replay)();
+};
+document.querySelectorAll(".mark").forEach((b) => b.addEventListener("click", () => { S.mode = b.dataset.mode; S.model = null; history.replaceState(null, "", "#" + S.mode); show(); }));
+document.getElementById("meta").textContent = `OpenRamble / pilot of ${DATA.date} / one run each, so a first look and not a ranking`;
+show();
+})();
+</script>

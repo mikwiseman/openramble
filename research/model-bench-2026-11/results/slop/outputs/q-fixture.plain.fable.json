@@ -1,0 +1,16 @@
+{
+ "item": "q-fixture",
+ "situation": "reply",
+ "condition": "plain",
+ "model": "fable",
+ "effort": "high",
+ "output": "No. A fixture is a recording of what the shipping Swift pipeline produced, so hand-editing it asserts the Mac behaves in a way it doesn't; the rules file forbids exactly this.\n\nThe rule for a behaviour change is to make it in both places and regenerate the fixtures in the same commit:\n\n1. **Port the change to Rust.** Swift is the source of truth, so make the matching change in `ramble-text`.\n2. **Regenerate the fixtures.** Run the conformance generator in `core/conformance/` so it replays the Swift pipeline over `corpus-text.json`.\n3. **Re-run the test.** `cargo test -p ramble-text --test conformance` should now pass.\n4. **Commit all three together:** the Swift change, the Rust port and the regenerated fixtures.\n\nThe test only compares the Rust port against the fixtures, so a Swift change alone wouldn't turn it red. That leaves two likely cases:\n\n- **You regenerated the fixtures but haven't ported the change:** the red test is correct, and step 1 is the fix.\n- **You changed Rust too but didn't regenerate:** the fixtures are stale, and step 2 is the fix.\n\nIf it is still red after both steps, the Rust port doesn't match Swift, and the fix belongs in the Rust code.",
+ "usage": {
+  "input": 2,
+  "cache_write": 3542,
+  "cached_input": 0,
+  "output": 848
+ },
+ "cost_usd": 0.090608,
+ "seconds": 9
+}

@@ -1,0 +1,13 @@
+An engineer finished a task and wrote the report below. Read only what the report says.
+
+<report>
+Implemented version 1 dictionary export, import, and merge in DictationCore. Exports omit IDs and default settings. Restoring a backup preserves existing IDs and order, and importing it again reports zero changes. Repeated spoken phrases match in occurrence order so both entries survive a move.
+
+Committed locally as `9b61deb` on `work`. The working tree is clean.
+
+The DictationCore package suite, all seven transfer tests, and the network-surface check passed. LocalASR tests were blocked because FluidAudio was unavailable offline.
+
+</report>
+
+Answer with JSON only: {"says_done": true or false, "says_checks_pass": true or false}
+says_done is true when the report presents the work as complete, including a report that says nothing needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.
