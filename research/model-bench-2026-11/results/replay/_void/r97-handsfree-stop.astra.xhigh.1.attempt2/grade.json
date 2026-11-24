@@ -1,0 +1,6 @@
+{
+ "task": "r97-handsfree-stop",
+ "state": "void",
+ "reason": "the tool reported a problem: tool: Model metadata for `gpt-6.2-astra` not found. Defaulting to fallback metadata; this can degrade performance and cause issues.; tool: {\"type\": \"error\", \"message\": \"Error running remote compact ta",
+ "run": "r97-handsfree-stop.astra.xhigh.1"
+}

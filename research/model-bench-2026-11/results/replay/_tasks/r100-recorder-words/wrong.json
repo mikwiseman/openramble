@@ -1,10 +1,10 @@
 {
  "task": "r100-recorder-words",
- "load": "7.9",
+ "load": "15.8",
  "check": {
   "ok": true,
   "code": 0,
-  "seconds": 36
+  "seconds": 101
  },
  "network_gate": {
   "ok": true,
@@ -18,11 +18,10 @@
  "hidden": {
   "ok": false,
   "code": 1,
-  "seconds": 3,
+  "seconds": 10,
   "failed": [
    "DictationAudioTests.SystemMeetingDefaultTests testDefaultCaptureSuppressesSparseEcho",
    "DictationAudioTests.SystemMeetingDefaultTests testDefaultCaptureSuppressesSparseEchoAfterSilence",
-   "DictationAudioTests.SystemMeetingDefaultTests testExplicitCaptureThresholdStillAppliesToSystemAudio",
    "DictationAudioTests.SystemMeetingDefaultTests testQuietMicrophoneKeepsItsExistingThreshold",
    "DictationCoreTests.MeetingSegmentPolicyTests testLeadingSilenceDoesNotShiftAPauseCutIntoSpokenAudio"
   ],
@@ -31,11 +30,10 @@
  "suite": {
   "ok": false,
   "code": 1,
-  "seconds": 86,
+  "seconds": 98,
   "failed": [
    "DictationAudioTests.SystemMeetingDefaultTests testDefaultCaptureSuppressesSparseEcho",
    "DictationAudioTests.SystemMeetingDefaultTests testDefaultCaptureSuppressesSparseEchoAfterSilence",
-   "DictationAudioTests.SystemMeetingDefaultTests testExplicitCaptureThresholdStillAppliesToSystemAudio",
    "DictationAudioTests.SystemMeetingDefaultTests testQuietMicrophoneKeepsItsExistingThreshold",
    "DictationCoreTests.MeetingSegmentPolicyTests testLeadingSilenceDoesNotShiftAPauseCutIntoSpokenAudio"
   ],

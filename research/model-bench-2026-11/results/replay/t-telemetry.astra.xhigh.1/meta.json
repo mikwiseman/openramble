@@ -1,0 +1,40 @@
+{
+ "run": "t-telemetry.astra.xhigh.1",
+ "task": "t-telemetry",
+ "model": "gpt-6.2-astra",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 01:53",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 94,
+ "slept_seconds": 0,
+ "load_before": "13.3",
+ "load_after": "16.1",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/t-telemetry.astra.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 22,
+ "by_kind": {
+  "Bash": 22
+ },
+ "turns": 23,
+ "usage": {
+  "input": 48879,
+  "cached_input": 348160,
+  "cache_write": 0,
+  "output": 2501
+ },
+ "tokens": 399540,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 3,
+ "last_test_run_failed": false,
+ "asked_instead": true,
+ "final_words": 79
+}

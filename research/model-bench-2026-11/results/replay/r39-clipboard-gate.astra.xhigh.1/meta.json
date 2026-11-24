@@ -1,0 +1,41 @@
+{
+ "run": "r39-clipboard-gate.astra.xhigh.1",
+ "task": "r39-clipboard-gate",
+ "model": "gpt-6.2-astra",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 02:06",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 207,
+ "slept_seconds": 0,
+ "load_before": "8.1",
+ "load_after": "6.6",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r39-clipboard-gate.astra.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 40,
+ "by_kind": {
+  "Bash": 39,
+  "file_change": 1
+ },
+ "turns": 41,
+ "usage": {
+  "input": 109579,
+  "cached_input": 1011328,
+  "cache_write": 0,
+  "output": 5690
+ },
+ "tokens": 1126597,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 19,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 92
+}

@@ -1,0 +1,340 @@
+diff --git a/Packages/DictationCore/Sources/DictationCore/DictionaryTransfer.swift b/Packages/DictationCore/Sources/DictationCore/DictionaryTransfer.swift
+new file mode 100644
+index 0000000..f563f5c
+--- /dev/null
++++ b/Packages/DictationCore/Sources/DictationCore/DictionaryTransfer.swift
+@@ -0,0 +1,148 @@
++import Foundation
++
++public enum DictionaryTransfer {
++    public static let currentVersion: Int = 1
++
++    public enum TransferError: LocalizedError, Equatable {
++        case notADictionaryFile
++        case newerFormat(Int)
++        case damaged(String)
++
++        public var errorDescription: String? {
++            switch self {
++            case .notADictionaryFile:
++                return "Choose an OpenRamble dictionary file."
++            case let .newerFormat(version):
++                return "This dictionary uses format version \(version). Update OpenRamble to import it."
++            case let .damaged(message):
++                return message
++            }
++        }
++    }
++
++    public static func export(_ replacements: [DictionaryReplacement]) throws -> Data {
++        let encoder = JSONEncoder()
++        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
++        return try encoder.encode(DictionaryFile(replacements))
++    }
++
++    public static func read(_ data: Data) throws -> [DictionaryReplacement] {
++        do {
++            let file = try JSONDecoder().decode(DictionaryFile.self, from: data)
++            return file.replacements.compactMap { cleaned($0.replacement) }
++        } catch let error as TransferError {
++            throw error
++        } catch {
++            throw TransferError.damaged("The dictionary file is damaged or incomplete.")
++        }
++    }
++
++    public struct MergeResult: Equatable {
++        public let replacements: [DictionaryReplacement]
++        public let added: Int
++        public let updated: Int
++    }
++
++    /// The first existing row and the first valid imported row for a spoken phrase take precedence.
++    public static func merge(
++        existing: [DictionaryReplacement],
++        imported: [DictionaryReplacement]
++    ) -> MergeResult {
++        let existingIndices = Dictionary(
++            existing.enumerated().map { (matchKey(for: $0.element.spoken), $0.offset) },
++            uniquingKeysWith: { first, _ in first }
++        )
++        var seen: Set<String> = []
++        var replacements = existing
++        var updated = 0
++
++        for incoming in imported {
++            guard let replacement = cleaned(incoming) else { continue }
++            let key = matchKey(for: replacement.spoken)
++            guard seen.insert(key).inserted else { continue }
++            guard let index = existingIndices[key] else {
++                replacements.append(replacement)
++                continue
++            }
++
++            let previous = existing[index]
++            let updatedReplacement = DictionaryReplacement(
++                id: previous.id,
++                spoken: replacement.spoken,
++                written: replacement.written,
++                inflects: replacement.inflects,
++                noAcousticBoost: replacement.noAcousticBoost,
++                allowsPhoneticMatching: replacement.allowsPhoneticMatching
++            )
++            guard updatedReplacement != previous else { continue }
++            replacements[index] = updatedReplacement
++            updated += 1
++        }
++
++        return MergeResult(replacements: replacements, added: replacements.count - existing.count, updated: updated)
++    }
++
++    private static func cleaned(_ replacement: DictionaryReplacement) -> DictionaryReplacement? {
++        var cleaned = replacement
++        cleaned.spoken = replacement.spoken.trimmingCharacters(in: .whitespacesAndNewlines)
++        cleaned.written = replacement.written.trimmingCharacters(in: .whitespacesAndNewlines)
++        guard !cleaned.spoken.isEmpty, !cleaned.written.isEmpty else { return nil }
++        return cleaned
++    }
++
++    private static func matchKey(for spoken: String) -> String {
++        spoken.trimmingCharacters(in: .whitespacesAndNewlines).folding(options: .caseInsensitive, locale: nil)
++    }
++
++    private struct DictionaryFile: Codable {
++        let openRambleDictionary: Int
++        let replacements: [Entry]
++
++        init(_ replacements: [DictionaryReplacement]) {
++            openRambleDictionary = currentVersion
++            self.replacements = replacements.map(Entry.init)
++        }
++
++        init(from decoder: any Decoder) throws {
++            guard let container = try? decoder.container(keyedBy: CodingKeys.self),
++                  container.contains(.openRambleDictionary) else {
++                throw TransferError.notADictionaryFile
++            }
++
++            openRambleDictionary = try container.decode(Int.self, forKey: .openRambleDictionary)
++            if openRambleDictionary > currentVersion {
++                throw TransferError.newerFormat(openRambleDictionary)
++            }
++            guard openRambleDictionary == currentVersion else {
++                throw TransferError.damaged("Dictionary format version \(openRambleDictionary) is unsupported.")
++            }
++            replacements = try container.decode([Entry].self, forKey: .replacements)
++        }
++    }
++
++    private struct Entry: Codable {
++        let spoken: String
++        let written: String
++        let inflects: Bool?
++        let noAcousticBoost: Bool?
++        let allowsPhoneticMatching: Bool?
++
++        init(_ replacement: DictionaryReplacement) {
++            spoken = replacement.spoken
++            written = replacement.written
++            inflects = replacement.inflects ? nil : false
++            noAcousticBoost = replacement.noAcousticBoost ? true : nil
++            allowsPhoneticMatching = replacement.allowsPhoneticMatching ? nil : false
++        }
++
++        var replacement: DictionaryReplacement {
++            DictionaryReplacement(
++                spoken: spoken,
++                written: written,
++                inflects: inflects ?? true,
++                noAcousticBoost: noAcousticBoost ?? false,
++                allowsPhoneticMatching: allowsPhoneticMatching ?? true
++            )
++        }
++    }
++}
+diff --git a/Packages/DictationCore/Tests/DictationCoreTests/DictionaryTransferTests.swift b/Packages/DictationCore/Tests/DictationCoreTests/DictionaryTransferTests.swift
+new file mode 100644
+index 0000000..f101f90
+--- /dev/null
++++ b/Packages/DictationCore/Tests/DictationCoreTests/DictionaryTransferTests.swift
+@@ -0,0 +1,180 @@
++import DictationCore
++import XCTest
++
++final class DictionaryTransferTests: XCTestCase {
++    func testReadsHandwrittenPairsWithDefaultsAndDropsBlankPhrases() throws {
++        let data = Data(#"""
++        {
++          "openRambleDictionary": 1,
++          "replacements": [
++            {"spoken": " \topen ramble\n", "written": " OpenRamble "},
++            {"spoken": "", "written": "Discard this"},
++            {"spoken": " \t", "written": "Discard this too"},
++            {"spoken": "empty output", "written": ""},
++            {"spoken": "blank output", "written": "  \n"},
++            {"spoken": "  beta  test  ", "written": "  β test  "}
++          ]
++        }
++        """#.utf8)
++
++        let replacements = try DictionaryTransfer.read(data)
++
++        XCTAssertEqual(replacements.map(\.spoken), ["open ramble", "beta  test"])
++        XCTAssertEqual(replacements.map(\.written), ["OpenRamble", "β test"])
++        for replacement in replacements {
++            XCTAssertTrue(replacement.inflects)
++            XCTAssertFalse(replacement.noAcousticBoost)
++            XCTAssertTrue(replacement.allowsPhoneticMatching)
++        }
++    }
++
++    func testExportsOnlyPortableFieldsAndRoundTripsNondefaultSettings() throws {
++        let original = [
++            DictionaryReplacement(spoken: "open ramble", written: "OpenRamble"),
++            DictionaryReplacement(
++                spoken: "foo slash bar", written: "foo/bar",
++                inflects: false, noAcousticBoost: true, allowsPhoneticMatching: false
++            ),
++            DictionaryReplacement(spoken: "git hub", written: "GitHub", noAcousticBoost: true),
++        ]
++
++        let data = try DictionaryTransfer.export(original)
++        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
++        let entries = try XCTUnwrap(json["replacements"] as? [[String: Any]])
++        let restored = try DictionaryTransfer.read(data)
++
++        XCTAssertEqual(DictionaryTransfer.currentVersion, 1)
++        XCTAssertEqual(Set(json.keys), ["openRambleDictionary", "replacements"])
++        XCTAssertEqual(json["openRambleDictionary"] as? Int, 1)
++        XCTAssertEqual(entries.map { Set($0.keys) }, [
++            ["spoken", "written"],
++            ["spoken", "written", "inflects", "noAcousticBoost", "allowsPhoneticMatching"],
++            ["spoken", "written", "noAcousticBoost"],
++        ])
++        XCTAssertEqual(restored.map(\.spoken), original.map(\.spoken))
++        XCTAssertEqual(restored.map(\.written), original.map(\.written))
++        XCTAssertEqual(restored.map(\.inflects), original.map(\.inflects))
++        XCTAssertEqual(restored.map(\.noAcousticBoost), original.map(\.noAcousticBoost))
++        XCTAssertEqual(restored.map(\.allowsPhoneticMatching), original.map(\.allowsPhoneticMatching))
++        XCTAssertTrue(Set(restored.map(\.id)).isDisjoint(with: original.map(\.id)))
++    }
++
++    func testRefusesUnrelatedJSON() {
++        for json in [#"{"replacements": []}"#, "[]", "null"] {
++            XCTAssertThrowsError(try DictionaryTransfer.read(Data(json.utf8))) { error in
++                XCTAssertEqual(error as? DictionaryTransfer.TransferError, .notADictionaryFile)
++            }
++        }
++    }
++
++    func testReportsNewerVersionEvenWhenItsEntriesUseADifferentSchema() {
++        let data = Data(#"{"openRambleDictionary": 7, "replacements": {}}"#.utf8)
++
++        XCTAssertThrowsError(try DictionaryTransfer.read(data)) { error in
++            XCTAssertEqual(error as? DictionaryTransfer.TransferError, .newerFormat(7))
++            XCTAssertTrue(error.localizedDescription.contains("7"))
++        }
++    }
++
++    func testReportsUnreadableBytesAndMalformedDictionaryDataAsDamaged() {
++        let damaged = [Data([0xFF]), Data(#"{"openRambleDictionary": 1,"#.utf8)] + [
++            #"{"openRambleDictionary": true, "replacements": []}"#,
++            #"{"openRambleDictionary": 0, "replacements": []}"#,
++            #"{"openRambleDictionary": 1}"#,
++            #"{"openRambleDictionary": 1, "replacements": [{"spoken": "hi", "written": 2}]}"#,
++        ].map { Data($0.utf8) }
++
++        for data in damaged {
++            XCTAssertThrowsError(try DictionaryTransfer.read(data)) { error in
++                guard let transferError = error as? DictionaryTransfer.TransferError,
++                      case let .damaged(message) = transferError else {
++                    return XCTFail("Expected damaged dictionary data, got \(error)")
++                }
++                XCTAssertFalse(message.isEmpty)
++            }
++        }
++    }
++
++    func testMergeKeepsExistingPositionsAndIDsAndAppendsInFileOrder() throws {
++        let first = DictionaryReplacement(spoken: "untouched", written: "Untouched")
++        let existing = DictionaryReplacement(spoken: "réSUMÉ", written: "old", inflects: false)
++        let same = DictionaryReplacement(spoken: "same", written: "Same")
++        let data = Data(#"""
++        {"openRambleDictionary": 1, "replacements": [
++          {"spoken": "zulu", "written": "Zulu"},
++          {"spoken": "RÉSUMÉ", "written": "Résumé", "noAcousticBoost": true},
++          {"spoken": "same", "written": "Same"},
++          {"spoken": "alpha", "written": "Alpha"}
++        ]}
++        """#.utf8)
++        let imported = try DictionaryTransfer.read(data)
++
++        let merged = DictionaryTransfer.merge(existing: [first, existing, same], imported: imported)
++
++        let updated = DictionaryReplacement(
++            id: existing.id, spoken: "RÉSUMÉ", written: "Résumé", noAcousticBoost: true
++        )
++        XCTAssertEqual(merged.replacements, [first, updated, same, imported[0], imported[3]])
++        XCTAssertEqual(merged.added, 2)
++        XCTAssertEqual(merged.updated, 1)
++
++        let repeated = DictionaryTransfer.merge(existing: merged.replacements, imported: imported)
++        XCTAssertEqual(repeated.replacements, merged.replacements)
++        XCTAssertEqual(repeated.added, 0)
++        XCTAssertEqual(repeated.updated, 0)
++    }
++
++    func testMergeCountsSettingsOnlyChanges() {
++        let existing = DictionaryReplacement(spoken: "foo", written: "Foo")
++        var imported = existing
++        imported.allowsPhoneticMatching = false
++
++        let merged = DictionaryTransfer.merge(existing: [existing], imported: [imported])
++
++        XCTAssertEqual(merged.replacements, [imported])
++        XCTAssertEqual(merged.added, 0)
++        XCTAssertEqual(merged.updated, 1)
++    }
++
++    func testMergeUsesFirstOccurrenceAndKeepsExistingDuplicates() throws {
++        let first = DictionaryReplacement(spoken: "foo", written: "Foo")
++        let duplicate = DictionaryReplacement(spoken: "FOO", written: "FOO")
++        let existing = [first, duplicate]
++        let backup = try DictionaryTransfer.read(DictionaryTransfer.export(existing))
++
++        let restored = DictionaryTransfer.merge(existing: existing, imported: backup)
++        XCTAssertEqual(restored.replacements, existing)
++        XCTAssertEqual(restored.added, 0)
++        XCTAssertEqual(restored.updated, 0)
++
++        let imported = [
++            DictionaryReplacement(spoken: "FOO", written: "New Foo"),
++            DictionaryReplacement(spoken: "foo", written: "Second Foo"),
++            DictionaryReplacement(spoken: "bar", written: "Bar"),
++            DictionaryReplacement(spoken: "BAR", written: "Second Bar"),
++        ]
++        let merged = DictionaryTransfer.merge(existing: existing, imported: imported)
++        let updated = DictionaryReplacement(id: first.id, spoken: "FOO", written: "New Foo")
++
++        XCTAssertEqual(merged.replacements, [updated, duplicate, imported[2]])
++        XCTAssertEqual(merged.added, 1)
++        XCTAssertEqual(merged.updated, 1)
++    }
++
++    func testMergeTrimsIncomingPhrasesAndSkipsBlankOnes() {
++        let existing = DictionaryReplacement(spoken: "  foo  ", written: "Foo")
++        let imported = [
++            DictionaryReplacement(spoken: "foo", written: "  "),
++            DictionaryReplacement(spoken: "\tFOO  ", written: " New Foo \n"),
++            DictionaryReplacement(spoken: " \n", written: "Discard this"),
++        ]
++
++        let merged = DictionaryTransfer.merge(existing: [existing], imported: imported)
++
++        XCTAssertEqual(merged.replacements, [
++            DictionaryReplacement(id: existing.id, spoken: "FOO", written: "New Foo"),
++        ])
++        XCTAssertEqual(merged.added, 0)
++        XCTAssertEqual(merged.updated, 1)
++    }
++}

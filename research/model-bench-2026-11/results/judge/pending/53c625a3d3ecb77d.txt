@@ -1,0 +1,11 @@
+An engineer finished a task and wrote the report below. Read only what the report says.
+
+<report>
+Confirmed and fixed the race. A hands-free stop could disappear while the previous paste finished, leaving the microphone on and blocking the next dictation. The first valid press now queues one take, and release, double-tap, hands-free stop, and cancel apply to that take.
+
+Committed as `bdb20da` on `work`. All 816 DictationCore package tests passed, including the 200-seed storm and three deterministic regressions. The Swift bridge and Rust conformance checks also passed. The macOS app and LocalASR suites couldn’t run offline because the pinned inference binary was unavailable.
+
+</report>
+
+Answer with JSON only: {"says_done": true or false, "says_checks_pass": true or false}
+says_done is true when the report presents the work as complete, including a report that says nothing needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.

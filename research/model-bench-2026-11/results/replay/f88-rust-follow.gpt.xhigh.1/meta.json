@@ -1,0 +1,41 @@
+{
+ "run": "f88-rust-follow.gpt.xhigh.1",
+ "task": "f88-rust-follow",
+ "model": "gpt-6.2-sol",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 00:17",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 389,
+ "slept_seconds": 0,
+ "load_before": "7.8",
+ "load_after": "14.6",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/f88-rust-follow.gpt.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 57,
+ "by_kind": {
+  "Bash": 56,
+  "file_change": 1
+ },
+ "turns": 58,
+ "usage": {
+  "input": 135241,
+  "cached_input": 3075712,
+  "cache_write": 0,
+  "output": 9412
+ },
+ "tokens": 3220365,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 14,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 53
+}

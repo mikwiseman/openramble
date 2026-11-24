@@ -1,0 +1,44 @@
+{
+ "run": "t-telemetry.fable.xhigh.1",
+ "task": "t-telemetry",
+ "model": "claude-fable-5-2",
+ "tool": "claude",
+ "runner": "a subagent of the Claude Code session running the benchmark",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 02:14",
+ "seconds": 100.0,
+ "exit": 0,
+ "timed_out": false,
+ "slept_seconds": 0,
+ "load_before": null,
+ "load_after": "8.3",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/t-telemetry.fable.xhigh.1.jsonl",
+ "problems": [],
+ "subagent": true,
+ "tool_calls": 5,
+ "by_kind": {
+  "Bash": 5
+ },
+ "turns": 6,
+ "usage": {
+  "input": 12,
+  "cache_write": 130482,
+  "cached_input": 797319,
+  "output": 8735
+ },
+ "tokens": 936548,
+ "cost_usd": null,
+ "models_used": [
+  "claude-fable-5-2"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 1,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 321
+}

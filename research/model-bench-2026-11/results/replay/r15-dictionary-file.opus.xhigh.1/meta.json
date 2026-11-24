@@ -1,0 +1,46 @@
+{
+ "run": "r15-dictionary-file.opus.xhigh.1",
+ "task": "r15-dictionary-file",
+ "model": "claude-opus-5-5",
+ "tool": "claude",
+ "runner": "a subagent of the Claude Code session running the benchmark",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 01:58",
+ "seconds": 480.0,
+ "exit": 0,
+ "timed_out": false,
+ "slept_seconds": 0,
+ "load_before": null,
+ "load_after": "25.2",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r15-dictionary-file.opus.xhigh.1.jsonl",
+ "problems": [],
+ "subagent": true,
+ "tool_calls": 19,
+ "by_kind": {
+  "Bash": 14,
+  "Read": 3,
+  "Write": 2
+ },
+ "turns": 19,
+ "usage": {
+  "input": 38,
+  "cache_write": 205574,
+  "cached_input": 3188505,
+  "output": 39846
+ },
+ "tokens": 3433963,
+ "cost_usd": null,
+ "models_used": [
+  "claude-opus-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 6,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 526
+}

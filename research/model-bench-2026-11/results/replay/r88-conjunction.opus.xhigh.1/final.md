@@ -1,0 +1,31 @@
+Fixed: Clean Verbatim no longer drops real words around "and", "if", "that", "about" or "и". All six of your sentences now keep every word, and only the hesitation goes. All three restarts still collapse. This holds with spoken corrections on and off. Committed as `ad7fdae` on branch `work`, not pushed.
+
+**Cause.** The restart rule saw "it and, um, it works" as a phrase started over ("with the, um, with Kowalski's") and deleted "it and". But a word like "and" or "about" is followed by the thing it joins, so the word said again after it is new speech, not a restart.
+
+**The rule now.** After a conjunction or preposition (English and Russian), a repeated word stays when:
+- it is a word that can end a phrase ("it", "Sam", "you", "them", "это"), or
+- the repeat opens a noun phrase ("Check the server and, um, the server logs").
+
+A clause started over is still a restart. "I think that, um, I think we should wait." and "Let's meet at, uh, let's meet on Monday." collapse as before. So do "So I think that, um, …" and "And so, um, and then …".
+
+**Where the two pull against each other.** One case now keeps extra words where it used to collapse: "We need the logs and, um, the logs from Friday." stays whole. That is the safer side, as you asked.
+
+**Everywhere it runs.**
+- I changed the Swift specification (`CleanVerbatim.swift`) and the Rust core (`core/ramble-text/src/clean.rs`), which the Mac app runs through FFI and Windows and Linux run directly.
+- I added 22 corpus cases: your nine sentences, plus "Check the server and, um, the server logs." and "And so, um, and then we left.", each with corrections on and off. The fixtures were regenerated from the Swift pipeline, and Rust reproduces them.
+
+**What I checked.**
+- New Swift and Rust tests fail on the old code and pass on the new.
+- `./scripts/check.sh --fast` passed every step except "Core matches macOS". That step compares against staged files, and the new fixtures were not staged yet. After staging I re-ran it and it passed. The network and diagnostics gates, which the script skipped after that step, also passed when I ran them myself.
+- None of the 466 existing corpus cases changed.
+- I wrote 46 sentences of my own to break the rule. Before the fix, 22 of them lost real words; now none do. Every restart that collapsed before still collapses.
+- I called `processText`, the same function the Mac app's `SharedCorePipeline` uses, on your nine sentences with corrections on and off. All 18 came out right.
+
+**Not done.** I did not run the app test suite, because it can need a network download for Sparkle, and I did not dictate into the running app.
+
+Files changed:
+- /Users/mikwiseman/.openramble/model-bench/work/r88-conjunction/run-opus/Packages/DictationCore/Sources/DictationCore/CleanVerbatim.swift
+- /Users/mikwiseman/.openramble/model-bench/work/r88-conjunction/run-opus/Packages/DictationCore/Tests/DictationCoreTests/CleanVerbatimTests.swift
+- /Users/mikwiseman/.openramble/model-bench/work/r88-conjunction/run-opus/core/ramble-text/src/clean.rs
+- /Users/mikwiseman/.openramble/model-bench/work/r88-conjunction/run-opus/core/conformance/corpus-text.json
+- /Users/mikwiseman/.openramble/model-bench/work/r88-conjunction/run-opus/core/conformance/fixtures/text/pipeline.json

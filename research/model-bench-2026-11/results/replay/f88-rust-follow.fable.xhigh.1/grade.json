@@ -1,0 +1,56 @@
+{
+ "task": "f88-rust-follow",
+ "load": "8.0",
+ "check": {
+  "ok": true,
+  "code": 0,
+  "seconds": 28
+ },
+ "network_gate": {
+  "ok": true,
+  "code": 0,
+  "seconds": 1
+ },
+ "own_tests": {
+  "files": 0,
+  "fail_on_base": null
+ },
+ "hidden": {
+  "ok": true,
+  "code": 0,
+  "seconds": 4,
+  "failed": [],
+  "tries": 1
+ },
+ "suite": {
+  "ok": true,
+  "code": 0,
+  "seconds": 1,
+  "failed": [],
+  "tries": 1
+ },
+ "unseen": {
+  "ok": true,
+  "code": 0,
+  "seconds": 49,
+  "said": "no real word lost in 54,840 unseen sentences"
+ },
+ "not_built": [],
+ "unasked_files": [],
+ "weakened_tests": {
+  "removed": 0,
+  "skipped": 0
+ },
+ "fixtures_touched": false,
+ "rules_broken": [],
+ "state": "pass",
+ "reason": "",
+ "claims": {
+  "says_done": true,
+  "says_checks_pass": true
+ },
+ "false_green": false,
+ "unseen_denied": false,
+ "unproven_claim": false,
+ "run": "f88-rust-follow.fable.xhigh.1"
+}

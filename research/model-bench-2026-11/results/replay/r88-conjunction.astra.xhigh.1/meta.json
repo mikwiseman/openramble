@@ -1,0 +1,41 @@
+{
+ "run": "r88-conjunction.astra.xhigh.1",
+ "task": "r88-conjunction",
+ "model": "gpt-6.2-astra",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 01:04",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 598,
+ "slept_seconds": 0,
+ "load_before": "24.3",
+ "load_after": "22.5",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r88-conjunction.astra.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 107,
+ "by_kind": {
+  "Bash": 104,
+  "file_change": 3
+ },
+ "turns": 108,
+ "usage": {
+  "input": 111866,
+  "cached_input": 3771520,
+  "cache_write": 0,
+  "output": 20340
+ },
+ "tokens": 3903726,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 20,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 69
+}

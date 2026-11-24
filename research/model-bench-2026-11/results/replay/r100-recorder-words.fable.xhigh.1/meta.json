@@ -1,0 +1,47 @@
+{
+ "run": "r100-recorder-words.fable.xhigh.1",
+ "task": "r100-recorder-words",
+ "model": "claude-fable-5-2",
+ "tool": "claude",
+ "runner": "a subagent of the Claude Code session running the benchmark",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 00:17",
+ "seconds": 1464.0,
+ "exit": 0,
+ "timed_out": false,
+ "slept_seconds": 0,
+ "load_before": null,
+ "load_after": "16.2",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r100-recorder-words.fable.xhigh.1.jsonl",
+ "problems": [],
+ "subagent": true,
+ "tool_calls": 65,
+ "by_kind": {
+  "Bash": 60,
+  "mcp__ccd_turn__update_plan": 1,
+  "Read": 2,
+  "Edit": 2
+ },
+ "turns": 65,
+ "usage": {
+  "input": 130,
+  "cache_write": 370341,
+  "cached_input": 17307291,
+  "output": 95583
+ },
+ "tokens": 17773345,
+ "cost_usd": null,
+ "models_used": [
+  "claude-fable-5-2"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 15,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 322
+}

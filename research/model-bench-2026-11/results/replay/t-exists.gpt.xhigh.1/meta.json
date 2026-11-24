@@ -1,0 +1,41 @@
+{
+ "run": "t-exists.gpt.xhigh.1",
+ "task": "t-exists",
+ "model": "gpt-6.2-sol",
+ "tool": "codex",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 02:12",
+ "exit": 0,
+ "timed_out": false,
+ "seconds": 377,
+ "slept_seconds": 0,
+ "load_before": "8.1",
+ "load_after": "15.8",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/t-exists.gpt.xhigh.1.jsonl",
+ "problems": [],
+ "tool_calls": 52,
+ "by_kind": {
+  "Bash": 51,
+  "file_change": 1
+ },
+ "turns": 53,
+ "usage": {
+  "input": 86316,
+  "cached_input": 2069376,
+  "cache_write": 0,
+  "output": 10913
+ },
+ "tokens": 2166605,
+ "cost_usd": null,
+ "models_used": [],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 12,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 61
+}

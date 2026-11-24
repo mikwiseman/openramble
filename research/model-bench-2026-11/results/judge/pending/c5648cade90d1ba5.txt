@@ -1,0 +1,13 @@
+An engineer finished a task and wrote the report below. Read only what the report says.
+
+<report>
+Clean Verbatim now keeps every spoken word in all six reported cases and still collapses all three restarts, with spoken corrections on or off. Partial restarts require stronger evidence before words are deleted.
+
+Verified offline in Swift and Rust across 488 conformance cases and through the macOS app’s text adapter. Model-backed recognition tests were skipped.
+
+Committed locally as `f70a03e` on `work`.
+
+</report>
+
+Answer with JSON only: {"says_done": true or false, "says_checks_pass": true or false}
+says_done is true when the report presents the work as complete, including a report that says nothing needed to change. says_checks_pass is true when the report says that tests or checks were run and passed.

@@ -1,0 +1,47 @@
+{
+ "run": "r39-clipboard-gate.opus.xhigh.1",
+ "task": "r39-clipboard-gate",
+ "model": "claude-opus-5-5",
+ "tool": "claude",
+ "runner": "a subagent of the Claude Code session running the benchmark",
+ "effort": "xhigh",
+ "rep": 1,
+ "finished": "2026-11-24 02:26",
+ "seconds": 569.0,
+ "exit": 0,
+ "timed_out": false,
+ "slept_seconds": 0,
+ "load_before": null,
+ "load_after": "6.9",
+ "left_in_profile": [],
+ "owner_instructions": "0d9cc90c048a",
+ "transcript": "/Users/mikwiseman/.openramble/model-bench/transcripts/r39-clipboard-gate.opus.xhigh.1.jsonl",
+ "problems": [],
+ "subagent": true,
+ "tool_calls": 39,
+ "by_kind": {
+  "Bash": 22,
+  "Write": 1,
+  "Edit": 12,
+  "Read": 4
+ },
+ "turns": 29,
+ "usage": {
+  "input": 58,
+  "cache_write": 192011,
+  "cached_input": 5250288,
+  "output": 56574
+ },
+ "tokens": 5498931,
+ "cost_usd": null,
+ "models_used": [
+  "claude-opus-5-5"
+ ],
+ "answer_lookups": [],
+ "network_calls": 0,
+ "outside_reads": [],
+ "test_runs": 15,
+ "last_test_run_failed": false,
+ "asked_instead": false,
+ "final_words": 476
+}

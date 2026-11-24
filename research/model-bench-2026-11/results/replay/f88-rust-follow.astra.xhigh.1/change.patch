@@ -1,0 +1,117 @@
+diff --git a/core/ramble-text/src/clean.rs b/core/ramble-text/src/clean.rs
+index 6e0bf3c..f760ed1 100644
+--- a/core/ramble-text/src/clean.rs
++++ b/core/ramble-text/src/clean.rs
+@@ -33,7 +33,9 @@
+ //!    it can only be the pause: after a word that cannot end a phrase
+ //!    ("should, um,"), in "Thanks, um, for", or after the sentence's opening
+ //!    subject ("The build, uh,"). A restart around a hesitation keeps one copy
+-//!    ("It's a, uh, a leak"). Repeated until nothing changes.
++//!    ("It's a, uh, a leak"). A word repeated across a conjunction or
++//!    preposition can belong to both clauses ("shipped it and, um, it works").
++//!    Repeated until nothing changes.
+ //! 3. **Stutters.** A short function word said twice in a row, from a list of
+ //!    words whose doubles are never grammatical ("the the", "я я", "I, I").
+ //! 4. **"New paragraph"** ("Новый абзац"), set apart by punctuation, becomes a
+@@ -301,6 +303,74 @@ const PAUSE_COMMA_WORDS: &[&str] = &[
+     "then",
+ ];
+ 
++/// Conjunctions and prepositions that can introduce the second occurrence
++/// of a word or phrase: "shipped it and, um, it works".
++const JOINING_WORDS: &[&str] = &[
++    "and",
++    "or",
++    "but",
++    "so",
++    "because",
++    "if",
++    "when",
++    "that",
++    "than",
++    "then",
++    "which",
++    "who",
++    "whom",
++    "whose",
++    "to",
++    "of",
++    "in",
++    "on",
++    "at",
++    "for",
++    "with",
++    "from",
++    "by",
++    "into",
++    "about",
++    "и",
++    "или",
++    "а",
++    "но",
++    "что",
++    "чтобы",
++    "если",
++    "когда",
++    "потому",
++    "как",
++    "который",
++    "которая",
++    "которое",
++    "которые",
++    "в",
++    "во",
++    "на",
++    "с",
++    "со",
++    "к",
++    "ко",
++    "у",
++    "по",
++    "за",
++    "из",
++    "от",
++    "до",
++    "о",
++    "об",
++    "при",
++    "для",
++    "кроме",
++    "через",
++    "между",
++    "без",
++    "перед",
++    "около",
++    "вместо",
++];
++
+ /// Opening words that take an object: "Thanks for", "Спасибо за".
+ const THANKING_WORDS: &[&str] = &["thanks", "sorry", "спасибо", "извини"];
+ const THANKING_OBJECTS: &[&str] = &["for", "about", "за"];
+@@ -1442,18 +1512,24 @@ impl<'a> Tokens<'a> {
+ 
+     /// How many words before the hesitation at `index` start a phrase that
+     /// stops on a word that cannot end it and is begun again with another
+-    /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an".
++    /// ending: "with the, um, with Kowalski's", "It's a, uh, it's an". A
++    /// phrase ending on a joining word can restart at a sentence opening
++    /// or after a comma: "Okay, I think that, um, I think we should wait".
+     fn revised_length(&self, index: usize) -> Option<usize> {
+         (2..=3).rev().find(|&length| {
+             if index < length || index + length >= self.items.len() {
+                 return false;
+             }
+-            let before = &self.items[index - length..index];
++            let start = index - length;
++            let before = &self.items[start..index];
+             let again = &self.items[index + 1..index + length];
+             let last = &before[length - 1];
+             let last_word = last.word();
+             (PAUSE_COMMA_WORDS.contains(&last_word.as_str())
+                 || UNFINISHED_WORDS.contains(&last_word.as_str()))
++                && (!JOINING_WORDS.contains(&last_word.as_str())
++                    || self.opens_sentence(start)
++                    || self.items[start - 1].ends_with_comma())
+                 && !last.starts_uppercase()
+                 && (last.punctuation().is_empty() || last.punctuation() == ",")
+                 && before[..length - 1]

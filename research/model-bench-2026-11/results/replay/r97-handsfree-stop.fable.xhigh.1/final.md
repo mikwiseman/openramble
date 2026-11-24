@@ -1,0 +1,28 @@
+**The test was right: the controller could end up listening with nothing left to stop it.** It is fixed and committed as `57f722b` on the current branch, not pushed.
+
+**What happened in seed 45.** While a paste finished, the controller kept only a press and its release. Seed 45 asked for a hands-free take there, then pressed again to stop it. The second press was dropped, the paste started the take, and nothing was left to end it. With a 10 ms paste the storm reproduced this on 13 of 200 seeds, 45 among them.
+
+**From the keyboard it could not get stuck, but it lost presses.** The Mac app never sent that sequence to the controller. I fixed those losses too, since your sentence is about what you press:
+- **Controller:** it now keeps everything done with the key after a waiting press (release, double tap, second press) and does each again, in order, once the paste has landed.
+- **Press after a hands-free take:** hands-free stayed on until cleanup, so any press during that take's paste was read as "stop" and thrown away. It now ends when the paste begins.
+- **Double tap during a paste:** the app dropped it. It now starts the hands-free take when the paste is done, after a dictation and after Insert Last Dictation.
+- **Escape after a waiting press:** the press still started its take. Escape now forgets it and says nothing.
+
+**Decisions I made:**
+- A new press during the paste replaces the earlier one, as before.
+- Hands-free ends when the paste begins rather than when recording stops; ending it earlier would add a stray VoiceOver announcement.
+- The Rust core is unchanged: it has neither hands-free nor the waiting press.
+
+**Checks.** Every new test failed on the old code first: three controller tests, six app tests, and the storm run again over a 10 ms paste (100 seeds, about 13 s more per run). After the fix:
+- DictationCore: 643 and 174 tests pass.
+- LocalASR: 176 and 22 pass.
+- RambleCoreFFI: 8 pass.
+- Mac app: 734 pass.
+- Network and diagnostics gates pass.
+- Wider storms pass: 1,400 more runs across 3, 10 and 25 ms pastes and 12-gesture storms.
+
+Not run: `./scripts/check.sh` as a whole, because it downloads the pinned XcodeGen. I ran its steps offline with the installed XcodeGen 2.44.1 instead of the pinned 2.46.0, and skipped the Rust workspace checks and the conformance check because no Rust or text-pipeline code changed. Nothing was tried on the live app with real keys.
+
+One more, not changed: by reading the code, the Copy Last Dictation shortcut pressed during a paste copies the previous dictation, because the new one is recorded only when the paste is done. Say if you want that to wait too.
+
+The changes are in `Packages/DictationCore/Sources/DictationCore/DictationController.swift` and `apps/macos/OpenRamble/AppState.swift`, with tests in `DictationControllerTests.swift`, `DictationControllerRaceTests.swift` and `AppStateTests.swift`, all under `/Users/mikwiseman/.openramble/model-bench/work/r97-handsfree-stop/run-fable`.
