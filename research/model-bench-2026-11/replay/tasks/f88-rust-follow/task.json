@@ -2,7 +2,7 @@
  "title": "The Rust core fell behind the Mac",
  "kind": "follow",
  "area": "Rust port of a Swift change, conformance",
- "source": "#88 merged, with its Rust half (core/ramble-text/src/clean.rs) taken out; base commit refs/bench/f88-base",
+ "source": "#88 merged, with its Rust half taken out. The base commit 598ec36d is made locally and kept as refs/bench/f88-base: the tree of 1ab4af81 with core/ramble-text/src/clean.rs from 1ab4af81^ (git read-tree 1ab4af81; git update-index --cacheinfo 100644,$(git rev-parse 1ab4af81^:core/ramble-text/src/clean.rs),core/ramble-text/src/clean.rs; git commit-tree $(git write-tree) -p 1ab4af81 -m 'bench: #88 with the Rust half taken out (follow task base)'), which gives the same commit id.",
  "base": "598ec36d0d0b90a44aef31d225df76893ab75100",
  "reference": "1ab4af81ab0eaaa27723bbe63fa50c14f03d9354",
  "hidden": [
