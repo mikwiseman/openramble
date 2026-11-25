@@ -1,9 +1,12 @@
 name: Desktop packages
+run-name: ${{ github.event_name == 'repository_dispatch' && format('Wolf desktop package {0}', github.event.client_payload.request) || format('Desktop packages · {0}', github.ref_name) }}
 
 # Installers for Windows and Linux. Run on demand and on a tag, because a
 # 700 MB toolchain build on three runners is not something to do on every push.
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [wolf-desktop-package]
   push:
     tags: ["desktop-v*"]
 
@@ -29,7 +32,8 @@ jobs:
     uses: ./.github/workflows/desktop-package.yml
     with:
       os: ${{ matrix.os }}
-      artifact: ${{ matrix.artifact }}
+      artifact: ${{ github.event_name == 'repository_dispatch' && format('{0}-{1}', matrix.artifact, github.event.client_payload.sha) || matrix.artifact }}
+      revision: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.sha || '' }}
     # Only the publishing job inside asks for this much; the build stays
     # read-only.
     permissions:
